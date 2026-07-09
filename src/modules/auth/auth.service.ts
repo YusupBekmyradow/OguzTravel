@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 
 import * as bcrypt from 'bcrypt';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { Employee } from '../employee/entities/employee.entity';
 
 @Injectable()
 export class AuthService {
@@ -42,7 +43,15 @@ export class AuthService {
   async signIn(signInAuthDto: signInAuthDto) {
     try {
 
-      const existUser = await this.userModel.findOne({ where: { phone_number: signInAuthDto.phone_number } });
+      const existUser = await this.userModel.findOne({
+        where: { phone_number: signInAuthDto.phone_number },
+        include: [
+          {
+            model: Employee,
+            attributes: ['fullName', 'position_guid']
+          }
+        ]
+      });
 
       if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, 'user not found');
 
@@ -56,7 +65,19 @@ export class AuthService {
 
       await existUser.update({ refresh_token });
 
-      return successResponse(HttpStatuses.OK, { access_token, refresh_token }, 'sign in success');
+      const responseData = {
+        access_token,
+        refresh_token,
+        user: {
+          guid: existUser.guid,
+          phone_number: existUser.phone_number,
+          role: existUser.role,
+          permissions: existUser.permissions,
+          employee_name: existUser.employee ? existUser.employee.fullName : null,
+          position_guid: existUser.employee ? existUser.employee.position_guid : null
+        }
+      };
+      return successResponse(HttpStatuses.OK, { responseData }, 'sign in success');
 
     } catch (error: any) {
       console.log(error);

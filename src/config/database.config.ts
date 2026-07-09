@@ -6,6 +6,7 @@ import { Office } from '../modules/office/entities/office.entity';
 import { Position } from '../modules/position/entities/position.entity';
 import { Employee } from '../modules/employee/entities/employee.entity';
 import { Client } from '../modules/client/entities/client.entity';
+import { Auth } from '../modules/auth/entities/auth.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
