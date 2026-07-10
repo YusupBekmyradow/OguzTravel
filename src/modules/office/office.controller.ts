@@ -28,6 +28,13 @@ export class OfficeController {
   }
 
   @Delete('/delete-office')
+  @ApiBody({
+    schema: {
+      type: 'object', properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
   async remove(@Body('guid') guid: string) {
     return this.officeService.deleteOffice(guid);
   }

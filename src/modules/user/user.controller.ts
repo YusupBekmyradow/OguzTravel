@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, Use
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../../guards/admin.guard';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -33,14 +33,23 @@ export class UserController {
     return this.userService.getAllUser(Number(page), Number(limit), search, filters);
   }
 
-  
-  @Patch('/update-user/:guid')
+
+  @Patch('/update-user')
   async update(
     @Body() updateUserDto: UpdateUserDto) {
     return this.userService.updateUser(updateUserDto);
   }
 
-  @Delete('/delete-user/:guid')
+
+
+  @Delete('/delete-user')
+  @ApiBody({
+    schema: {
+      type: 'object', properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
   async remove(@Body('guid') guid: string) {
     return this.userService.deleteUser(guid);
   }

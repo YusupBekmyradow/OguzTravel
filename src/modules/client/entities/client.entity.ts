@@ -1,4 +1,5 @@
-import { Table, Model, Column, DataType } from "sequelize-typescript"
+import { Table, Model, Column, DataType, HasMany } from "sequelize-typescript"
+import { B2b } from "../../b2b/entities/b2b.entity";
 
 
 @Table({
@@ -53,8 +54,14 @@ export class Client extends Model<Client> {
   declare passportCountryOfIssue: string;
 
   @Column({
-    type: DataType.ENUM('Male', 'Female'), 
+    type: DataType.ENUM('Male', 'Female'),
     allowNull: false
   })
   declare gender: string;
+
+  @HasMany(() => B2b, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare b2b: B2b[];
 }

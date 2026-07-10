@@ -33,6 +33,7 @@ export class UserService {
   }
 
 
+  
   async getAllUser(page: number = 1, limit: number = 10,
     search?: string,
     filters?: { isActive?: boolean; isExternalUser?: boolean }
@@ -43,17 +44,16 @@ export class UserService {
       const offset = (currentPage - 1) * currentLimit;
 
       const whereClause: any = {};
-
-      if (search) {
-        whereClause.phone_number = { [Op.iLike]: `%${search.trim()}%` };
-      }
-
       if (filters?.isActive !== undefined) {
         whereClause.isActive = filters.isActive;
       }
-
       if (filters?.isExternalUser !== undefined) {
         whereClause.isExternalUser = filters.isExternalUser;
+      }
+
+      const employeeWhere: any = {};
+      if (search) {
+        employeeWhere.fullName = { [Op.iLike]: `%${search.trim()}%` };
       }
 
       const { count, rows } = await this.userRepository.findAndCountAll({
@@ -61,8 +61,15 @@ export class UserService {
         limit: currentLimit,
         offset: offset,
         order: [['createdAt', 'DESC']],
-        include: [Employee]
+        include: [
+          {
+            model: Employee,
+            where: Object.keys(employeeWhere).length > 0 ? employeeWhere : undefined,
+            required: !!search
+          }
+        ]
       });
+
       const totalPages = Math.ceil(count / limit);
 
       return {

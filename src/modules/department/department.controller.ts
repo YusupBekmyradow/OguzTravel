@@ -26,6 +26,13 @@ export class DepartmentController {
   }
 
   @Delete('/delete-department')
+  @ApiBody({
+    schema: {
+      type: 'object', properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
   async remove(@Body('guid') guid: string) {
     return this.departmentService.deleteDepartment(guid);
   }

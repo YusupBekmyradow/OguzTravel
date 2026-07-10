@@ -68,7 +68,6 @@ export class EmployeeService {
           { gmail: { [Op.iLike]: `%${sanitizedSearch}%` } },
         ];
       }
-
       const { count, rows } = await this.employeeRepository.findAndCountAll({
         where: whereClause,
         order: [['index_number', 'ASC']],
@@ -98,7 +97,6 @@ export class EmployeeService {
 
 
 
-////  async getPositionForEmployee()
   async updateEmployee(updateEmployeeDto: UpdateEmployeeDto) {
     try {
       const employee = await this.employeeRepository.findByPk(updateEmployeeDto.guid);

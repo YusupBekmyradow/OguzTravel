@@ -27,7 +27,14 @@ export class PositionController {
   }
 
 
-  @Delete('/delete-postion/:guid')
+  @Delete('/delete-postion')
+  @ApiBody({
+    schema: {
+      type: 'object', properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
   async remove(@Body('guid') guid: string) {
     return this.positionService.deletePosition(guid);
   }

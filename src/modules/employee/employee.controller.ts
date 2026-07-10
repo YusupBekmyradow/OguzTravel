@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestj
 import { EmployeeService } from './employee.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Employees')
 @Controller('employee')
@@ -24,7 +24,7 @@ export class EmployeeController {
     @Query('position_guid') position_guid?: string,
   ) {
     const filters = { department_guid, office_guid, position_guid };
-        return this.employeeService.getAllEmployee(Number(page), Number(limit), search, filters);
+    return this.employeeService.getAllEmployee(Number(page), Number(limit), search, filters);
   }
 
   @Patch('/update-employee')
@@ -34,6 +34,13 @@ export class EmployeeController {
   }
 
   @Delete('/delete-employee')
+  @ApiBody({
+    schema: {
+      type: 'object', properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
   async remove(@Body('guid') guid: string) {
     return this.employeeService.deleteEmployee(guid);
   }

@@ -1,8 +1,9 @@
-import { Model, BelongsTo, Column, DataType, Table, AllowNull, HasOne } from "sequelize-typescript";
+import { Model, BelongsTo, Column, DataType, Table, AllowNull, HasOne, HasMany } from "sequelize-typescript";
 import { Office } from "../../office/entities/office.entity";
 import { Position } from "../../position/entities/position.entity";
 import { Department } from "../../department/entities/department.entity";
 import { User } from "../../user/entities/user.entity";
+import { B2b } from "../../b2b/entities/b2b.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -88,9 +89,23 @@ export class Employee extends Model<Employee> {
   })
   declare department: Department;
 
-  @HasOne(() => User, {
+  @HasMany(() => User, {
     foreignKey: 'employee_guid',
     sourceKey: 'guid'
   })
-  declare user: User;
+  declare user: User[];
+
+  @HasMany(() => B2b, {
+    foreignKey: 'assignment_opr_guid',
+    sourceKey: 'guid',
+    as: 'assignment_operator'
+  })
+  declare b2bOperator: B2b[];
+
+  @HasMany(() => B2b, {
+    foreignKey: 'receiver_opr_guid',
+    sourceKey: 'guid',
+    as: 'receiver_operator'
+  })
+  declare b2bRecipient: B2b[];
 }

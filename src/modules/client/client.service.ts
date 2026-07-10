@@ -42,6 +42,7 @@ export class ClientService {
         const sanitizedSearch = search.trim();
         whereClause[Op.or] = [
           { fullName: { [Op.iLike]: `%${sanitizedSearch}%` } },
+          { phone_number: { [Op.iLike]: `%${sanitizedSearch}%` } },
           { passport_number: { [Op.iLike]: `%${sanitizedSearch}%` } }
         ];
       }
