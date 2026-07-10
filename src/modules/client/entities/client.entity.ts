@@ -1,5 +1,6 @@
 import { Table, Model, Column, DataType, HasMany } from "sequelize-typescript"
 import { B2b } from "../../b2b/entities/b2b.entity";
+import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.entity";
 
 
 @Table({
@@ -64,4 +65,10 @@ export class Client extends Model<Client> {
     sourceKey: 'guid'
   })
   declare b2b: B2b[];
+
+  @HasMany(() => TurkishAirline, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare turkishAirline: TurkishAirline[];
 }

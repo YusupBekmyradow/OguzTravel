@@ -14,7 +14,7 @@ import { ClientModule } from './modules/client/client.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { B2bModule } from './modules/b2b/b2b.module';
 import { TstatusModule } from './modules/tstatus/tstatus.module';
-import { TurkishAirlinesModule } from './turkish_airlines/turkish_airlines.module';
+import { TurkishAirlinesModule } from './modules/turkish_airlines/turkish_airlines.module';
 dotenv.config();
 
 @Module({

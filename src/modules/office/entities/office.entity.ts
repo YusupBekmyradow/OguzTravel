@@ -1,12 +1,13 @@
 import { Table, Column, Model, DataType, HasMany } from 'sequelize-typescript';
 import { Employee } from '../../employee/entities/employee.entity';
+import { TurkishAirline } from '../../turkish_airlines/entities/turkish_airline.entity';
 
 @Table({
   tableName: 'tbl_offices',
   timestamps: true
 })
 
-export class Office extends Model<Office>{
+export class Office extends Model<Office> {
 
   @Column({
     primaryKey: true,
@@ -21,16 +22,16 @@ export class Office extends Model<Office>{
     type: DataType.JSONB,
     allowNull: false,
   })
-  declare fullName:{
+  declare fullName: {
     tk: string;
     ru: string;
     en: string;
   };
 
-  
+
   @Column({
     type: DataType.JSONB,
-    allowNull :true,
+    allowNull: true,
   })
   declare shortName?: {
     tk: string;
@@ -44,7 +45,11 @@ export class Office extends Model<Office>{
   })
   declare employees: Employee[];
 
-
+  @HasMany(() => TurkishAirline, {
+    foreignKey: 'office_guid',
+    sourceKey: 'guid',
+  })
+  declare turkishAirline: TurkishAirline[];
 }
 
 

@@ -1,5 +1,6 @@
 import { Column, DataType, HasMany, Model, Table } from "sequelize-typescript";
 import { B2b } from "../../b2b/entities/b2b.entity";
+import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.entity";
 
 @Table({
   tableName: 'tbl_Tstatuses',
@@ -15,19 +16,25 @@ export class Tstatus extends Model<Tstatus> {
   })
   declare guid: string;
 
-    @Column({
+  @Column({
     type: DataType.JSONB,
     allowNull: false,
   })
-  declare name:{
+  declare name: {
     tk: string;
     ru: string;
     en: string;
   };
 
-    @HasMany(() => B2b, {
-      foreignKey: 'status_guid',
-      sourceKey: 'guid',
-    })
-    declare b2b: B2b[];
+  @HasMany(() => B2b, {
+    foreignKey: 'status_guid',
+    sourceKey: 'guid',
+  })
+  declare b2b: B2b[];
+
+  @HasMany(() => TurkishAirline, {
+    foreignKey: 'status_guid',
+    sourceKey: 'guid',
+  })
+  declare turkishAirline: TurkishAirline[];
 }

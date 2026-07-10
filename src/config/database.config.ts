@@ -8,6 +8,7 @@ import { Employee } from '../modules/employee/entities/employee.entity';
 import { Client } from '../modules/client/entities/client.entity';
 import { B2b } from '../modules/b2b/entities/b2b.entity';
 import { Tstatus } from '../modules/tstatus/entities/tstatus.entity';
+import { TurkishAirline } from '../modules/turkish_airlines/entities/turkish_airline.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
@@ -24,6 +25,6 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     autoLoadModels: true,
     synchronize: true,
     logging: false,
-    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b ]
+    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline]
   };
 };

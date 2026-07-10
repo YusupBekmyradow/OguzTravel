@@ -4,6 +4,7 @@ import { Position } from "../../position/entities/position.entity";
 import { Department } from "../../department/entities/department.entity";
 import { User } from "../../user/entities/user.entity";
 import { B2b } from "../../b2b/entities/b2b.entity";
+import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -108,4 +109,18 @@ export class Employee extends Model<Employee> {
     as: 'receiver_operator'
   })
   declare b2bRecipient: B2b[];
+
+    @HasMany(() => TurkishAirline, {
+    foreignKey: 'assignment_opr_guid',
+    sourceKey: 'guid',
+    as: 'ta_assignment_operator'
+  })
+  declare airlineOperator: TurkishAirline[];
+
+  @HasMany(() => TurkishAirline, {
+    foreignKey: 'receiver_opr_guid',
+    sourceKey: 'guid',
+    as: 'ta_receiver_operator'
+  })
+  declare airlineRecipient: TurkishAirline[];
 }
