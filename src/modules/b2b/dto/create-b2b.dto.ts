@@ -38,6 +38,11 @@ export class CreateB2bDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
+  declare pnr: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
   declare airline: string;
 
   @ApiProperty()

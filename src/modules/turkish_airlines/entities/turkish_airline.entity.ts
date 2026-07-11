@@ -53,6 +53,12 @@ export class TurkishAirline extends Model<TurkishAirline> {
     declare client_guid: string;
 
     @Column({
+        type: DataType.STRING,
+        allowNull: true,
+    })
+    declare milesSmiles: string;
+
+    @Column({
         type: DataType.UUID,
         allowNull: false
     })
@@ -60,7 +66,6 @@ export class TurkishAirline extends Model<TurkishAirline> {
 
     @Column({
         type: DataType.STRING,
-        unique: true,
         allowNull: false
     })
     declare pnr: string;

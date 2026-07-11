@@ -1,26 +1,123 @@
 import { Injectable } from '@nestjs/common';
 import { CreateTurkishAirlineDto } from './dto/create-turkish_airline.dto';
 import { UpdateTurkishAirlineDto } from './dto/update-turkish_airline.dto';
+import { InjectModel } from '@nestjs/sequelize';
+import { TurkishAirline } from './entities/turkish_airline.entity';
+import { errorResponse, successResponse } from '../../helpers/responseFunctions';
+import { HttpStatuses } from '../../helpers/httpStatuses.enum';
+import { Employee } from '../employee/entities/employee.entity';
+import { Office } from '../office/entities/office.entity';
+import { Client } from '../client/entities/client.entity';
+import { Tstatus } from '../tstatus/entities/tstatus.entity';
 
 @Injectable()
 export class TurkishAirlinesService {
-  create(createTurkishAirlineDto: CreateTurkishAirlineDto) {
-    return 'This action adds a new turkishAirline';
+  constructor(
+    @InjectModel(TurkishAirline) private turkishAirlineRepo: typeof TurkishAirline
+  ) { }
+
+  private getTurkishAirlineIncludes() {
+    return [
+      {
+        model: Employee, as: 'ta_assignment_operator', attributes: ['guid', 'fullName'],
+        include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
+      },
+      {
+        model: Employee, as: 'ta_receiver_operator', attributes: ['guid', 'fullName'],
+        include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
+      },
+      { model: Client },
+      { model: Tstatus, attributes: ['guid', 'name'] },
+      { model: Office, attributes: ['guid', 'fullName', 'shortName'] }
+    ];
   }
 
-  findAll() {
-    return `This action returns all turkishAirlines`;
+  async addTurkishAirline(createTurkishAirlineDto: CreateTurkishAirlineDto) {
+    try {
+      const turkishAirline = await this.turkishAirlineRepo.create({
+        ...createTurkishAirlineDto,
+      } as any);
+      const newTurkishAirline = await this.turkishAirlineRepo.findOne({
+        where: { guid: turkishAirline.guid },
+        include: this.getTurkishAirlineIncludes()
+      });
+      if (!newTurkishAirline) {
+        return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found')
+      }
+      return {
+        status: 201,
+        data: newTurkishAirline,
+        message: 'TurkishAirline created successfully'
+      }
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TurkishAirline creation failes', error)
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} turkishAirline`;
+
+  async getAllTurkishAirline(page: number = 1, limit: number = 10) {
+    try {
+      const currentPage = Math.max(1, Number(page));
+      const currentLimit = Math.max(1, Number(limit));
+      const offset = (currentPage - 1) * currentLimit;
+
+      const { rows, count } = await this.turkishAirlineRepo.findAndCountAll({
+        include: this.getTurkishAirlineIncludes(),
+        order: [['index_number', 'DESC']],
+        limit: Number(limit),
+        offset: Number(offset),
+      });
+
+      return {
+        status: 200,
+        data: rows,
+        meta: {
+          totalItems: count,
+          totalPages: Math.ceil(count / limit),
+          currentPage: currentPage
+        },
+        message: 'TurkishAirline fetched successfully'
+      };
+    } catch (error: any) {
+      console.log(error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TurkishAirline fetching error', error);
+    }
   }
 
-  update(id: number, updateTurkishAirlineDto: UpdateTurkishAirlineDto) {
-    return `This action updates a #${id} turkishAirline`;
+
+  async updateTurkishAirline(updateDto: UpdateTurkishAirlineDto) {
+    try {
+      const [affectedCount] = await this.turkishAirlineRepo.update(updateDto, {
+        where: { guid: updateDto.guid }
+      });
+      if (affectedCount === 0) return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
+
+      const newTurkishAirline = await this.turkishAirlineRepo.findOne({
+        where: { guid: updateDto.guid },
+        include: this.getTurkishAirlineIncludes()
+      });
+      return {
+        status: 200,
+        data: newTurkishAirline,
+        message: 'TurkishAirline updated successfully'
+      };
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error)
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} turkishAirline`;
+
+  async deleteTurkishAirline(guid: string) {
+    try {
+      const turkishAirline = await this.turkishAirlineRepo.findByPk(guid);
+      if (!turkishAirline) {
+        return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
+      }
+      await turkishAirline.destroy();
+
+      return successResponse(HttpStatuses.OK, null, 'TurkishAirline deleted successfully');
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error)
+    }
   }
 }

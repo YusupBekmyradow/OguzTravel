@@ -6,6 +6,7 @@ import { B2bService } from './b2b.service';
 import { ClientModule } from '../client/client.module';
 import { EmployeeModule } from '../employee/employee.module';
 import { TstatusModule } from '../tstatus/tstatus.module';
+import { TicketPaymentModule } from '../ticket_payment/ticket_payment.module';
 
 
 @Module({
@@ -13,7 +14,8 @@ import { TstatusModule } from '../tstatus/tstatus.module';
     SequelizeModule.forFeature([B2b]),
     EmployeeModule,
     ClientModule,
-    TstatusModule
+    TstatusModule,
+    TicketPaymentModule
   ],
   controllers: [B2bController],
   providers: [B2bService],

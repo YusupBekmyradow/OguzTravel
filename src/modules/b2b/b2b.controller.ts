@@ -33,7 +33,7 @@ export class B2bController {
     schema: {
       type: 'object',
       properties: {
-        guid: { type: 'string', example: 'uuid-buraya-gelir' }
+        guid: { type: 'string' }
       }
     }
   })

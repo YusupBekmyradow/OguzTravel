@@ -1,7 +1,8 @@
-import { BeforeSave, BeforeUpdate, BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
+import { BeforeSave, BeforeUpdate, BelongsTo, Column, DataType, HasMany, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Client } from "../../client/entities/client.entity";
 import { Tstatus } from "../../tstatus/entities/tstatus.entity";
+import { TicketPayment } from "../../ticket_payment/entities/ticket_payment.entity";
 
 @Table({
   tableName: 'tbl_b2b',
@@ -154,11 +155,23 @@ export class B2b extends Model<B2b> {
   })
   declare client: Client;
 
+  @Column({
+    type: DataType.STRING,
+    allowNull: false
+  })
+  declare pnr: string;
+
   @BelongsTo(() => Tstatus, {
     targetKey: 'guid',
     foreignKey: 'status_guid'
   })
   declare tstatus: Tstatus;
+
+  @HasMany(() => TicketPayment, {
+    foreignKey: 'b2b_guid',
+    sourceKey: 'guid',
+  })
+  declare ticketPayment: TicketPayment[];
 
   @BeforeSave
   @BeforeUpdate

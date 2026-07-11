@@ -1,34 +1,42 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { TurkishAirlinesService } from './turkish_airlines.service';
 import { CreateTurkishAirlineDto } from './dto/create-turkish_airline.dto';
 import { UpdateTurkishAirlineDto } from './dto/update-turkish_airline.dto';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('TurkishAirliens')
 @Controller('turkish-airlines')
 export class TurkishAirlinesController {
-  constructor(private readonly turkishAirlinesService: TurkishAirlinesService) {}
+  constructor(private readonly turkishAirlinesService: TurkishAirlinesService) { }
 
-  @Post()
-  create(@Body() createTurkishAirlineDto: CreateTurkishAirlineDto) {
-    return this.turkishAirlinesService.create(createTurkishAirlineDto);
+  @Post('/add-turkish-airlines')
+  async create(@Body() createTurkishAirlineDto: CreateTurkishAirlineDto) {
+    return this.turkishAirlinesService.addTurkishAirline(createTurkishAirlineDto);
   }
 
-  @Get()
-  findAll() {
-    return this.turkishAirlinesService.findAll();
+  @Get('/get-all-turkish-airlines')
+  async findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.turkishAirlinesService.getAllTurkishAirline(Number(page), Number(limit));
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.turkishAirlinesService.findOne(+id);
+  @Patch('/update-turkish-airlines')
+  update(@Body() updateTurkishAirlineDto: UpdateTurkishAirlineDto) {
+    return this.turkishAirlinesService.updateTurkishAirline(updateTurkishAirlineDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTurkishAirlineDto: UpdateTurkishAirlineDto) {
-    return this.turkishAirlinesService.update(+id, updateTurkishAirlineDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.turkishAirlinesService.remove(+id);
+  @Delete('/delete-turkish-airlines')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
+  remove(@Body('guid') guid: string) {
+    return this.turkishAirlinesService.deleteTurkishAirline(guid);
   }
 }
