@@ -68,7 +68,7 @@ export class Client extends Model<Client> {
 
   @HasMany(() => TurkishAirline, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
   })
   declare turkishAirline: TurkishAirline[];
 }

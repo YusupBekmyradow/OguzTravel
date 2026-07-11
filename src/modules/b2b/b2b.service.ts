@@ -80,7 +80,7 @@ export class B2bService {
       };
     } catch (error: any) {
       console.log(error)
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'B2n fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'B2b fetching error', error);
     }
   }
 

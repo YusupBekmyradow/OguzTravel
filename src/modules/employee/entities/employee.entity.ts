@@ -92,7 +92,7 @@ export class Employee extends Model<Employee> {
 
   @HasMany(() => User, {
     foreignKey: 'employee_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
   })
   declare user: User[];
 

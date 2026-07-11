@@ -138,7 +138,7 @@ export class B2b extends Model<B2b> {
   @BelongsTo(() => Employee, {
     targetKey: 'guid',
     foreignKey: 'assignment_opr_guid',
-    as: 'assignment_operator'
+    as: 'assignment_operator',
   })
   declare assignment_operator: Employee;
 
