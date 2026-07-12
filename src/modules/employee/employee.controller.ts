@@ -15,7 +15,7 @@ export class EmployeeController {
   }
 
   @Get('/get-all-employees')
-  async findAll(
+  async getAllEmployee(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Query('search') search?: string,
@@ -25,6 +25,15 @@ export class EmployeeController {
   ) {
     const filters = { department_guid, office_guid, position_guid };
     return this.employeeService.getAllEmployee(Number(page), Number(limit), search, filters);
+  }
+
+  @Get('/get-employees-for-position')
+  async getEmployeeForPosition(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('position_guid') position_guid: string
+  ) {
+    return this.employeeService.getEmployeeForPosition(Number(page), Number(limit), position_guid);
   }
 
   @Patch('/update-employee')

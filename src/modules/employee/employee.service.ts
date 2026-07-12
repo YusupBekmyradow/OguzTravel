@@ -52,7 +52,7 @@ export class EmployeeService {
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
-      const currentLimit = Math.max(1, Number(limit)); 
+      const currentLimit = Math.max(1, Number(limit));
 
       const offset = (currentPage - 1) * currentLimit;
 
@@ -95,6 +95,39 @@ export class EmployeeService {
     }
   }
 
+  async getEmployeeForPosition(
+    page: number = 1,
+    limit: number = 10,
+    position_guid: string
+  ) {
+    try {
+      const currentPage = Math.max(1, Number(page));
+      const currentLimit = Math.max(1, Number(limit));
+
+      const offset = (currentPage - 1) * currentLimit;
+
+      const { count, rows } = await this.employeeRepository.findAndCountAll({
+        attributes:['guid','fullName'],
+        order: [['index_number', 'ASC']],
+        limit: Number(limit),
+        offset: Number(offset),
+        include: [
+          { model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
+      });
+      return {
+        status: 200,
+        data: rows,
+        meta: {
+          totalItems: count,
+          totalPages: Math.ceil(count / limit),
+          currentPage: currentPage
+        },
+        message: 'Employees fetched successfully'
+      };
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Employees fetching error', error);
+    }
+  }
 
 
   async updateEmployee(updateEmployeeDto: UpdateEmployeeDto) {

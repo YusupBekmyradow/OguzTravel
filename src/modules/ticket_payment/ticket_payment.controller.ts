@@ -18,8 +18,9 @@ export class TicketPaymentController {
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('b2b_guid') b2b_guid: string
   ) {
-    return this.ticketPaymentService.getAllTicketPayment(Number(page), Number(limit));
+    return this.ticketPaymentService.getAllTicketPayment(Number(page), Number(limit), b2b_guid);
   }
 
   @Patch('/update-ticket-payment')
