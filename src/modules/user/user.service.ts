@@ -26,14 +26,18 @@ export class UserService {
         password: hashedPassword,
       } as any);
 
-      return successResponse(HttpStatuses.CREATED, user, 'User created successfully');
+      const plainUser = user.get({ plain: true });
+
+      const { password, refresh_token, ...userResponse } = plainUser;
+
+      return successResponse(HttpStatuses.CREATED, userResponse, 'User created successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'User creation failed', error);
     }
   }
 
 
-  
+
   async getAllUser(page: number = 1, limit: number = 10,
     search?: string,
     filters?: { isActive?: boolean; isExternalUser?: boolean }
@@ -69,12 +73,16 @@ export class UserService {
           }
         ]
       });
-
       const totalPages = Math.ceil(count / limit);
 
+      const cleanedRows = rows.map(user => {
+        const plainUser = user.get({ plain: true });
+        const { password, refresh_token, ...userWithoutSensitiveData } = plainUser;
+        return userWithoutSensitiveData;
+      });
       return {
         status: 200,
-        data: rows,
+        data: cleanedRows,
         meta: {
           totalItems: count,
           totalPages,
@@ -82,7 +90,6 @@ export class UserService {
         },
         message: 'Users fetched successfully'
       };
-
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Users fetching error', error);
     }
@@ -100,7 +107,9 @@ export class UserService {
       }
       await user.update(updateUserDto);
       await user.reload();
-      return successResponse(HttpStatuses.OK, user, 'User updated successfully');
+      const plainUser = user.get({ plain: true });
+      const { password, refresh_token, ...userResponse } = plainUser;
+      return successResponse(HttpStatuses.OK, userResponse, 'User updated successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
     }

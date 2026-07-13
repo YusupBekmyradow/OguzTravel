@@ -65,19 +65,16 @@ export class AuthService {
 
       await existUser.update({ refresh_token });
 
-      const responseData = {
+      return successResponse(HttpStatuses.OK, {
+        guid: existUser.guid,
+        phone_number: existUser.phone_number,
+        role: existUser.role,
+        permissions: existUser.permissions,
+        employee_name: existUser.employee ? existUser.employee.fullName : null,
+        position_guid: existUser.employee ? existUser.employee.position_guid : null,
         access_token,
         refresh_token,
-        user: {
-          guid: existUser.guid,
-          phone_number: existUser.phone_number,
-          role: existUser.role,
-          permissions: existUser.permissions,
-          employee_name: existUser.employee ? existUser.employee.fullName : null,
-          position_guid: existUser.employee ? existUser.employee.position_guid : null
-        }
-      };
-      return successResponse(HttpStatuses.OK, { responseData }, 'sign in success');
+      }, 'sign in success');
 
     } catch (error: any) {
       console.log(error);
