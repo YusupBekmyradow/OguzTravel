@@ -48,16 +48,14 @@ export class TicketPaymentService {
       });
 
       const stats = await this.getPaymentStats(b2b_guid);
-      const dataWithStats = rows.map(row => ({
-        ...row.toJSON(),
-        ...stats
-      }));
+
       return {
         status: 200,
-        data: dataWithStats,
+        data: rows,
+        stats: stats,
         meta: {
           totalItems: count,
-          totalPages: Math.ceil(count / limit),
+          totalPages: Math.ceil(count / currentLimit),
           currentPage: currentPage
         },
         message: 'TicketPayment fetched successfully'
@@ -93,19 +91,26 @@ export class TicketPaymentService {
 
   async deleteTicketPayment(guid: string) {
     try {
-      const deletedCount = await this.ticketPaymentRepo.destroy({
+      const payment = await this.ticketPaymentRepo.findOne({
+        where: { guid }
+      });
+      if (!payment) {
+        return errorResponse(HttpStatuses.NOT_FOUND, 'TicketPayment not found');
+      }
+      const b2b_guid = payment.b2b_guid;
+      await this.ticketPaymentRepo.destroy({
         where: { guid }
       });
 
-      if (deletedCount === 0) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'TicketPayment not found');
-      }
-      return successResponse(HttpStatuses.OK, null, 'TicketPayment deleted successfully');
+      const stats = await this.getPaymentStats(b2b_guid);
+      return successResponse(HttpStatuses.OK, stats, 'TicketPayment deleted successfully');
+
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete error', error);
     }
   }
 
+  
   private async getPaymentStats(b2b_guid: string) {
     const stats = await this.sequelize.query(`
       SELECT 

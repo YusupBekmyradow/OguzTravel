@@ -3,7 +3,7 @@ import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.
 import { B2b } from "../../b2b/entities/b2b.entity";
 
 @Table({
-  tableName: 'tbl_ticket_payment',
+  tableName: 'tbl_ticket_payments',
   timestamps: true
 })
 
