@@ -15,6 +15,6 @@ export class signInAuthDto {
   @IsString()
   @MinLength(6)
   @MaxLength(20)
-  password: string;
+  declare password: string;
 
 }

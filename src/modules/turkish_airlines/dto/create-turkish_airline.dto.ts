@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsUUID, IsDateString, IsNotEmpty, IsOptional, IsObject, IsString, IsNumber } from "class-validator";
+import { IsUUID, IsDateString, IsNotEmpty, IsOptional, IsObject, IsString, IsNumber, IsBoolean } from "class-validator";
 
 export class CreateTurkishAirlineDto {
   @ApiProperty()
@@ -75,20 +75,15 @@ export class CreateTurkishAirlineDto {
   @IsNotEmpty()
   declare base_fare: number;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsNumber()
-  @IsNotEmpty()
-  declare quoted_price: number;
+  @IsOptional()
+  declare accepted_price?: number;
 
-  @ApiProperty()
-  @IsNumber()
-  @IsNotEmpty()
-  declare accepted_price: number;
-
-  @ApiProperty()
-  @IsNumber()
-  @IsNotEmpty()
-  declare returned_price: number;
+  @ApiPropertyOptional({ default: 'USD' })
+  @IsString()
+  @IsOptional()
+  declare currency?: string;
 
   @ApiProperty()
   @IsUUID()
@@ -99,4 +94,9 @@ export class CreateTurkishAirlineDto {
   @IsString()
   @IsOptional()
   declare note?: string;
+
+  @ApiProperty()
+  @IsBoolean()
+  @IsNotEmpty()
+  declare is_paid: boolean;
 }

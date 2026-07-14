@@ -26,6 +26,14 @@ export class Tstatus extends Model<Tstatus> {
     en: string;
   };
 
+  @Column({
+    type: DataType.INTEGER,
+    autoIncrement: true,
+    allowNull: false,
+    unique: true
+  })
+  declare index_number: number;
+
   @HasMany(() => B2b, {
     foreignKey: 'status_guid',
     sourceKey: 'guid',

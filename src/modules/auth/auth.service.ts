@@ -55,7 +55,7 @@ export class AuthService {
 
       if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, 'user not found');
 
-      const comparePassword = await bcrypt.compare(signInAuthDto.password, existUser.password);
+      const comparePassword = await bcrypt.compare(signInAuthDto.password, existUser.password ?? '');
       if (!comparePassword) return errorResponse(HttpStatuses.FORBIDDEN, 'password invalid');
 
       const payload = { phone: existUser.phone_number, guid: existUser.guid, role: existUser.role };

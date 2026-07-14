@@ -1,4 +1,4 @@
-import { BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
+import { BeforeSave, BeforeUpdate, BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Client } from "../../client/entities/client.entity";
 import { Tstatus } from "../../tstatus/entities/tstatus.entity";
@@ -131,6 +131,13 @@ export class TurkishAirline extends Model<TurkishAirline> {
     declare returned_price: number;
 
     @Column({
+        type: DataType.STRING,
+        allowNull: false,
+        defaultValue: 'USD'
+    })
+    declare currency: string;
+
+    @Column({
         type: DataType.UUID,
         allowNull: false
     })
@@ -149,6 +156,12 @@ export class TurkishAirline extends Model<TurkishAirline> {
         unique: true
     })
     declare index_number: number;
+
+    @Column({
+        type: DataType.BOOLEAN,
+        allowNull: false,
+    })
+    declare is_paid: boolean;
 
     @BelongsTo(() => Employee, {
         targetKey: 'guid',
@@ -181,5 +194,15 @@ export class TurkishAirline extends Model<TurkishAirline> {
         foreignKey: 'office_guid'
     })
     declare office: Office;
+
+    @BeforeSave
+    @BeforeUpdate
+    static calculateAndRoundPrices(instance: TurkishAirline) {
+        const total = Math.round(Number(instance.total_price) || 0);
+        instance.quoted_price = total;
+        const accepted = instance.is_paid ? Number(instance.accepted_price) || 0 : 0;
+        instance.accepted_price = accepted;
+        instance.returned_price = instance.is_paid ? (instance.quoted_price - instance.accepted_price) : 0;
+    }
 }
 

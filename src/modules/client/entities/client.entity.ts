@@ -1,6 +1,7 @@
 import { Table, Model, Column, DataType, HasMany } from "sequelize-typescript"
 import { B2b } from "../../b2b/entities/b2b.entity";
 import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.entity";
+import { Visa } from "../../visa/entities/visa.entity";
 
 
 @Table({
@@ -60,6 +61,14 @@ export class Client extends Model<Client> {
   })
   declare gender: string;
 
+  @Column({
+    type: DataType.INTEGER,
+    autoIncrement: true,
+    allowNull: false,
+    unique: true
+  })
+  declare index_number: number;
+
   @HasMany(() => B2b, {
     foreignKey: 'client_guid',
     sourceKey: 'guid'
@@ -71,4 +80,10 @@ export class Client extends Model<Client> {
     sourceKey: 'guid',
   })
   declare turkishAirline: TurkishAirline[];
+
+  @HasMany(() => Visa, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare visa: Visa[];
 }

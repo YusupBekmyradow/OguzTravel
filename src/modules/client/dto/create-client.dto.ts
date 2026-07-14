@@ -1,6 +1,6 @@
 import { ApiProperty, } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsIn,IsDate, IsNotEmpty, IsString } from "class-validator";
+import { IsIn, IsDate, IsNotEmpty, IsString, MinLength, MaxLength } from "class-validator";
 
 
 export class CreateClientDto {
@@ -13,6 +13,8 @@ export class CreateClientDto {
     @ApiProperty()
     @IsString()
     @IsNotEmpty()
+    @MinLength(12)
+    @MaxLength(12)
     declare phone_number: string;
 
     @ApiProperty()

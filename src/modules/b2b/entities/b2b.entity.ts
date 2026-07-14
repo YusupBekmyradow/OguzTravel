@@ -104,6 +104,13 @@ export class B2b extends Model<B2b> {
   declare sale_price: number;
 
   @Column({
+    type: DataType.STRING,
+    allowNull: false,
+    defaultValue: 'USD'
+  })
+  declare currency: string;
+
+  @Column({
     type: DataType.DECIMAL(12, 2),
     allowNull: false
   })

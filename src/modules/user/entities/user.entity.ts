@@ -18,7 +18,7 @@ export class User extends Model<User> {
     type: DataType.UUID,
     allowNull: true
   })
-  declare employee_guid: string;
+  declare employee_guid?: string;
 
   @Column({
     type: DataType.BOOLEAN,
@@ -34,9 +34,9 @@ export class User extends Model<User> {
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare password: string;
+  declare password?: string;
 
   @Column({
     type: DataType.JSONB,
@@ -47,9 +47,9 @@ export class User extends Model<User> {
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare phone_number: string;
+  declare phone_number?: string;
 
   @Column({
     type: DataType.STRING,
@@ -63,6 +63,14 @@ export class User extends Model<User> {
     allowNull: true
   })
   declare refresh_token?: string;
+
+  @Column({
+    type: DataType.INTEGER,
+    autoIncrement: true,
+    allowNull: false,
+    unique: true
+  })
+  declare index_number: number;
 
   @BelongsTo(() => Employee, {
     foreignKey: 'employee_guid',

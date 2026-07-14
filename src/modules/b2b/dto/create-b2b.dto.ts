@@ -75,6 +75,11 @@ export class CreateB2bDto {
   @IsNotEmpty()
   declare sale_price: number;
 
+  @ApiPropertyOptional({ default: 'USD' })
+  @IsString()
+  @IsOptional()
+  declare currency?: string;
+
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()

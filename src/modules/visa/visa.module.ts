@@ -1,0 +1,16 @@
+import { Module } from '@nestjs/common';
+import { VisaService } from './visa.service';
+import { VisaController } from './visa.controller';
+import { SequelizeModule } from '@nestjs/sequelize';
+import { Visa } from './entities/visa.entity';
+import { ClientModule } from '../client/client.module';
+
+@Module({
+  imports: [
+    SequelizeModule.forFeature([Visa]),
+    ClientModule
+  ],
+  controllers: [VisaController],
+  providers: [VisaService],
+})
+export class VisaModule { }

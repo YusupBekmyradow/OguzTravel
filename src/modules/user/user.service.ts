@@ -14,16 +14,31 @@ import { Employee } from '../employee/entities/employee.entity';
 export class UserService {
 
   constructor(
-    @InjectModel(User) private userRepository: typeof User
+    @InjectModel(User) private userRepository: typeof User,
+    @InjectModel(Employee) private employeeRepository: typeof Employee
   ) { }
 
   async addUser(createUserDto: CreateUserDto) {
     try {
+      let employeePhoneNumber: string | null = null;
+
+      if (createUserDto.employee_guid) {
+        const employee = await this.employeeRepository.findOne({
+          where: { guid: createUserDto.employee_guid }
+        });
+
+        if (!employee) {
+          return errorResponse(HttpStatuses.NOT_FOUND, 'Employee not found');
+        }
+        employeePhoneNumber = employee.phone_number;
+      }
+
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
       const user = await this.userRepository.create({
         ...createUserDto,
         password: hashedPassword,
+        phone_number: employeePhoneNumber
       } as any);
 
       const plainUser = user.get({ plain: true });

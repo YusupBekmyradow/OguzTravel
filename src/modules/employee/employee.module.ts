@@ -16,6 +16,6 @@ import { SequelizeModule } from '@nestjs/sequelize';
   ],
   controllers: [EmployeeController],
   providers: [EmployeeService],
-  exports: [EmployeeModule]
+  exports: [EmployeeService, EmployeeModule]
 })
 export class EmployeeModule { }

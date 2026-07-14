@@ -18,9 +18,9 @@ export class CreateTicketPaymentDto {
   declare payment_date: Date;
 
   @ApiProperty()
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
-  declare method: string;
+  declare opr_guid: string;
 
   @ApiPropertyOptional()
   @IsString()
