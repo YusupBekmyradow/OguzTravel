@@ -34,9 +34,9 @@ export class User extends Model<User> {
 
   @Column({
     type: DataType.STRING,
-    allowNull: true
+    allowNull: false
   })
-  declare password?: string;
+  declare password: string;
 
   @Column({
     type: DataType.JSONB,
