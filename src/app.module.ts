@@ -17,6 +17,7 @@ import { TstatusModule } from './modules/tstatus/tstatus.module';
 import { TurkishAirlinesModule } from './modules/turkish_airlines/turkish_airlines.module';
 import { TicketPaymentModule } from './modules/ticket_payment/ticket_payment.module';
 import { VisaModule } from './modules/visa/visa.module';
+import { ReferenceListModule } from './modules/reference_list/reference_list.module';
 dotenv.config();
 
 @Module({
@@ -38,7 +39,8 @@ dotenv.config();
     B2bModule,
     TurkishAirlinesModule,
     TicketPaymentModule,
-    VisaModule
+    VisaModule,
+    ReferenceListModule
   ],
   controllers: [AppController],
   providers: [

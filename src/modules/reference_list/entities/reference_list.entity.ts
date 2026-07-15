@@ -1,11 +1,14 @@
-import { Column, DataType, Table } from "sequelize-typescript";
+import { BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
+import { Employee } from "../../employee/entities/employee.entity";
+import { Office } from "../../office/entities/office.entity";
+import { Client } from "../../client/entities/client.entity";
 
 @Table({
     tableName: 'tbl_reference_list',
     timestamps: true
 })
 
-export class ReferenceList {
+export class ReferenceList extends Model<ReferenceList> {
     @Column({
         primaryKey: true,
         allowNull: false,
@@ -23,17 +26,16 @@ export class ReferenceList {
     declare index_number: number;
 
     @Column({
+        type: DataType.INTEGER,
+        allowNull: false,
+    })
+    declare application_number: number;
+
+    @Column({
         type: DataType.UUID,
         allowNull: false
     })
     declare office_guid: string;
-
-    @Column({
-        type: DataType.INTEGER,
-        allowNull: false,
-        unique: true
-    })
-    declare application_number: number;
 
     @Column({
         type: DataType.UUID,
@@ -43,7 +45,7 @@ export class ReferenceList {
 
     @Column({
         type: DataType.STRING,
-        allowNull: true
+        allowNull: false
     })
     declare destination_country: string;
 
@@ -56,7 +58,6 @@ export class ReferenceList {
     @Column({
         type: DataType.INTEGER,
         allowNull: false,
-        unique: true
     })
     declare trvl_document_num: number;
 
@@ -102,9 +103,8 @@ export class ReferenceList {
     };
 
     @Column({
-        type: DataType.NUMBER,
+        type: DataType.INTEGER,
         allowNull: false,
-        unique: true
     })
     declare contract_number: number;
 
@@ -120,4 +120,22 @@ export class ReferenceList {
     })
     declare note?: string;
 
+    @BelongsTo(() => Employee, {
+        targetKey: 'guid',
+        foreignKey: 'operator_guid',
+        as: 'referenceoperator'
+    })
+    declare employee: Employee;
+
+    @BelongsTo(() => Office, {
+        targetKey: 'guid',
+        foreignKey: 'office_guid'
+    })
+    declare office: Office;
+
+    @BelongsTo(() => Client, {
+        targetKey: 'guid',
+        foreignKey: 'client_guid'
+    })
+    declare client: Client;
 }

@@ -1,4 +1,4 @@
-import { Model, BelongsTo, Column, DataType, Table, AllowNull, HasOne, HasMany } from "sequelize-typescript";
+import { Model, BelongsTo, Column, DataType, Table, HasMany } from "sequelize-typescript";
 import { Office } from "../../office/entities/office.entity";
 import { Position } from "../../position/entities/position.entity";
 import { Department } from "../../department/entities/department.entity";
@@ -6,6 +6,7 @@ import { User } from "../../user/entities/user.entity";
 import { B2b } from "../../b2b/entities/b2b.entity";
 import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.entity";
 import { TicketPayment } from "../../ticket_payment/entities/ticket_payment.entity";
+import { ReferenceList } from "../../reference_list/entities/reference_list.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -131,4 +132,11 @@ export class Employee extends Model<Employee> {
     as: 'operator'
   })
   declare paymentOpr: TicketPayment[];
+
+  @HasMany(() => ReferenceList, {
+    foreignKey: 'operator_guid',
+    sourceKey: 'guid',
+    as: 'referenceoperator'
+  })
+  declare referenceList: ReferenceList[];
 }
