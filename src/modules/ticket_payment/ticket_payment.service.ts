@@ -7,6 +7,7 @@ import { errorResponse, successResponse } from '../../helpers/responseFunctions'
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Sequelize } from 'sequelize-typescript';
 import { QueryTypes } from 'sequelize';
+import { Employee } from '../employee/entities/employee.entity';
 
 @Injectable()
 export class TicketPaymentService {
@@ -21,10 +22,17 @@ export class TicketPaymentService {
       const ticketPayment = await this.ticketPaymentRepo.create({
         ...createTicketPaymentDto,
       } as any)
+      const createdPayment = await this.ticketPaymentRepo.findByPk(ticketPayment.guid, {
+        include: [{ model: Employee, as: 'ticketPayments', attributes: ['guid', 'fullName'] }]
+      });
+      if (!createdPayment) {
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Ticket payment not found');
+      }
+
       const statsResult = await this.getPaymentStats(createTicketPaymentDto.b2b_guid);
 
       const combinedData = {
-        ...ticketPayment.toJSON(),
+        ...createdPayment.toJSON(),
         ...statsResult
       };
       return successResponse(HttpStatuses.CREATED, combinedData, 'TicketPayment created successfully')
@@ -42,6 +50,7 @@ export class TicketPaymentService {
 
       const { rows, count } = await this.ticketPaymentRepo.findAndCountAll({
         where: { b2b_guid },
+        include: [{ model: Employee, as: 'ticketPayments', attributes: ['guid', 'fullName'] }],
         order: [['createdAt', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
@@ -73,8 +82,10 @@ export class TicketPaymentService {
 
       await this.ticketPaymentRepo.update(updateTicketPaymentDto as any, { where: { guid: updateTicketPaymentDto.guid } });
 
-      const updatedTicketPayment = await this.ticketPaymentRepo.findOne({ where: { guid: updateTicketPaymentDto.guid } });
-
+      const updatedTicketPayment = await this.ticketPaymentRepo.findOne({
+        where: { guid: updateTicketPaymentDto.guid },
+        include: [{ model: Employee, as: 'ticketPayments', attributes: ['guid', 'fullName'] }]
+      });
       if (updatedTicketPayment) {
         const stats = await this.getPaymentStats(updatedTicketPayment.b2b_guid);
         const combinedData = {
@@ -110,7 +121,7 @@ export class TicketPaymentService {
     }
   }
 
-  
+
   private async getPaymentStats(b2b_guid: string) {
     const stats = await this.sequelize.query(`
       SELECT 

@@ -7,6 +7,7 @@ import { B2b } from "../../b2b/entities/b2b.entity";
 import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.entity";
 import { TicketPayment } from "../../ticket_payment/entities/ticket_payment.entity";
 import { ReferenceList } from "../../reference_list/entities/reference_list.entity";
+import { TurkishPayment } from "../../turkish_payment/entities/turkish_payment.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -129,9 +130,16 @@ export class Employee extends Model<Employee> {
   @HasMany(() => TicketPayment, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'operator'
+    as: 'ticketPayments'
   })
   declare paymentOpr: TicketPayment[];
+
+  @HasMany(() => TurkishPayment, {
+    foreignKey: 'opr_guid',
+    sourceKey: 'guid',
+    as: 'turkishPayments'
+  })
+  declare turkpaymentOpr: TurkishPayment[];
 
   @HasMany(() => ReferenceList, {
     foreignKey: 'operator_guid',

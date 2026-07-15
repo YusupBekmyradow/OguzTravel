@@ -1,8 +1,9 @@
-import { BeforeSave, BeforeUpdate, BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
+import { BeforeSave, BeforeUpdate, BelongsTo, Column, DataType, HasMany, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Client } from "../../client/entities/client.entity";
 import { Tstatus } from "../../tstatus/entities/tstatus.entity";
 import { Office } from "../../office/entities/office.entity";
+import { TurkishPayment } from "../../turkish_payment/entities/turkish_payment.entity";
 
 @Table({
     tableName: 'tbl_turkishAirlines',
@@ -194,6 +195,12 @@ export class TurkishAirline extends Model<TurkishAirline> {
         foreignKey: 'office_guid'
     })
     declare office: Office;
+
+    @HasMany(() => TurkishPayment, {
+        foreignKey: 'turkish_airline_guid',
+        sourceKey: 'guid',
+    })
+    declare turkishPayment: TurkishPayment[];
 
     @BeforeSave
     @BeforeUpdate
