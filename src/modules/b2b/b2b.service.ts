@@ -9,6 +9,7 @@ import { Employee } from '../employee/entities/employee.entity';
 import { Client } from '../client/entities/client.entity';
 import { Tstatus } from '../tstatus/entities/tstatus.entity';
 import { Office } from '../office/entities/office.entity';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class B2bService {
@@ -63,6 +64,31 @@ export class B2bService {
 
       const { rows, count } = await this.b2bRepository.findAndCountAll({
         include: this.getB2bIncludes(),
+
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(`(
+              SELECT COALESCE(SUM(amount), 0)
+              FROM tbl_ticket_payment AS tp
+              WHERE tp.b2b_guid = "tbl_b2b"."guid"
+            )`),
+              'totalPaid'
+            ],
+            [
+              Sequelize.literal(`(
+              SELECT CASE 
+                WHEN sale_price > 0 THEN (SUM(amount) / sale_price) * 100 
+                ELSE 100 
+              END
+              FROM tbl_ticket_payment AS tp
+              WHERE tp.b2b_guid = "tbl_b2b"."guid"
+            )`),
+              'paidPercentage'
+            ]
+          ]
+        },
+
         order: [['index_number', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),

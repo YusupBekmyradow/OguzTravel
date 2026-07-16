@@ -12,5 +12,6 @@ import { ClientModule } from '../client/client.module';
   ],
   controllers: [VisaController],
   providers: [VisaService],
+  exports: [VisaService]
 })
 export class VisaModule { }

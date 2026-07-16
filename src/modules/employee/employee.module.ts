@@ -10,12 +10,12 @@ import { SequelizeModule } from '@nestjs/sequelize';
 @Module({
   imports: [
     SequelizeModule.forFeature([Employee]),
-    forwardRef(() => OfficeModule),
-    forwardRef(() => PositionModule),
-    forwardRef(() => DepartmentModule),
+    OfficeModule,
+    PositionModule,
+    DepartmentModule
   ],
   controllers: [EmployeeController],
   providers: [EmployeeService],
-  exports: [EmployeeService, EmployeeModule]
+  exports: [EmployeeService]
 })
 export class EmployeeModule { }

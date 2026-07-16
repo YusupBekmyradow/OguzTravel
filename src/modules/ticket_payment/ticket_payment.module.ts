@@ -10,6 +10,6 @@ import { TicketPayment } from './entities/ticket_payment.entity';
   ],
   controllers: [TicketPaymentController],
   providers: [TicketPaymentService],
-  exports: [SequelizeModule]
+  exports: [TicketPaymentService]
 })
 export class TicketPaymentModule { }
