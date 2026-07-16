@@ -138,6 +138,7 @@ export class B2b extends Model<B2b> {
 
   @Column({
     type: DataType.BOOLEAN,
+    defaultValue: false,
     allowNull: false,
   })
   declare is_paid: boolean;

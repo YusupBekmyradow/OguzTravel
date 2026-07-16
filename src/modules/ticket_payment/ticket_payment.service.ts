@@ -8,11 +8,13 @@ import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Sequelize } from 'sequelize-typescript';
 import { QueryTypes } from 'sequelize';
 import { Employee } from '../employee/entities/employee.entity';
+import { B2b } from '../b2b/entities/b2b.entity';
 
 @Injectable()
 export class TicketPaymentService {
   constructor(
     @InjectModel(TicketPayment) private ticketPaymentRepo: typeof TicketPayment,
+    @InjectModel(B2b) private b2bRepository: typeof B2b,
     private sequelize: Sequelize,
   ) { }
 
@@ -23,14 +25,19 @@ export class TicketPaymentService {
         ...createTicketPaymentDto,
       } as any)
       const createdPayment = await this.ticketPaymentRepo.findByPk(ticketPayment.guid, {
-        include: [{ model: Employee, as: 'ticketPayments', attributes: ['guid', 'fullName'] }]
+        include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
       if (!createdPayment) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'Ticket payment not found');
       }
-
       const statsResult = await this.getPaymentStats(createTicketPaymentDto.b2b_guid);
-
+      const stats = statsResult as any;
+      if (stats.remaining <= 0) {
+        await this.b2bRepository.update(
+          { is_paid: true },
+          { where: { guid: createTicketPaymentDto.b2b_guid } }
+        );
+      }
       const combinedData = {
         ...createdPayment.toJSON(),
         ...statsResult
@@ -50,7 +57,7 @@ export class TicketPaymentService {
 
       const { rows, count } = await this.ticketPaymentRepo.findAndCountAll({
         where: { b2b_guid },
-        include: [{ model: Employee, as: 'ticketPayments', attributes: ['guid', 'fullName'] }],
+        include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }],
         order: [['createdAt', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
@@ -84,10 +91,15 @@ export class TicketPaymentService {
 
       const updatedTicketPayment = await this.ticketPaymentRepo.findOne({
         where: { guid: updateTicketPaymentDto.guid },
-        include: [{ model: Employee, as: 'ticketPayments', attributes: ['guid', 'fullName'] }]
+        include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
       if (updatedTicketPayment) {
         const stats = await this.getPaymentStats(updatedTicketPayment.b2b_guid);
+        const statsResult = stats as any;
+        await this.b2bRepository.update(
+          { is_paid: statsResult.remaining <= 0 },
+          { where: { guid: updatedTicketPayment.b2b_guid } }
+        );
         const combinedData = {
           ...updatedTicketPayment.toJSON(),
           ...stats
@@ -112,8 +124,12 @@ export class TicketPaymentService {
       await this.ticketPaymentRepo.destroy({
         where: { guid }
       });
-
       const stats = await this.getPaymentStats(b2b_guid);
+      const statsResult = stats as any;
+      await this.b2bRepository.update(
+        { is_paid: statsResult.remaining <= 0 },
+        { where: { guid: b2b_guid } }
+      );
       return successResponse(HttpStatuses.OK, stats, 'TicketPayment deleted successfully');
 
     } catch (error) {

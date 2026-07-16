@@ -28,39 +28,39 @@ export class Client extends Model<Client> {
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare phone_number: string;
+  declare phone_number?: string;
 
   @Column({
     type: DataType.DATEONLY,
-    allowNull: false
+    allowNull: true
   })
-  declare dateOfBirth: Date;
+  declare dateOfBirth?: Date;
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare passport_number: string;
+  declare passport_number?: string;
 
   @Column({
     type: DataType.DATEONLY,
-    allowNull: false
+    allowNull: true
   })
-  declare passportExpiryDate: Date;
+  declare passportExpiryDate?: Date;
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare passportCountryOfIssue: string;
+  declare passportCountryOfIssue?: string;
 
   @Column({
     type: DataType.ENUM('Male', 'Female'),
-    allowNull: false
+    allowNull: true
   })
-  declare gender: string;
+  declare gender?: string;
 
   @Column({
     type: DataType.INTEGER,

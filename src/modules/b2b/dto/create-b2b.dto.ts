@@ -90,8 +90,8 @@ export class CreateB2bDto {
   @IsOptional()
   declare note?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsBoolean()
-  @IsNotEmpty()
+  @IsOptional()
   declare is_paid: boolean;
 }

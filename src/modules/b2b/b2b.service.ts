@@ -10,11 +10,14 @@ import { Client } from '../client/entities/client.entity';
 import { Tstatus } from '../tstatus/entities/tstatus.entity';
 import { Office } from '../office/entities/office.entity';
 import { Sequelize } from 'sequelize-typescript';
+import { TicketPayment } from '../ticket_payment/entities/ticket_payment.entity';
 
 @Injectable()
 export class B2bService {
   constructor(
-    @InjectModel(B2b) private b2bRepository: typeof B2b
+    @InjectModel(B2b) private b2bRepository: typeof B2b,
+    @InjectModel(TicketPayment) private ticketPaymentRepo: typeof TicketPayment,
+    private sequelize: Sequelize,
   ) { }
 
   private getB2bIncludes() {
@@ -32,15 +35,59 @@ export class B2bService {
     ];
   }
 
+
+  private getB2bAttributes() {
+    return {
+      include: [
+        [
+          Sequelize.literal(`(
+          SELECT ROUND(COALESCE(SUM(amount), 0)::numeric, 2)
+          FROM "tbl_ticket_payments" AS tp
+          WHERE tp.b2b_guid = "B2b"."guid"
+        )`),
+          'totalPaid'
+        ],
+        [
+          Sequelize.literal(`(
+            SELECT COALESCE(
+              CONCAT(
+                ROUND(
+                  CASE 
+                    WHEN "B2b".sale_price > 0 THEN (SUM(amount) / "B2b".sale_price) * 100 
+                    ELSE 100 
+                  END::numeric, 2
+                ), '%'),'0%'
+            )
+            FROM "tbl_ticket_payments" AS tp
+            WHERE tp.b2b_guid = "B2b"."guid"
+          )`),
+          'paidPercentage'
+        ]
+      ]
+    };
+  }
+
   async addB2b(createB2bDto: CreateB2bDto) {
+    const t = await this.sequelize.transaction();
     try {
       const b2b = await this.b2bRepository.create({
         ...createB2bDto,
         profit: Number(createB2bDto.sale_price) - Number(createB2bDto.net_price)
-      } as any);
+      } as any, { transaction: t });
+
+      if (createB2bDto.is_paid === true) {
+        await this.ticketPaymentRepo.create({
+          b2b_guid: b2b.guid,
+          amount: b2b.sale_price,
+          payment_date: new Date(),
+          opr_guid: createB2bDto.receiver_opr_guid
+        } as any, { transaction: t });
+      }
+      await t.commit();
       const newB2b = await this.b2bRepository.findOne({
         where: { guid: b2b.guid },
-        include: this.getB2bIncludes()
+        include: this.getB2bIncludes(),
+        attributes: { include: this.getB2bAttributes().include as any }
       });
       if (!newB2b) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'B2b not found')
@@ -51,6 +98,7 @@ export class B2bService {
         message: 'B2b created successfully'
       }
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'B2b creation failes', error)
     }
   }
@@ -64,36 +112,11 @@ export class B2bService {
 
       const { rows, count } = await this.b2bRepository.findAndCountAll({
         include: this.getB2bIncludes(),
-
-        attributes: {
-          include: [
-            [
-              Sequelize.literal(`(
-              SELECT COALESCE(SUM(amount), 0)
-              FROM tbl_ticket_payment AS tp
-              WHERE tp.b2b_guid = "tbl_b2b"."guid"
-            )`),
-              'totalPaid'
-            ],
-            [
-              Sequelize.literal(`(
-              SELECT CASE 
-                WHEN sale_price > 0 THEN (SUM(amount) / sale_price) * 100 
-                ELSE 100 
-              END
-              FROM tbl_ticket_payment AS tp
-              WHERE tp.b2b_guid = "tbl_b2b"."guid"
-            )`),
-              'paidPercentage'
-            ]
-          ]
-        },
-
+        attributes: { include: this.getB2bAttributes().include as any },
         order: [['index_number', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
       });
-
       return {
         status: 200,
         data: rows,
@@ -110,7 +133,9 @@ export class B2bService {
   }
 
 
+
   async updateB2b(updateDto: UpdateB2bDto) {
+    const t = await this.sequelize.transaction();
     try {
       const [affectedCount] = await this.b2bRepository.update(updateDto, {
         where: { guid: updateDto.guid }
@@ -119,7 +144,8 @@ export class B2bService {
 
       const newB2b = await this.b2bRepository.findOne({
         where: { guid: updateDto.guid },
-        include: this.getB2bIncludes()
+        include: this.getB2bIncludes(),
+        attributes: { include: this.getB2bAttributes().include as any }
       });
       return {
         status: 200,

@@ -6,7 +6,9 @@ import {
   IsOptional,
   IsArray,
   IsUUID,
-  ValidateIf
+  ValidateIf,
+  MinLength,
+  MaxLength
 } from "class-validator";
 
 export class CreateUserDto {
@@ -15,26 +17,33 @@ export class CreateUserDto {
   @ValidateIf(o => o.isExternalUser === false)
   @IsNotEmpty()
   @IsUUID()
-  employee_guid?: string;
+  declare employee_guid?: string;
 
   @ApiPropertyOptional({ default: true })
   @IsBoolean()
   @IsOptional()
-  isActive?: boolean;
+  declare isActive?: boolean;
 
   @ApiPropertyOptional({ default: true })
   @IsBoolean()
   @IsOptional()
-  isExternalUser?: boolean;
+  declare isExternalUser?: boolean;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  password: string;
+  declare password: string;
 
   @ApiPropertyOptional({ type: [String], default: [] })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
-  permissions?: string[];
+  declare permissions?: string[];
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  @MinLength(12)
+  @MaxLength(12)
+  declare phone_number?: string;
 }

@@ -32,3 +32,5 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, ReferenceList, TurkishPayment]
   };
 };
+
+// npx sequelize-cli migration:generate --name dsdsds

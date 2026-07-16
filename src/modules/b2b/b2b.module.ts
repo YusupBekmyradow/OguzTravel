@@ -19,6 +19,6 @@ import { TicketPaymentModule } from '../ticket_payment/ticket_payment.module';
   ],
   controllers: [B2bController],
   providers: [B2bService],
-  exports: [B2bService]
+  exports: [SequelizeModule]
 })
 export class B2bModule { }

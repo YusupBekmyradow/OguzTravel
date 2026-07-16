@@ -1,5 +1,7 @@
 import { Table, Model, Column, DataType, BeforeCreate, BeforeUpdate, BelongsTo } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
+import { IsNotEmpty, ValidateIf, IsUUID } from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 
 @Table({
   tableName: 'tbl_users',
@@ -14,10 +16,10 @@ export class User extends Model<User> {
   })
   declare guid: string;
 
-  @Column({
-    type: DataType.UUID,
-    allowNull: true
-  })
+  @ApiPropertyOptional({ description: 'Required if isExternalUser is false' })
+  @ValidateIf(o => o.isExternalUser === false)
+  @IsNotEmpty()
+  @IsUUID()
   declare employee_guid?: string;
 
   @Column({

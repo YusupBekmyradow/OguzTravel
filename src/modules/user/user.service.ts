@@ -20,31 +20,29 @@ export class UserService {
 
   async addUser(createUserDto: CreateUserDto) {
     try {
-      let employeePhoneNumber: string | null = null;
-
-      if (createUserDto.employee_guid) {
+      let finalPhoneNumber = createUserDto.phone_number;
+      if (createUserDto.isExternalUser === false && createUserDto.employee_guid) {
         const employee = await this.employeeRepository.findOne({
           where: { guid: createUserDto.employee_guid }
         });
-
         if (!employee) {
           return errorResponse(HttpStatuses.NOT_FOUND, 'Employee not found');
         }
-        employeePhoneNumber = employee.phone_number;
+        finalPhoneNumber = employee.phone_number;
       }
 
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-
       const user = await this.userRepository.create({
         ...createUserDto,
         password: hashedPassword,
-        phone_number: employeePhoneNumber
+        phone_number: finalPhoneNumber
       } as any);
-
+      await user.reload({
+        include: [Employee]
+      });
       const plainUser = user.get({ plain: true });
 
       const { password, refresh_token, ...userResponse } = plainUser;
-
       return successResponse(HttpStatuses.CREATED, userResponse, 'User created successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'User creation failed', error);
@@ -61,7 +59,6 @@ export class UserService {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
-
       const whereClause: any = {};
       if (filters?.isActive !== undefined) {
         whereClause.isActive = filters.isActive;
@@ -69,7 +66,6 @@ export class UserService {
       if (filters?.isExternalUser !== undefined) {
         whereClause.isExternalUser = filters.isExternalUser;
       }
-
       const employeeWhere: any = {};
       if (search) {
         employeeWhere.fullName = { [Op.iLike]: `%${search.trim()}%` };
@@ -89,7 +85,6 @@ export class UserService {
         ]
       });
       const totalPages = Math.ceil(count / limit);
-
       const cleanedRows = rows.map(user => {
         const plainUser = user.get({ plain: true });
         const { password, refresh_token, ...userWithoutSensitiveData } = plainUser;
@@ -117,11 +112,22 @@ export class UserService {
       if (!user) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'User not found');
       }
+      if (updateUserDto.isExternalUser === false && updateUserDto.employee_guid) {
+        const employee = await this.employeeRepository.findOne({
+          where: { guid: updateUserDto.employee_guid }
+        });
+        if (!employee) {
+          return errorResponse(HttpStatuses.NOT_FOUND, 'Employee not found');
+        }
+        updateUserDto.phone_number = employee.phone_number;
+      }
       if (updateUserDto.password) {
         updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
       }
       await user.update(updateUserDto);
-      await user.reload();
+      await user.reload({
+        include: [{ model: Employee }]
+      });
       const plainUser = user.get({ plain: true });
       const { password, refresh_token, ...userResponse } = plainUser;
       return successResponse(HttpStatuses.OK, userResponse, 'User updated successfully');

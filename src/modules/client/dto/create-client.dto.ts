@@ -1,6 +1,6 @@
-import { ApiProperty, } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional, } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsIn, IsDate, IsNotEmpty, IsString, MinLength, MaxLength } from "class-validator";
+import { IsIn, IsDate, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional } from "class-validator";
 
 
 export class CreateClientDto {
@@ -10,38 +10,38 @@ export class CreateClientDto {
     @IsNotEmpty()
     declare fullName: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     @MinLength(12)
     @MaxLength(12)
-    declare phone_number: string;
+    declare phone_number?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @Type(() => Date)
     @IsDate()
-    @IsNotEmpty()
-    declare dateOfBirth: Date;
+    @IsOptional()
+    declare dateOfBirth?: Date;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare passport_number: string
+    @IsOptional()
+    declare passport_number?: string
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @Type(() => Date)
     @IsDate()
-    @IsNotEmpty()
-    declare passportExpiryDate: Date;
+    @IsOptional()
+    declare passportExpiryDate?: Date;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare passportCountryOfIssue: string;
+    @IsOptional()
+    declare passportCountryOfIssue?: string;
 
-    @ApiProperty({ enum: ['Male', 'Female'] })
+    @ApiPropertyOptional({ enum: ['Male', 'Female'] })
     @IsIn(['Male', 'Female'])
-    @IsNotEmpty()
-    declare gender: string;
+    @IsOptional()
+    declare gender?: string;
 
 }
