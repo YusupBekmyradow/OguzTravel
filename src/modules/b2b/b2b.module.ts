@@ -7,11 +7,12 @@ import { ClientModule } from '../client/client.module';
 import { EmployeeModule } from '../employee/employee.module';
 import { TstatusModule } from '../tstatus/tstatus.module';
 import { TicketPaymentModule } from '../ticket_payment/ticket_payment.module';
+import { TicketPayment } from '../ticket_payment/entities/ticket_payment.entity';
 
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([B2b]),
+    SequelizeModule.forFeature([B2b, TicketPayment]),
     EmployeeModule,
     ClientModule,
     TstatusModule,
@@ -19,6 +20,6 @@ import { TicketPaymentModule } from '../ticket_payment/ticket_payment.module';
   ],
   controllers: [B2bController],
   providers: [B2bService],
-  exports: [SequelizeModule]
+  exports: [B2bService]
 })
 export class B2bModule { }

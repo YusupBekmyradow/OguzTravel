@@ -124,8 +124,10 @@ export class TicketPaymentService {
       await this.ticketPaymentRepo.destroy({
         where: { guid }
       });
+
       const stats = await this.getPaymentStats(b2b_guid);
       const statsResult = stats as any;
+
       await this.b2bRepository.update(
         { is_paid: statsResult.remaining <= 0 },
         { where: { guid: b2b_guid } }

@@ -19,6 +19,8 @@ import { TicketPaymentModule } from './modules/ticket_payment/ticket_payment.mod
 import { VisaModule } from './modules/visa/visa.module';
 import { ReferenceListModule } from './modules/reference_list/reference_list.module';
 import { TurkishPaymentModule } from './modules/turkish_payment/turkish_payment.module';
+import { VisaCategoryModule } from './modules/visa_category/visa_category.module';
+import { VisaPackageModule } from './modules/visa_package/visa_package.module';
 dotenv.config();
 
 @Module({
@@ -42,7 +44,9 @@ dotenv.config();
     TicketPaymentModule,
     VisaModule,
     ReferenceListModule,
-    TurkishPaymentModule
+    TurkishPaymentModule,
+    VisaCategoryModule,
+    VisaPackageModule
   ],
   controllers: [AppController],
   providers: [

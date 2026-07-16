@@ -13,6 +13,8 @@ import { TicketPayment } from '../modules/ticket_payment/entities/ticket_payment
 import { Visa } from '../modules/visa/entities/visa.entity';
 import { ReferenceList } from '../modules/reference_list/entities/reference_list.entity';
 import { TurkishPayment } from '../modules/turkish_payment/entities/turkish_payment.entity';
+import { VisaCategory } from '../modules/visa_category/entities/visa_category.entity';
+import { VisaPackage } from '../modules/visa_package/entities/visa_package.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
@@ -29,7 +31,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     autoLoadModels: true,
     synchronize: true,
     logging: false,
-    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, ReferenceList, TurkishPayment]
+    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, ReferenceList, TurkishPayment, VisaCategory, VisaPackage]
   };
 };
 
