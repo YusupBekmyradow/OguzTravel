@@ -22,6 +22,9 @@ import { VisaCategoryModule } from './modules/visa_category/visa_category.module
 import { VisaPackageModule } from './modules/visa_package/visa_package.module';
 import { VisaPaymentModule } from './modules/visa_payment/visa_payment.module';
 import { RefferalLetterModule } from './modules/refferal_letter/refferal_letter.module';
+import { TransStatusModule } from './trans_status/trans_status.module';
+import { TranslatorModule } from './translator/translator.module';
+import { GeneralTranslationModule } from './modules/general_translation/general_translation.module';
 dotenv.config();
 
 @Module({
@@ -48,7 +51,10 @@ dotenv.config();
     VisaCategoryModule,
     VisaPackageModule,
     VisaPaymentModule,
-    RefferalLetterModule
+    RefferalLetterModule,
+    TransStatusModule,
+    TranslatorModule,
+    GeneralTranslationModule
   ],
   controllers: [AppController],
   providers: [

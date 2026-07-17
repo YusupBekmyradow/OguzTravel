@@ -16,6 +16,9 @@ import { VisaCategory } from '../modules/visa_category/entities/visa_category.en
 import { VisaPackage } from '../modules/visa_package/entities/visa_package.entity';
 import { VisaPayment } from '../modules/visa_payment/entities/visa_payment.entity';
 import { RefferalLetter } from '../modules/refferal_letter/entities/refferal_letter.entity';
+import { TransStatus } from '../trans_status/entities/trans_status.entity';
+import { Translator } from '../translator/entities/translator.entity';
+import { GeneralTranslation } from '../modules/general_translation/entities/general_translation.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
@@ -32,7 +35,8 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     autoLoadModels: true,
     synchronize: true,
     logging: false,
-    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaCategory, VisaPackage, VisaPayment, RefferalLetter]
+    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaCategory,
+      VisaPackage, VisaPayment, RefferalLetter, TransStatus, Translator, GeneralTranslation]
   };
 };
 
