@@ -26,9 +26,9 @@ export class RefferalLetter extends Model<RefferalLetter> {
 
     @Column({
         type: DataType.INTEGER,
-        allowNull: false,
+        allowNull: true,
     })
-    declare application_number: number;
+    declare application_number?: number;
 
     @Column({
         type: DataType.UUID,
