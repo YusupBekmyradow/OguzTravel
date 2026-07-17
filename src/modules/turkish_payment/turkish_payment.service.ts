@@ -23,7 +23,7 @@ export class TurkishPaymentService {
       } as any);
 
       const createdPayment = await this.turkishPaymentRepo.findByPk(payment.guid, {
-        include: [{ model: Employee, as: 'turkishPayments', attributes: ['guid', 'fullName'] }]
+        include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
 
       if (!createdPayment) {
@@ -53,7 +53,7 @@ export class TurkishPaymentService {
         include: [
           {
             model: Employee,
-            as: 'turkishPayments',
+            as: 'operator',
             attributes: ['guid', 'fullName']
           }
         ],
@@ -90,7 +90,7 @@ export class TurkishPaymentService {
 
       const updatedPayment = await this.turkishPaymentRepo.findOne({
         where: { guid: updateDto.guid },
-        include: [{ model: Employee, as: 'turkishPayments', attributes: ['guid', 'fullName'] }]
+        include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
       if (!updatedPayment) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
@@ -128,13 +128,13 @@ export class TurkishPaymentService {
     const stats = await this.sequelize.query(`
       SELECT 
         b.guid as "turkish_airline_guid",
-        b.sale_price as "total_sales",
+        b.quoted_price as "total_sales",
         COALESCE(SUM(tp.amount), 0) as "total_paid",
-        (b.sale_price - COALESCE(SUM(tp.amount), 0)) as "remaining"
+        (b.quoted_price - COALESCE(SUM(tp.amount), 0)) as "remaining"
       FROM tbl_turkish_airlines b
       LEFT JOIN tbl_turkish_payments tp ON b.guid = tp.turkish_airline_guid
       WHERE b.guid = :turkish_airline_guid
-      GROUP BY b.guid, b.sale_price
+      GROUP BY b.guid, b.quoted_price
     `, {
       replacements: { turkish_airline_guid },
       type: QueryTypes.SELECT

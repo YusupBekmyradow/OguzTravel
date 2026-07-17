@@ -49,18 +49,16 @@ export class B2bService {
         ],
         [
           Sequelize.literal(`(
-            SELECT COALESCE(
-              CONCAT(
-                ROUND(
-                  CASE 
-                    WHEN "B2b".sale_price > 0 THEN (SUM(amount) / "B2b".sale_price) * 100 
-                    ELSE 100 
-                  END::numeric, 2
-                ), '%'),'0%'
-            )
-            FROM "tbl_ticket_payments" AS tp
-            WHERE tp.b2b_guid = "B2b"."guid"
-          )`),
+    SELECT 
+      CASE 
+        WHEN SUM(tp.amount) IS NULL OR SUM(tp.amount) = 0 THEN '0%'
+        WHEN "B2b".sale_price > 0 
+        THEN CONCAT(ROUND(((SUM(tp.amount) / "B2b".sale_price) * 100)::numeric, 2), '%')
+        ELSE '100%' 
+      END
+    FROM "tbl_ticket_payments" AS tp
+    WHERE tp.b2b_guid = "B2b"."guid"
+  )`),
           'paidPercentage'
         ]
       ]

@@ -6,7 +6,7 @@ import { Office } from "../../office/entities/office.entity";
 import { TurkishPayment } from "../../turkish_payment/entities/turkish_payment.entity";
 
 @Table({
-    tableName: 'tbl_turkishAirlines',
+    tableName: 'tbl_turkish_airlines',
     timestamps: true
 })
 export class TurkishAirline extends Model<TurkishAirline> {

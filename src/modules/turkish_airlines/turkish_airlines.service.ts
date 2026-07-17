@@ -9,6 +9,7 @@ import { Employee } from '../employee/entities/employee.entity';
 import { Office } from '../office/entities/office.entity';
 import { Client } from '../client/entities/client.entity';
 import { Tstatus } from '../tstatus/entities/tstatus.entity';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class TurkishAirlinesService {
@@ -32,6 +33,33 @@ export class TurkishAirlinesService {
     ];
   }
 
+  private getTurkishAttributes() {
+    return [
+      [
+        Sequelize.literal(`(
+        SELECT ROUND(COALESCE(SUM(tp.amount), 0)::numeric, 2)
+        FROM "tbl_turkish_payments" AS tp
+        WHERE tp.turkish_airline_guid = "TurkishAirline"."guid"
+      )`),
+        'totalPaid'
+      ],
+      [
+        Sequelize.literal(`(
+        SELECT 
+          CASE 
+            WHEN SUM(tp.amount) IS NULL OR SUM(tp.amount) = 0 THEN '0%'
+            WHEN "TurkishAirline".total_price > 0 
+            THEN CONCAT(ROUND(((SUM(tp.amount) / "TurkishAirline".total_price) * 100)::numeric, 2), '%')
+            ELSE '100%'
+          END
+        FROM "tbl_turkish_payments" AS tp
+        WHERE tp.turkish_airline_guid = "TurkishAirline"."guid"
+      )`),
+        'paidPercentage'
+      ]
+    ];
+  }
+
   async addTurkishAirline(createTurkishAirlineDto: CreateTurkishAirlineDto) {
     try {
       const turkishAirline = await this.turkishAirlineRepo.create({
@@ -39,8 +67,10 @@ export class TurkishAirlinesService {
       } as any);
       const newTurkishAirline = await this.turkishAirlineRepo.findOne({
         where: { guid: turkishAirline.guid },
-        include: this.getTurkishAirlineIncludes()
+        include: this.getTurkishAirlineIncludes(),
+        attributes: { include: this.getTurkishAttributes() as any }
       });
+
       if (!newTurkishAirline) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found')
       }
@@ -63,6 +93,7 @@ export class TurkishAirlinesService {
 
       const { rows, count } = await this.turkishAirlineRepo.findAndCountAll({
         include: this.getTurkishAirlineIncludes(),
+        attributes: { include: this.getTurkishAttributes() as any },
         order: [['index_number', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
@@ -94,7 +125,8 @@ export class TurkishAirlinesService {
 
       const newTurkishAirline = await this.turkishAirlineRepo.findOne({
         where: { guid: updateDto.guid },
-        include: this.getTurkishAirlineIncludes()
+        include: this.getTurkishAirlineIncludes(),
+        attributes: { include: this.getTurkishAttributes() as any }
       });
       return {
         status: 200,
