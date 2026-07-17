@@ -22,6 +22,12 @@ export class VisaPackageController {
     return this.visaPackageService.getAllVisaPackages(Number(index));
   }
 
+  @Get('/get-visa-packages')
+  async find(
+  ) {
+    return this.visaPackageService.getAllVisaPack();
+  }
+  
   @Patch('/update-visa-package')
   async update(@Body() updateDto: UpdateVisaPackageDto) {
     return this.visaPackageService.updateVisaPackage(updateDto);

@@ -46,6 +46,14 @@ export class VisaPackageService {
     }
   }
 
+  async getAllVisaPack() {
+    try {
+      const packages = await this.visaPackageRepository.findAll();
+      return successResponse(HttpStatuses.OK, packages, 'Packages fetched successfully');
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Packages fetching error', error);
+    }
+  }
 
   async updateVisaPackage(updateDto: UpdateVisaPackageDto) {
     try {
