@@ -90,7 +90,6 @@ export class EmployeeService {
         message: 'Employees fetched successfully'
       };
     } catch (error) {
-      console.log(error)
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Employees fetching error', error);
     }
   }
@@ -107,7 +106,7 @@ export class EmployeeService {
       const offset = (currentPage - 1) * currentLimit;
 
       const { count, rows } = await this.employeeRepository.findAndCountAll({
-        attributes:['guid','fullName'],
+        attributes: ['guid', 'fullName'],
         order: [['index_number', 'ASC']],
         limit: Number(limit),
         offset: Number(offset),

@@ -11,10 +11,11 @@ import { Tstatus } from '../modules/tstatus/entities/tstatus.entity';
 import { TurkishAirline } from '../modules/turkish_airlines/entities/turkish_airline.entity';
 import { TicketPayment } from '../modules/ticket_payment/entities/ticket_payment.entity';
 import { Visa } from '../modules/visa/entities/visa.entity';
-import { ReferenceList } from '../modules/reference_list/entities/reference_list.entity';
 import { TurkishPayment } from '../modules/turkish_payment/entities/turkish_payment.entity';
 import { VisaCategory } from '../modules/visa_category/entities/visa_category.entity';
 import { VisaPackage } from '../modules/visa_package/entities/visa_package.entity';
+import { VisaPayment } from '../modules/visa_payment/entities/visa_payment.entity';
+import { RefferalLetter } from '../modules/refferal_letter/entities/refferal_letter.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
@@ -31,7 +32,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     autoLoadModels: true,
     synchronize: true,
     logging: false,
-    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, ReferenceList, TurkishPayment, VisaCategory, VisaPackage]
+    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaCategory, VisaPackage, VisaPayment, RefferalLetter]
   };
 };
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { VisaPackageService } from './visa_package.service';
 import { CreateVisaPackageDto } from './dto/create-visa_package.dto';
 import { UpdateVisaPackageDto } from './dto/update-visa_package.dto';
@@ -15,9 +15,11 @@ export class VisaPackageController {
     return this.visaPackageService.addVisaPackage(createDto);
   }
 
-  @Get('/get-all-visa-packages')
-  async findAll() {
-    return this.visaPackageService.getAllVisaPackages();
+  @Get('/get-visa-packages-byindex')
+  async findAll(
+    @Query('index') index: number
+  ) {
+    return this.visaPackageService.getAllVisaPackages(Number(index));
   }
 
   @Patch('/update-visa-package')

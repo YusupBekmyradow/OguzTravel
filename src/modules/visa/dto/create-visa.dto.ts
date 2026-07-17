@@ -26,29 +26,39 @@ export class CreateVisaDto {
   };
 
   @ApiPropertyOptional()
-  @IsString()
+  @IsUUID()
   @IsOptional()
-  declare service?: string;
+  declare package_guid?: string;
 
   @ApiPropertyOptional()
-  @IsString()
+  @IsUUID()
   @IsOptional()
-  declare hotel_booking?: string;
+  declare service_guid?: string;
 
   @ApiPropertyOptional()
-  @IsString()
+  @IsUUID()
   @IsOptional()
-  declare translation?: string;
+  declare hotel_booking_guid?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsUUID()
+  @IsOptional()
+  declare translation_guid?: string;
+
+  @ApiPropertyOptional()
+  @IsUUID()
+  @IsOptional()
+  declare courier_guid?: string;
+
+  @ApiPropertyOptional()
   @IsNumber()
-  @IsNotEmpty()
-  declare total_price: number
-
-  @ApiPropertyOptional({ default: 'USD' })
-  @IsString()
   @IsOptional()
-  declare currency?: string;
+  declare price_tmt?: number
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  declare price_usd?: number
 
   @ApiPropertyOptional()
   @IsString()

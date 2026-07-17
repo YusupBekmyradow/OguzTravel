@@ -1,8 +1,8 @@
-import { CreateReferenceListDto } from './create-reference_list.dto';
+import { CreateRefferalLetterDto } from './create-refferal_letter.dto';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { IsNotEmpty, IsUUID } from 'class-validator';
 
-export class UpdateReferenceListDto extends PartialType(CreateReferenceListDto) {
+export class UpdateRefferalLetterDto extends PartialType(CreateRefferalLetterDto) {
   @ApiProperty()
   @IsUUID()
   @IsNotEmpty()

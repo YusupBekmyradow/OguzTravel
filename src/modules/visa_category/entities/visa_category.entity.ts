@@ -21,6 +21,14 @@ export class VisaCategory extends Model<VisaCategory> {
   })
   declare name: string
 
+  @Column({
+    type: DataType.INTEGER,
+    autoIncrement: true,
+    allowNull: false,
+    unique: true
+  })
+  declare index_number: number;
+
   @HasMany(() => VisaPackage, {
     foreignKey: 'category_guid',
     sourceKey: 'guid'

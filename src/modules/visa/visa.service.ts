@@ -6,6 +6,7 @@ import { Visa } from './entities/visa.entity';
 import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
+import { VisaPackage } from '../visa_package/entities/visa_package.entity';
 
 @Injectable()
 export class VisaService {
@@ -16,6 +17,11 @@ export class VisaService {
   private getVisaIncludes() {
     return [
       { model: Client, attributes: ['guid', 'fullName', 'phone_number', 'passport_number', 'dateOfBirth'] },
+      { model: VisaPackage, as: 'package', attributes: ['guid', 'name', 'price', 'sale_price'] },
+      { model: VisaPackage, as: 'service', attributes: ['guid', 'name', 'price', 'sale_price'] },
+      { model: VisaPackage, as: 'hotel_booking', attributes: ['guid', 'name', 'price', 'sale_price'] },
+      { model: VisaPackage, as: 'translation', attributes: ['guid', 'name', 'price', 'sale_price'] },
+      { model: VisaPackage, as: 'courier', attributes: ['guid', 'name', 'price', 'sale_price'] },
     ];
   }
 
@@ -26,6 +32,9 @@ export class VisaService {
       } as any);
       const newVisa = await this.visaRepository.findOne({
         where: { guid: visa.guid },
+        attributes: {
+          exclude: ['package_guid', 'service_guid', 'hotel_booking_guid', 'translation_guid', 'courier_guid']
+        },
         include: this.getVisaIncludes()
       });
       if (!newVisa) {
@@ -49,6 +58,9 @@ export class VisaService {
       const offset = (currentPage - 1) * currentLimit;
 
       const { rows, count } = await this.visaRepository.findAndCountAll({
+        attributes: {
+          exclude: ['package_guid', 'service_guid', 'hotel_booking_guid', 'translation_guid', 'courier_guid']
+        },
         include: this.getVisaIncludes(),
         order: [['createdAt', 'DESC']],
         limit: Number(limit),
@@ -66,7 +78,6 @@ export class VisaService {
         message: 'Visa fetched successfully'
       };
     } catch (error: any) {
-      console.log(error)
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Visa fetching error', error);
     }
   }
@@ -81,6 +92,9 @@ export class VisaService {
 
       const newVisa = await this.visaRepository.findOne({
         where: { guid: updateDto.guid },
+        attributes: {
+          exclude: ['package_guid', 'service_guid', 'hotel_booking_guid', 'translation_guid', 'courier_guid']
+        },
         include: this.getVisaIncludes()
       });
       return {

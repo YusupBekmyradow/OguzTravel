@@ -1,7 +1,6 @@
 import { Table, Column, Model, DataType, HasMany } from 'sequelize-typescript';
 import { Employee } from '../../employee/entities/employee.entity';
 import { TurkishAirline } from '../../turkish_airlines/entities/turkish_airline.entity';
-import { ReferenceList } from '../../reference_list/entities/reference_list.entity';
 
 @Table({
   tableName: 'tbl_offices',
@@ -51,12 +50,6 @@ export class Office extends Model<Office> {
     sourceKey: 'guid',
   })
   declare turkishAirline: TurkishAirline[];
-
-  @HasMany(() => ReferenceList, {
-    foreignKey: 'office_guid',
-    sourceKey: 'guid',
-  })
-  declare referenceList: ReferenceList[];
 }
 
 

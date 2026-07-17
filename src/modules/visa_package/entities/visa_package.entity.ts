@@ -1,5 +1,6 @@
-import { Table, Model, Column, DataType, BelongsTo } from "sequelize-typescript";
+import { Table, Model, Column, DataType, BelongsTo, HasMany } from "sequelize-typescript";
 import { VisaCategory } from "../../visa_category/entities/visa_category.entity";
+import { Visa } from "../../visa/entities/visa.entity";
 
 
 @Table({
@@ -75,4 +76,39 @@ export class VisaPackage extends Model<VisaPackage> {
     foreignKey: 'category_guid'
   })
   declare visaCategory: VisaCategory;
+
+  @HasMany(() => Visa, {
+    foreignKey: 'package_guid',
+    sourceKey: 'guid',
+    as: 'package'
+  })
+  declare visapackage: Visa[];
+
+  @HasMany(() => Visa, {
+    foreignKey: 'service_guid',
+    sourceKey: 'guid',
+    as: 'service'
+  })
+  declare visaservice: Visa[];
+
+  @HasMany(() => Visa, {
+    foreignKey: 'hotel_booking_guid',
+    sourceKey: 'guid',
+    as: 'hotel_booking'
+  })
+  declare visahotel_booking: Visa[];
+
+  @HasMany(() => Visa, {
+    foreignKey: 'translation_guid',
+    sourceKey: 'guid',
+    as: 'translation'
+  })
+  declare visatranslation: Visa[];
+
+  @HasMany(() => Visa, {
+    foreignKey: 'courier_guid',
+    sourceKey: 'guid',
+    as: 'courier'
+  })
+  declare visacourier: Visa[];
 }

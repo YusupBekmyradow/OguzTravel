@@ -1,14 +1,13 @@
 import { BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
-import { Office } from "../../office/entities/office.entity";
 import { Client } from "../../client/entities/client.entity";
 
 @Table({
-    tableName: 'tbl_reference_list',
+    tableName: 'tbl_refferal_letter',
     timestamps: true
 })
 
-export class ReferenceList extends Model<ReferenceList> {
+export class RefferalLetter extends Model<RefferalLetter> {
     @Column({
         primaryKey: true,
         allowNull: false,
@@ -35,7 +34,7 @@ export class ReferenceList extends Model<ReferenceList> {
         type: DataType.UUID,
         allowNull: false
     })
-    declare office_guid: string;
+    declare received_opr_guid: string;
 
     @Column({
         type: DataType.UUID,
@@ -53,13 +52,13 @@ export class ReferenceList extends Model<ReferenceList> {
         type: DataType.STRING,
         allowNull: true
     })
-    declare transit_country: string;
+    declare tranzit?: string;
 
     @Column({
         type: DataType.INTEGER,
         allowNull: false,
     })
-    declare trvl_document_num: number;
+    declare travel_document_number: number;
 
     @Column({
         type: DataType.DATE,
@@ -71,10 +70,10 @@ export class ReferenceList extends Model<ReferenceList> {
         type: DataType.DATE,
         allowNull: false
     })
-    declare arrival_date: Date;
+    declare return_date: Date;
 
     @Column({
-        type: DataType.DECIMAL,
+        type: DataType.DECIMAL(10, 2),
         defaultValue: 0
     })
     declare price: number;
@@ -87,15 +86,9 @@ export class ReferenceList extends Model<ReferenceList> {
     declare currency: string;
 
     @Column({
-        type: DataType.UUID,
-        allowNull: false
-    })
-    declare operator_guid: string;
-
-    @Column({
         type: DataType.JSONB,
         allowNull: true,
-        defaultValue: { phone: null, name: null }
+        defaultValue: { name: null, phone_number: null }
     })
     declare agent: {
         name: string,
@@ -103,16 +96,16 @@ export class ReferenceList extends Model<ReferenceList> {
     };
 
     @Column({
-        type: DataType.INTEGER,
-        allowNull: false,
+        type: DataType.STRING,
+        allowNull: true,
     })
-    declare contract_number: number;
+    declare contract_number?: string;
 
     @Column({
         type: DataType.DATE,
-        allowNull: false
+        allowNull: true
     })
-    declare contract_date: Date;
+    declare contract_date?: Date;
 
     @Column({
         type: DataType.TEXT,
@@ -122,16 +115,10 @@ export class ReferenceList extends Model<ReferenceList> {
 
     @BelongsTo(() => Employee, {
         targetKey: 'guid',
-        foreignKey: 'operator_guid',
-        as: 'referenceoperator'
+        foreignKey: 'received_opr_guid',
+        as: 'refferaloperator'
     })
     declare employee: Employee;
-
-    @BelongsTo(() => Office, {
-        targetKey: 'guid',
-        foreignKey: 'office_guid'
-    })
-    declare office: Office;
 
     @BelongsTo(() => Client, {
         targetKey: 'guid',

@@ -1,7 +1,7 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsDateString, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID } from "class-validator"
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsDateString, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID } from "class-validator";
 
-export class CreateReferenceListDto {
+export class CreateRefferalLetterDto {
   @ApiProperty()
   @IsNumber()
   @IsNotEmpty()
@@ -10,7 +10,7 @@ export class CreateReferenceListDto {
   @ApiProperty()
   @IsUUID()
   @IsNotEmpty()
-  declare office_guid: string;
+  declare received_opr_guid: string;
 
   @ApiProperty()
   @IsUUID()
@@ -25,12 +25,12 @@ export class CreateReferenceListDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  declare transit_country?: string;
+  declare tranzit?: string;
 
   @ApiProperty()
   @IsNumber()
   @IsNotEmpty()
-  declare trvl_document_num: number;
+  declare travel_document_number: number;
 
   @ApiProperty()
   @IsDateString()
@@ -40,7 +40,7 @@ export class CreateReferenceListDto {
   @ApiProperty()
   @IsDateString()
   @IsNotEmpty()
-  declare arrival_date: Date;
+  declare return_date: Date;
 
   @ApiProperty()
   @IsNumber()
@@ -52,11 +52,6 @@ export class CreateReferenceListDto {
   @IsString()
   declare currency?: string;
 
-  @ApiProperty()
-  @IsUUID()
-  @IsNotEmpty()
-  declare operator_guid: string;
-
   @ApiPropertyOptional()
   @IsOptional()
   @IsObject()
@@ -65,15 +60,15 @@ export class CreateReferenceListDto {
     phone_number: string;
   }
 
-  @ApiProperty()
-  @IsNumber()
-  @IsNotEmpty()
-  declare contract_number: number;
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  declare contract_number?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsDateString()
-  @IsNotEmpty()
-  declare contract_date: Date;
+  @IsOptional()
+  declare contract_date?: Date;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -81,4 +76,3 @@ export class CreateReferenceListDto {
   declare note?: string;
 
 }
-

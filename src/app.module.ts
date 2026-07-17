@@ -17,10 +17,11 @@ import { TstatusModule } from './modules/tstatus/tstatus.module';
 import { TurkishAirlinesModule } from './modules/turkish_airlines/turkish_airlines.module';
 import { TicketPaymentModule } from './modules/ticket_payment/ticket_payment.module';
 import { VisaModule } from './modules/visa/visa.module';
-import { ReferenceListModule } from './modules/reference_list/reference_list.module';
 import { TurkishPaymentModule } from './modules/turkish_payment/turkish_payment.module';
 import { VisaCategoryModule } from './modules/visa_category/visa_category.module';
 import { VisaPackageModule } from './modules/visa_package/visa_package.module';
+import { VisaPaymentModule } from './modules/visa_payment/visa_payment.module';
+import { RefferalLetterModule } from './modules/refferal_letter/refferal_letter.module';
 dotenv.config();
 
 @Module({
@@ -43,10 +44,11 @@ dotenv.config();
     TurkishAirlinesModule,
     TicketPaymentModule,
     VisaModule,
-    ReferenceListModule,
     TurkishPaymentModule,
     VisaCategoryModule,
-    VisaPackageModule
+    VisaPackageModule,
+    VisaPaymentModule,
+    RefferalLetterModule
   ],
   controllers: [AppController],
   providers: [

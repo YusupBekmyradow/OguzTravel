@@ -110,7 +110,6 @@ export class TurkishAirlinesService {
         message: 'TurkishAirline fetched successfully'
       };
     } catch (error: any) {
-      console.log(error)
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TurkishAirline fetching error', error);
     }
   }

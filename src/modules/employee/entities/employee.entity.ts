@@ -6,8 +6,9 @@ import { User } from "../../user/entities/user.entity";
 import { B2b } from "../../b2b/entities/b2b.entity";
 import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.entity";
 import { TicketPayment } from "../../ticket_payment/entities/ticket_payment.entity";
-import { ReferenceList } from "../../reference_list/entities/reference_list.entity";
 import { TurkishPayment } from "../../turkish_payment/entities/turkish_payment.entity";
+import { VisaPayment } from "../../visa_payment/entities/visa_payment.entity";
+import { RefferalLetter } from "../../refferal_letter/entities/refferal_letter.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -141,10 +142,17 @@ export class Employee extends Model<Employee> {
   })
   declare turkpaymentOpr: TurkishPayment[];
 
-  @HasMany(() => ReferenceList, {
-    foreignKey: 'operator_guid',
+  @HasMany(() => RefferalLetter, {
+    foreignKey: 'received_opr_guid',
     sourceKey: 'guid',
-    as: 'referenceoperator'
+    as: 'refferaloperator'
   })
-  declare referenceList: ReferenceList[];
+  declare refferalLetter: RefferalLetter[];
+
+  @HasMany(() => VisaPayment, {
+    foreignKey: 'opr_guid',
+    sourceKey: 'guid',
+    as: 'visaPayments'
+  })
+  declare visaPayment: VisaPayment[];
 }

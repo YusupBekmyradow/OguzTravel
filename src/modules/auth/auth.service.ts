@@ -77,7 +77,6 @@ export class AuthService {
       }, 'sign in success');
 
     } catch (error: any) {
-      console.log(error);
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'signin failed')
     }
   }

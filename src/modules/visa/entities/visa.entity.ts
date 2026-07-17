@@ -1,5 +1,7 @@
-import { Table, Model, Column, DataType, BelongsTo } from "sequelize-typescript";
+import { Table, Model, Column, DataType, BelongsTo, HasMany } from "sequelize-typescript";
 import { Client } from "../../client/entities/client.entity";
+import { VisaPackage } from "../../visa_package/entities/visa_package.entity";
+import { VisaPayment } from "../../visa_payment/entities/visa_payment.entity";
 
 @Table({
   tableName: 'tbl_visa',
@@ -45,35 +47,46 @@ export class Visa extends Model<Visa> {
   };
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.UUID,
     allowNull: true
   })
-  declare service: string;
+  declare package_guid: string;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.UUID,
     allowNull: true
   })
-  declare hotel_booking: string;
+  declare service_guid: string
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.UUID,
     allowNull: true
   })
-  declare translation: string;
+  declare hotel_booking_guid: string;
+
+  @Column({
+    type: DataType.UUID,
+    allowNull: true
+  })
+  declare translation_guid: string;
+
+  @Column({
+    type: DataType.UUID,
+    allowNull: true
+  })
+  declare courier_guid: string;
 
   @Column({
     type: DataType.DECIMAL(12, 2),
     defaultValue: 0
   })
-  declare total_price: number;
+  declare price_tmt: number;
 
   @Column({
-    type: DataType.STRING,
-    allowNull: false,
-    defaultValue: 'USD'
+    type: DataType.DECIMAL(12, 2),
+    defaultValue: 0
   })
-  declare currency: string;
+  declare price_usd: number;
 
   @Column({
     type: DataType.TEXT,
@@ -86,5 +99,46 @@ export class Visa extends Model<Visa> {
     foreignKey: 'client_guid'
   })
   declare client: Client;
-  
+
+  @BelongsTo(() => VisaPackage, {
+    targetKey: 'guid',
+    foreignKey: 'package_guid',
+    as: 'package'
+  })
+  declare package: VisaPackage;
+
+  @BelongsTo(() => VisaPackage, {
+    targetKey: 'guid',
+    foreignKey: 'service_guid',
+    as: 'service'
+  })
+  declare service: VisaPackage;
+
+  @BelongsTo(() => VisaPackage, {
+    targetKey: 'guid',
+    foreignKey: 'hotel_booking_guid',
+    as: 'hotel_booking'
+
+  })
+  declare hotel_booking: VisaPackage;
+
+  @BelongsTo(() => VisaPackage, {
+    targetKey: 'guid',
+    foreignKey: 'translation_guid',
+    as: 'translation'
+  })
+  declare translation: VisaPackage;
+
+  @BelongsTo(() => VisaPackage, {
+    targetKey: 'guid',
+    foreignKey: 'courier_guid',
+    as: 'courier'
+  })
+  declare courier: VisaPackage;
+
+  @HasMany(() => VisaPayment, {
+    foreignKey: 'visa_guid',
+    sourceKey: 'guid',
+  })
+  declare visaPayment: VisaPayment[];
 }
