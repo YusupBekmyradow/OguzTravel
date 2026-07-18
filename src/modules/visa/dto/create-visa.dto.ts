@@ -15,6 +15,11 @@ export class CreateVisaDto {
   @ApiProperty()
   @IsUUID()
   @IsNotEmpty()
+  declare receiver_opr_guid: string;
+
+  @ApiProperty()
+  @IsUUID()
+  @IsNotEmpty()
   declare client_guid: string;
 
   @ApiPropertyOptional()

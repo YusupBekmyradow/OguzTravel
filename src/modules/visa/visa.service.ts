@@ -7,6 +7,8 @@ import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { VisaPackage } from '../visa_package/entities/visa_package.entity';
+import { Employee } from '../employee/entities/employee.entity';
+import { Office } from '../office/entities/office.entity';
 
 @Injectable()
 export class VisaService {
@@ -16,6 +18,10 @@ export class VisaService {
 
   private getVisaIncludes() {
     return [
+      {
+        model: Employee, as: 'receiveroperator', attributes: ['guid', 'fullName'],
+        include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
+      },
       { model: Client, attributes: ['guid', 'fullName', 'phone_number', 'passport_number', 'dateOfBirth'] },
       { model: VisaPackage, as: 'package', attributes: ['guid', 'name', 'price', 'sale_price'] },
       { model: VisaPackage, as: 'service', attributes: ['guid', 'name', 'price', 'sale_price'] },

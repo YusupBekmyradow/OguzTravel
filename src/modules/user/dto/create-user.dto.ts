@@ -24,7 +24,7 @@ export class CreateUserDto {
   @IsOptional()
   declare isActive?: boolean;
 
-  @ApiPropertyOptional({ default: true })
+  @ApiPropertyOptional()
   @IsBoolean()
   @IsOptional()
   declare isExternalUser?: boolean;

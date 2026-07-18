@@ -11,6 +11,7 @@ import { VisaPayment } from "../../visa_payment/entities/visa_payment.entity";
 import { RefferalLetter } from "../../refferal_letter/entities/refferal_letter.entity";
 import { GeneralTranslation } from "../../general_translation/entities/general_translation.entity";
 import { TransPayment } from "../../trans_payment/entities/trans_payment.entity";
+import { Visa } from "../../visa/entities/visa.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -115,6 +116,14 @@ export class Employee extends Model<Employee> {
     as: 'receiver_operator'
   })
   declare b2bRecipient: B2b[];
+
+
+  @HasMany(() => Visa, {
+    foreignKey: 'receiver_opr_guid',
+    sourceKey: 'guid',
+    as: 'receiveroperator'
+  })
+  declare visa: Visa[];
 
   @HasMany(() => TurkishAirline, {
     foreignKey: 'assignment_opr_guid',

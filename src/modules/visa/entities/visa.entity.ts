@@ -2,6 +2,7 @@ import { Table, Model, Column, DataType, BelongsTo, HasMany } from "sequelize-ty
 import { Client } from "../../client/entities/client.entity";
 import { VisaPackage } from "../../visa_package/entities/visa_package.entity";
 import { VisaPayment } from "../../visa_payment/entities/visa_payment.entity";
+import { Employee } from "../../employee/entities/employee.entity";
 
 @Table({
   tableName: 'tbl_visa',
@@ -29,6 +30,12 @@ export class Visa extends Model<Visa> {
     allowNull: false
   })
   declare datetime: Date;
+
+  @Column({
+    type: DataType.UUID,
+    allowNull: false
+  })
+  declare receiver_opr_guid: string;
 
   @Column({
     type: DataType.UUID,
@@ -141,4 +148,11 @@ export class Visa extends Model<Visa> {
     sourceKey: 'guid',
   })
   declare visaPayment: VisaPayment[];
+
+  @BelongsTo(() => Employee, {
+    targetKey: 'guid',
+    foreignKey: 'receiver_opr_guid',
+    as: 'receiveroperator'
+  })
+  declare receiver_operator: Employee;
 }

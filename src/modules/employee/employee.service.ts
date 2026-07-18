@@ -106,6 +106,7 @@ export class EmployeeService {
       const offset = (currentPage - 1) * currentLimit;
 
       const { count, rows } = await this.employeeRepository.findAndCountAll({
+        where: { position_guid },
         attributes: ['guid', 'fullName'],
         order: [['index_number', 'ASC']],
         limit: Number(limit),
