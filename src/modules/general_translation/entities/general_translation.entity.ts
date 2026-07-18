@@ -1,7 +1,8 @@
 import { BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
-import { TransStatus } from "../../../trans_status/entities/trans_status.entity";
-import { Translator } from "../../../translator/entities/translator.entity";
+import { TransStatus } from "../../trans_status/entities/trans_status.entity";
+import { Translator } from "../../translator/entities/translator.entity";
+import { Client } from "../../client/entities/client.entity";
 
 @Table({
   tableName: 'tbl_general_translations',
@@ -20,7 +21,7 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
     type: DataType.DATEONLY,
     allowNull: false
   })
-  declare received_date: Date;
+  declare received_day: Date;
 
   @Column({
     type: DataType.TIME,
@@ -28,11 +29,11 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   })
   declare received_time: string;
 
-  // @Column({
-  //   type: DataType.UUID,
-  //   allowNull: false
-  // })
-  // declare opr_guid: string;
+  @Column({
+    type: DataType.UUID,
+    allowNull: false
+  })
+  declare opr_guid: string;
 
   @Column({
     type: DataType.INTEGER,
@@ -40,75 +41,95 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   })
   declare page_count: number;
 
-  // @Column({
-  //   type: DataType.STRING,
-  //   allowNull: false
-  // })
-  // declare client_guid: string;
+  @Column({
+    type: DataType.UUID,
+    allowNull: false
+  })
+  declare client_guid: string;
 
   @Column({
     type: DataType.STRING,
     allowNull: false
   })
-  declare translation_direction: string;
+  declare source_to_target: string;
 
   @Column({
     type: DataType.TIME,
-    allowNull: true
+    allowNull: false
   })
   declare completed_time: string;
 
-  // @Column({
-  //   type: DataType.UUID,
-  //   allowNull: false
-  // })
-  // declare status_guid: string;
+  @Column({
+    type: DataType.UUID,
+    allowNull: false
+  })
+  declare status_guid: string;
 
   @Column({
     type: DataType.INTEGER,
-    allowNull: true
+    allowNull: false
   })
   declare completed_page_count: number;
 
   @Column({
     type: DataType.DATEONLY,
-    allowNull: true
+    allowNull: false
   })
-  declare completed_date: Date;
+  declare completed_day: Date;
 
-  // @Column({
-  //   type: DataType.UUID,
-  //   allowNull: true
-  // })
-  // declare translator_guid: string;
+  @Column({
+    type: DataType.UUID,
+    allowNull: false
+  })
+  declare translator_guid: string;
 
   @Column({
     type: DataType.STRING,
-    allowNull: true
+    allowNull: false
   })
   declare correction_status: string;
 
   @Column({
-    type: DataType.DECIMAL(10, 2),
+    type: DataType.DECIMAL(12, 2),
     defaultValue: 0
   })
   declare price: number;
 
-  // @BelongsTo(() => Employee, {
-  //   foreignKey: 'opr_guid',
-  //   targetKey: 'guid'
-  // })
-  // declare operator: Employee;
+  @Column({
+    type: DataType.INTEGER,
+    autoIncrement: true,
+    allowNull: false,
+    unique: true
+  })
+  declare index_number: number;
 
-  // client
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true
+  })
+  declare note?: string;
 
-  // @BelongsTo(() => TransStatus, { 
-  //   foreignKey: 'status_guid', 
-  //   targetKey: 'guid' })
-  // declare status: TransStatus;
+  @BelongsTo(() => Employee, {
+    foreignKey: 'opr_guid',
+    targetKey: 'guid'
+  })
+  declare operator: Employee;
 
-  // @BelongsTo(() => Translator, { 
-  //   foreignKey: 'translator_guid',
-  //   targetKey: 'guid' })
-  // declare translator: Translator;
+  @BelongsTo(() => Client, {
+    foreignKey: 'client_guid',
+    targetKey: 'guid'
+  })
+  declare client: Client;
+
+  @BelongsTo(() => TransStatus, {
+    foreignKey: 'status_guid',
+    targetKey: 'guid'
+  })
+  declare status: TransStatus;
+
+  @BelongsTo(() => Translator, {
+    foreignKey: 'translator_guid',
+    targetKey: 'guid'
+  })
+  declare translator: Translator;
 }

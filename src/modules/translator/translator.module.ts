@@ -8,5 +8,6 @@ import { SequelizeModule } from '@nestjs/sequelize';
   imports: [SequelizeModule.forFeature([Translator])],
   controllers: [TranslatorController],
   providers: [TranslatorService],
+  exports: [TranslatorService]
 })
 export class TranslatorModule { }

@@ -3,6 +3,7 @@ import { B2b } from "../../b2b/entities/b2b.entity";
 import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.entity";
 import { Visa } from "../../visa/entities/visa.entity";
 import { RefferalLetter } from "../../refferal_letter/entities/refferal_letter.entity";
+import { GeneralTranslation } from "../../general_translation/entities/general_translation.entity";
 
 
 @Table({
@@ -57,7 +58,7 @@ export class Client extends Model<Client> {
   declare passportCountryOfIssue?: string;
 
   @Column({
-    type: DataType.ENUM('Male', 'Female'),
+    type: DataType.STRING,
     allowNull: true
   })
   declare gender?: string;
@@ -93,4 +94,11 @@ export class Client extends Model<Client> {
     sourceKey: 'guid'
   })
   declare refferalLetter: RefferalLetter[];
+
+
+  @HasMany(() => GeneralTranslation, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare generalTranslation: GeneralTranslation[];
 }

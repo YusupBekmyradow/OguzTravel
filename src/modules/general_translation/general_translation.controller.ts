@@ -1,34 +1,44 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { GeneralTranslationService } from './general_translation.service';
 import { CreateGeneralTranslationDto } from './dto/create-general_translation.dto';
 import { UpdateGeneralTranslationDto } from './dto/update-general_translation.dto';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('General Translation')
 @Controller('general-translation')
 export class GeneralTranslationController {
-  constructor(private readonly generalTranslationService: GeneralTranslationService) {}
+  constructor(private readonly translationService: GeneralTranslationService) { }
 
-  @Post()
-  create(@Body() createGeneralTranslationDto: CreateGeneralTranslationDto) {
-    return this.generalTranslationService.create(createGeneralTranslationDto);
+  @Post('/add-translation')
+  async create(@Body() createDto: CreateGeneralTranslationDto) {
+    return this.translationService.addGeneralTranslation(createDto);
   }
 
-  @Get()
-  findAll() {
-    return this.generalTranslationService.findAll();
+  @Get('/get-translations')
+  async findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.translationService.getAllGeneralTranslation(Number(page), Number(limit));
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.generalTranslationService.findOne(+id);
+  @Patch('/update-translation/:guid')
+  async update(
+    @Body() updateDto: UpdateGeneralTranslationDto
+  ) {
+    return this.translationService.updateGeneralTranslation(updateDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateGeneralTranslationDto: UpdateGeneralTranslationDto) {
-    return this.generalTranslationService.update(+id, updateGeneralTranslationDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.generalTranslationService.remove(+id);
+  @Delete('/delete-translation')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
+  async remove(@Body('guid') guid: string) {
+    return this.translationService.deleteGeneralTranslation(guid);
   }
 }

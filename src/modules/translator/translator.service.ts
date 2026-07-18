@@ -3,8 +3,8 @@ import { CreateTranslatorDto } from './dto/create-translator.dto';
 import { UpdateTranslatorDto } from './dto/update-translator.dto';
 import { InjectModel } from '@nestjs/sequelize';
 import { Translator } from './entities/translator.entity';
-import { errorResponse, successResponse } from '../helpers/responseFunctions';
-import { HttpStatuses } from '../helpers/httpStatuses.enum';
+import { errorResponse, successResponse } from '../../helpers/responseFunctions';
+import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 
 @Injectable()
 export class TranslatorService {

@@ -3,8 +3,8 @@ import { CreateTransStatusDto } from './dto/create-trans_status.dto';
 import { UpdateTransStatusDto } from './dto/update-trans_status.dto';
 import { TransStatus } from './entities/trans_status.entity';
 import { InjectModel } from '@nestjs/sequelize';
-import { errorResponse, successResponse } from '../helpers/responseFunctions';
-import { HttpStatuses } from '../helpers/httpStatuses.enum';
+import { HttpStatuses } from '../../helpers/httpStatuses.enum';
+import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 
 @Injectable()
 export class TransStatusService {

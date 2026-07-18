@@ -10,5 +10,6 @@ import { SequelizeModule } from '@nestjs/sequelize';
   ],
   controllers: [TransStatusController],
   providers: [TransStatusService],
+  exports: [TransStatusService]
 })
 export class TransStatusModule { }

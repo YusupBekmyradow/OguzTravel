@@ -25,10 +25,10 @@ export class RefferalLetter extends Model<RefferalLetter> {
     declare index_number: number;
 
     @Column({
-        type: DataType.INTEGER,
+        type: DataType.STRING,
         allowNull: true,
     })
-    declare application_number?: number;
+    declare application_number?: string;
 
     @Column({
         type: DataType.UUID,
@@ -55,10 +55,10 @@ export class RefferalLetter extends Model<RefferalLetter> {
     declare tranzit?: string;
 
     @Column({
-        type: DataType.INTEGER,
+        type: DataType.STRING,
         allowNull: false,
     })
-    declare travel_document_number: number;
+    declare travel_document_number: string;
 
     @Column({
         type: DataType.DATE,
@@ -88,7 +88,7 @@ export class RefferalLetter extends Model<RefferalLetter> {
     @Column({
         type: DataType.JSONB,
         allowNull: true,
-        defaultValue: { name: null, phone_number: null }
+        defaultValue: {}
     })
     declare agent: {
         name: string,

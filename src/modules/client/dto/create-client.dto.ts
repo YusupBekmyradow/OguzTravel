@@ -13,8 +13,6 @@ export class CreateClientDto {
     @ApiPropertyOptional()
     @IsString()
     @IsOptional()
-    @MinLength(12)
-    @MaxLength(12)
     declare phone_number?: string;
 
     @ApiPropertyOptional()
@@ -39,8 +37,8 @@ export class CreateClientDto {
     @IsOptional()
     declare passportCountryOfIssue?: string;
 
-    @ApiPropertyOptional({ enum: ['Male', 'Female'] })
-    @IsIn(['Male', 'Female'])
+    @ApiPropertyOptional()
+    @IsString()
     @IsOptional()
     declare gender?: string;
 

@@ -1,11 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Transform } from "class-transformer";
 import { IsDateString, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class CreateRefferalLetterDto {
   @ApiPropertyOptional()
-  @IsNumber()
   @IsOptional()
-  declare application_number: number;
+  @Transform(({ value }) => (value === "" ? null : value))
+  @IsString()
+  declare application_number?: string;
 
   @ApiProperty()
   @IsUUID()
@@ -28,9 +30,9 @@ export class CreateRefferalLetterDto {
   declare tranzit?: string;
 
   @ApiProperty()
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  declare travel_document_number: number;
+  declare travel_document_number: string;
 
   @ApiProperty()
   @IsDateString()
@@ -55,7 +57,7 @@ export class CreateRefferalLetterDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsObject()
-  declare agent: {
+  declare agent?: {
     name: string,
     phone_number: string;
   }
@@ -66,8 +68,9 @@ export class CreateRefferalLetterDto {
   declare contract_number?: string;
 
   @ApiPropertyOptional()
-  @IsDateString()
   @IsOptional()
+  @Transform(({ value }) => (value === "" ? null : value))
+  @IsDateString()
   declare contract_date?: Date;
 
   @ApiPropertyOptional()

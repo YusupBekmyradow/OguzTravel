@@ -1,4 +1,5 @@
-import { Model, Column, DataType, Table } from "sequelize-typescript";
+import { Model, Column, DataType, Table, HasMany } from "sequelize-typescript";
+import { GeneralTranslation } from "../../general_translation/entities/general_translation.entity";
 
 @Table({
   tableName: 'tbl_trans_status',
@@ -29,4 +30,9 @@ export class TransStatus extends Model<TransStatus> {
   })
   declare index_number: number;
 
+  @HasMany(() => GeneralTranslation, {
+    foreignKey: 'status_guid',
+    sourceKey: 'guid'
+  })
+  declare generalTranslation: GeneralTranslation[];
 }
