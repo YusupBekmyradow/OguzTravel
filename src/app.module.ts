@@ -26,6 +26,7 @@ import { GeneralTranslationModule } from './modules/general_translation/general_
 import { TransStatusModule } from './modules/trans_status/trans_status.module';
 import { TranslatorModule } from './modules/translator/translator.module';
 import { TransPaymentModule } from './modules/trans_payment/trans_payment.module';
+import { HotelModule } from './modules/hotel/hotel.module';
 dotenv.config();
 
 @Module({
@@ -56,7 +57,8 @@ dotenv.config();
     TransStatusModule,
     TranslatorModule,
     GeneralTranslationModule,
-    TransPaymentModule
+    TransPaymentModule,
+    HotelModule
   ],
   controllers: [AppController],
   providers: [

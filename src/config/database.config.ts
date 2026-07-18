@@ -20,6 +20,7 @@ import { GeneralTranslation } from '../modules/general_translation/entities/gene
 import { Translator } from '../modules/translator/entities/translator.entity';
 import { TransStatus } from '../modules/trans_status/entities/trans_status.entity';
 import { TransPayment } from '../modules/trans_payment/entities/trans_payment.entity';
+import { Hotel } from '../modules/hotel/entities/hotel.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
@@ -37,7 +38,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     synchronize: true,
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaCategory,
-      VisaPackage, VisaPayment, RefferalLetter, TransStatus, Translator, GeneralTranslation, TransPayment]
+      VisaPackage, VisaPayment, RefferalLetter, TransStatus, Translator, GeneralTranslation, TransPayment, Hotel]
   };
 };
 
