@@ -10,6 +10,7 @@ import { TurkishPayment } from "../../turkish_payment/entities/turkish_payment.e
 import { VisaPayment } from "../../visa_payment/entities/visa_payment.entity";
 import { RefferalLetter } from "../../refferal_letter/entities/refferal_letter.entity";
 import { GeneralTranslation } from "../../general_translation/entities/general_translation.entity";
+import { TransPayment } from "../../trans_payment/entities/trans_payment.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -163,4 +164,11 @@ export class Employee extends Model<Employee> {
     as: 'generalTranslation'
   })
   declare generalTranslation: GeneralTranslation[];
+
+  @HasMany(() => TransPayment, {
+    foreignKey: 'opr_guid',
+    sourceKey: 'guid',
+    as: 'transPayments'
+  })
+  declare transPaymentOpr: TransPayment[];
 }

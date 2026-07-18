@@ -25,6 +25,7 @@ import { RefferalLetterModule } from './modules/refferal_letter/refferal_letter.
 import { GeneralTranslationModule } from './modules/general_translation/general_translation.module';
 import { TransStatusModule } from './modules/trans_status/trans_status.module';
 import { TranslatorModule } from './modules/translator/translator.module';
+import { TransPaymentModule } from './modules/trans_payment/trans_payment.module';
 dotenv.config();
 
 @Module({
@@ -54,7 +55,8 @@ dotenv.config();
     RefferalLetterModule,
     TransStatusModule,
     TranslatorModule,
-    GeneralTranslationModule
+    GeneralTranslationModule,
+    TransPaymentModule
   ],
   controllers: [AppController],
   providers: [

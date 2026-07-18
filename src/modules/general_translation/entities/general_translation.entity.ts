@@ -1,8 +1,9 @@
-import { BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
+import { BelongsTo, Column, DataType, HasMany, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { TransStatus } from "../../trans_status/entities/trans_status.entity";
 import { Translator } from "../../translator/entities/translator.entity";
 import { Client } from "../../client/entities/client.entity";
+import { TransPayment } from "../../trans_payment/entities/trans_payment.entity";
 
 @Table({
   tableName: 'tbl_general_translations',
@@ -132,4 +133,10 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
     targetKey: 'guid'
   })
   declare translator: Translator;
+
+  @HasMany(() => TransPayment, {
+    foreignKey: 'translation_guid',
+    sourceKey: 'guid',
+  })
+  declare transPayment: TransPayment[];
 }
