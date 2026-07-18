@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import { IsIn, IsDate, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { IsIn, IsDate, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional, IsDateString } from "class-validator";
 
 
 export class CreateClientDto {
@@ -16,9 +16,8 @@ export class CreateClientDto {
     declare phone_number?: string;
 
     @ApiPropertyOptional()
-    @Type(() => Date)
-    @IsDate()
     @IsOptional()
+    @IsDateString()
     declare dateOfBirth?: Date;
 
     @ApiPropertyOptional()
@@ -27,9 +26,8 @@ export class CreateClientDto {
     declare passport_number?: string
 
     @ApiPropertyOptional()
-    @Type(() => Date)
-    @IsDate()
     @IsOptional()
+    @IsDateString()
     declare passportExpiryDate?: Date;
 
     @ApiPropertyOptional()
