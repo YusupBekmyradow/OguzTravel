@@ -1,0 +1,91 @@
+import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate } from "sequelize-typescript";
+
+@Table({
+    tableName: 'tbl_package',
+    timestamps: true
+})
+export class Package extends Model<Package> {
+    @Column({
+        primaryKey: true,
+        allowNull: false,
+        defaultValue: DataType.UUIDV4,
+        type: DataType.UUID
+    })
+    declare guid: string;
+
+    @Column({
+        type: DataType.INTEGER,
+        autoIncrement: true,
+        allowNull: false,
+        unique: true
+    })
+    declare index_number: number;
+
+    @Column({
+        type: DataType.DATE,
+        allowNull: false
+    })
+    declare application_date: Date;
+
+    //   type: DataType.UUID,
+    //   allowNull: true
+    // })
+    // declare opr_guid: string;
+
+    // @Column({
+    //   type: DataType.UUID,
+    //   allowNull: true
+    // })
+    // declare client_guid: string;
+
+    // @Column({
+    //   type: DataType.UUID,
+    //   allowNull: false
+    // })
+    // declare prepared_opr_guid: string;
+
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: false
+    })
+    declare destination_country: string;
+
+    @Column({
+        type: DataType.DECIMAL(12, 2),
+        allowNull: false
+    })
+    declare cost: number;
+
+    @Column({
+        type: DataType.DECIMAL(12, 2),
+        allowNull: false
+    })
+    declare price: number;
+
+    @Column({
+        type: DataType.DECIMAL(12, 2),
+        allowNull: true
+    })
+    declare profit: number;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: false
+    })
+    declare partner: string;
+
+    @Column({
+        type: DataType.TEXT,
+        allowNull: true
+    })
+    declare note?: string;
+
+    @BeforeSave
+    @BeforeUpdate
+    static calculateProfit(instance: Package) {
+        const cost = Number(instance.cost) || 0;
+        const price = Number(instance.price) || 0;
+        instance.profit = price - cost;
+    }
+}

@@ -1,0 +1,105 @@
+import { Injectable } from '@nestjs/common';
+import { CreateRailwayDto } from './dto/create-railway.dto';
+import { UpdateRailwayDto } from './dto/update-railway.dto';
+import { InjectModel } from '@nestjs/sequelize';
+import { Railway } from './entities/railway.entity';
+import { Employee } from '../employee/entities/employee.entity';
+import { Office } from '../office/entities/office.entity';
+import { Client } from '../client/entities/client.entity';
+import { errorResponse, successResponse } from '../../helpers/responseFunctions';
+import { HttpStatuses } from '../../helpers/httpStatuses.enum';
+
+@Injectable()
+export class RailwayService {
+  constructor(
+    @InjectModel(Railway) private railwayRepository: typeof Railway
+  ) { }
+
+  private getIncludes() {
+    return [
+      {
+        model: Employee, as: 'operator', attributes: ['guid', 'fullName'],
+        include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
+      },
+      { model: Client, attributes: ['guid', 'fullName'] },
+      { model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'] },
+    ];
+  }
+
+  async addRailway(createDto: CreateRailwayDto) {
+    try {
+      const railway = await this.railwayRepository.create({ ...createDto } as any, { hooks: true });
+
+      const newRailway = await this.railwayRepository.findOne({
+        where: { guid: railway.guid },
+        attributes: { exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'] },
+        include: this.getIncludes()
+      });
+
+      return { status: 201, data: newRailway, message: 'Railway created successfully' };
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Railway creation failed', error);
+    }
+  }
+
+  async getAllRailway(page: number = 1, limit: number = 10) {
+    try {
+      const currentPage = Math.max(1, Number(page));
+      const currentLimit = Math.max(1, Number(limit));
+      const offset = (currentPage - 1) * currentLimit;
+
+      const { rows, count } = await this.railwayRepository.findAndCountAll({
+        attributes: { exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'] },
+        include: this.getIncludes(),
+        order: [['index_number', 'DESC']],
+        limit: currentLimit,
+        offset: offset,
+      });
+
+      return {
+        status: 200,
+        data: rows,
+        meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
+        message: 'Railway records fetched successfully'
+      };
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Railway fetching error', error);
+    }
+  }
+
+
+  async updateRailway(updateDto: UpdateRailwayDto) {
+    try {
+      const railway = await this.railwayRepository.findOne({
+        where: { guid: updateDto.guid }
+      });
+
+      if (!railway) {
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Railway not found');
+      }
+      await railway.update(updateDto);
+      const updatedRailway = await this.railwayRepository.findOne({
+        where: { guid: updateDto.guid },
+        attributes: { exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'] },
+        include: this.getIncludes()
+      });
+
+      return { status: 200, data: updatedRailway, message: 'Railway updated successfully' };
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+    }
+  }
+
+
+  async deleteRailway(guid: string) {
+    try {
+      const railway = await this.railwayRepository.findByPk(guid);
+      if (!railway) return errorResponse(HttpStatuses.NOT_FOUND, 'Railway not found');
+
+      await railway.destroy();
+      return successResponse(HttpStatuses.OK, null, 'Railway deleted successfully');
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
+    }
+  }
+}

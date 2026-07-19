@@ -62,9 +62,10 @@ export class TurkishAirlinesService {
 
   async addTurkishAirline(createTurkishAirlineDto: CreateTurkishAirlineDto) {
     try {
-      const turkishAirline = await this.turkishAirlineRepo.create({
-        ...createTurkishAirlineDto,
-      } as any);
+      const turkishAirline = await this.turkishAirlineRepo.create(
+        { ...createTurkishAirlineDto } as any,
+        { hooks: true }
+      );
       const newTurkishAirline = await this.turkishAirlineRepo.findOne({
         where: { guid: turkishAirline.guid },
         include: this.getTurkishAirlineIncludes(),
@@ -72,15 +73,16 @@ export class TurkishAirlinesService {
       });
 
       if (!newTurkishAirline) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found')
+        return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
       }
+
       return {
         status: 201,
         data: newTurkishAirline,
         message: 'TurkishAirline created successfully'
-      }
+      };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TurkishAirline creation failes', error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Creation failed', error);
     }
   }
 
@@ -117,26 +119,22 @@ export class TurkishAirlinesService {
 
   async updateTurkishAirline(updateDto: UpdateTurkishAirlineDto) {
     try {
-      const [affectedCount] = await this.turkishAirlineRepo.update(updateDto, {
-        where: { guid: updateDto.guid }
-      });
-      if (affectedCount === 0) return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
+      const turkishAirline = await this.turkishAirlineRepo.findByPk(updateDto.guid);
+      if (!turkishAirline) return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
 
-      const newTurkishAirline = await this.turkishAirlineRepo.findOne({
+      await turkishAirline.update(updateDto);
+
+      const updatedTurkishAirline = await this.turkishAirlineRepo.findOne({
         where: { guid: updateDto.guid },
         include: this.getTurkishAirlineIncludes(),
         attributes: { include: this.getTurkishAttributes() as any }
       });
-      return {
-        status: 200,
-        data: newTurkishAirline,
-        message: 'TurkishAirline updated successfully'
-      };
+
+      return { status: 200, data: updatedTurkishAirline, message: 'TurkishAirline updated successfully' };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
     }
   }
-
 
   async deleteTurkishAirline(guid: string) {
     try {

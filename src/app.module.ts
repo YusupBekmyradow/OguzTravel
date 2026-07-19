@@ -27,6 +27,11 @@ import { TransStatusModule } from './modules/trans_status/trans_status.module';
 import { TranslatorModule } from './modules/translator/translator.module';
 import { TransPaymentModule } from './modules/trans_payment/trans_payment.module';
 import { HotelModule } from './modules/hotel/hotel.module';
+import { RailwayModule } from './modules/railway/railway.module';
+import { AirwayModule } from './modules/airway/airway.module';
+import { TourModule } from './modules/tour/tour.module';
+import { TransferModule } from './modules/transfer/transfer.module';
+import { PackageModule } from './modules/package/package.module';
 dotenv.config();
 
 @Module({
@@ -58,7 +63,12 @@ dotenv.config();
     TranslatorModule,
     GeneralTranslationModule,
     TransPaymentModule,
-    HotelModule
+    HotelModule,
+    AirwayModule,
+    RailwayModule,
+    TourModule,
+    TransferModule,
+    PackageModule
   ],
   controllers: [AppController],
   providers: [

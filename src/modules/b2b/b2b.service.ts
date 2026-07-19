@@ -135,26 +135,32 @@ export class B2bService {
   async updateB2b(updateDto: UpdateB2bDto) {
     const t = await this.sequelize.transaction();
     try {
-      const [affectedCount] = await this.b2bRepository.update(updateDto, {
-        where: { guid: updateDto.guid }
+      const b2b = await this.b2bRepository.findOne({
+        where: { guid: updateDto.guid },
+        transaction: t
       });
-      if (affectedCount === 0) return errorResponse(HttpStatuses.NOT_FOUND, 'B2b not found');
 
-      const newB2b = await this.b2bRepository.findOne({
+      if (!b2b) {
+        await t.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, 'B2b not found');
+      }
+
+      await b2b.update(updateDto, { transaction: t });
+
+      await t.commit();
+
+      const updatedB2b = await this.b2bRepository.findOne({
         where: { guid: updateDto.guid },
         include: this.getB2bIncludes(),
         attributes: { include: this.getB2bAttributes().include as any }
       });
-      return {
-        status: 200,
-        data: newB2b,
-        message: 'B2b updated successfully'
-      };
+
+      return { status: 200, data: updatedB2b, message: 'B2b updated successfully' };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error)
+      await t.rollback();
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
     }
   }
-
 
   async deleteB2b(guid: string) {
     try {

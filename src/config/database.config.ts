@@ -21,6 +21,11 @@ import { Translator } from '../modules/translator/entities/translator.entity';
 import { TransStatus } from '../modules/trans_status/entities/trans_status.entity';
 import { TransPayment } from '../modules/trans_payment/entities/trans_payment.entity';
 import { Hotel } from '../modules/hotel/entities/hotel.entity';
+import { Airway } from '../modules/airway/entities/airway.entity';
+import { Railway } from '../modules/railway/entities/railway.entity';
+import { Tour } from '../modules/tour/entities/tour.entity';
+import { Transfer } from '../modules/transfer/entities/transfer.entity';
+import { Package } from '../modules/package/entities/package.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
@@ -38,7 +43,8 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     synchronize: true,
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaCategory,
-      VisaPackage, VisaPayment, RefferalLetter, TransStatus, Translator, GeneralTranslation, TransPayment, Hotel]
+      VisaPackage, VisaPayment, RefferalLetter, TransStatus, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
+      Package]
   };
 };
 

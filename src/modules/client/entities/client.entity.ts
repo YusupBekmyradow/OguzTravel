@@ -4,6 +4,10 @@ import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.
 import { Visa } from "../../visa/entities/visa.entity";
 import { RefferalLetter } from "../../refferal_letter/entities/refferal_letter.entity";
 import { GeneralTranslation } from "../../general_translation/entities/general_translation.entity";
+import { Hotel } from "../../hotel/entities/hotel.entity";
+import { Airway } from "../../airway/entities/airway.entity";
+import { Railway } from "../../railway/entities/railway.entity";
+import { Tour } from "../../tour/entities/tour.entity";
 
 
 @Table({
@@ -101,4 +105,28 @@ export class Client extends Model<Client> {
     sourceKey: 'guid'
   })
   declare generalTranslation: GeneralTranslation[];
+
+  @HasMany(() => Hotel, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare hotel: Hotel[];
+
+  @HasMany(() => Airway, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare airway: Airway[];
+
+  @HasMany(() => Railway, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare railway: Railway[];
+
+  @HasMany(() => Tour, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare tour: Tour[];
 }

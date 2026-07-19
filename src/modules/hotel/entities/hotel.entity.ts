@@ -1,4 +1,6 @@
-import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate } from "sequelize-typescript";
+import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate, BelongsTo } from "sequelize-typescript";
+import { Employee } from "../../employee/entities/employee.entity";
+import { Client } from "../../client/entities/client.entity";
 
 @Table({
   tableName: 'tbl_hotel',
@@ -15,28 +17,36 @@ export class Hotel extends Model<Hotel> {
   declare guid: string;
 
   @Column({
+    type: DataType.INTEGER,
+    autoIncrement: true,
+    allowNull: false,
+    unique: true
+  })
+  declare index_number: number;
+
+  @Column({
     type: DataType.DATE,
     allowNull: false
   })
   declare application_date: Date;
 
-  // @Column({
-  //   type: DataType.UUID,
-  //   allowNull: true
-  // })
-  // declare opr_guid: string;
+  @Column({
+    type: DataType.UUID,
+    allowNull: true
+  })
+  declare opr_guid: string;
 
-  // @Column({
-  //   type: DataType.UUID,
-  //   allowNull: true
-  // })
-  // declare client_guid: string;
+  @Column({
+    type: DataType.UUID,
+    allowNull: false
+  })
+  declare client_guid: string;
 
-  // @Column({
-  //   type: DataType.UUID,
-  //   allowNull: false
-  // })
-  // declare prepared_opr_guid: string;
+  @Column({
+    type: DataType.UUID,
+    allowNull: false
+  })
+  declare prepared_opr_guid: string;
 
   @Column({
     type: DataType.STRING,
@@ -77,7 +87,8 @@ export class Hotel extends Model<Hotel> {
 
   @Column({
     type: DataType.DECIMAL(12, 2),
-    allowNull: false, defaultValue: 0
+    allowNull: false,
+    defaultValue: 0
   })
   declare price: number;
 
@@ -95,18 +106,28 @@ export class Hotel extends Model<Hotel> {
   declare system: string;
 
   @Column({
-    type: DataType.INTEGER,
-    autoIncrement: true,
-    allowNull: false,
-    unique: true
-  })
-  declare index_number: number;
-
-  @Column({
     type: DataType.TEXT,
     allowNull: true
   })
   declare note?: string;
+
+  @BelongsTo(() => Employee, {
+    foreignKey: 'opr_guid',
+    targetKey: 'guid'
+  })
+  declare operator: Employee;
+
+  @BelongsTo(() => Client, {
+    foreignKey: 'client_guid',
+    targetKey: 'guid'
+  })
+  declare client: Client;
+
+  @BelongsTo(() => Employee, {
+    foreignKey: 'prepared_opr_guid',
+    targetKey: 'guid'
+  })
+  declare preparedOpr: Employee;
 
   @BeforeSave
   @BeforeUpdate

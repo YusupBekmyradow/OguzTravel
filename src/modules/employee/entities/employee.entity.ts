@@ -12,6 +12,10 @@ import { RefferalLetter } from "../../refferal_letter/entities/refferal_letter.e
 import { GeneralTranslation } from "../../general_translation/entities/general_translation.entity";
 import { TransPayment } from "../../trans_payment/entities/trans_payment.entity";
 import { Visa } from "../../visa/entities/visa.entity";
+import { Hotel } from "../../hotel/entities/hotel.entity";
+import { Airway } from "../../airway/entities/airway.entity";
+import { Railway } from "../../railway/entities/railway.entity";
+import { Tour } from "../../tour/entities/tour.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -59,7 +63,7 @@ export class Employee extends Model<Employee> {
     type: DataType.JSONB,
     allowNull: true
   })
-  declare address: string;
+  declare address: any;
 
   @Column({
     type: DataType.UUID,
@@ -180,4 +184,60 @@ export class Employee extends Model<Employee> {
     as: 'transPayments'
   })
   declare transPaymentOpr: TransPayment[];
+
+  @HasMany(() => Hotel, {
+    foreignKey: 'opr_guid',
+    sourceKey: 'guid',
+    as: 'hotel'
+  })
+  declare hotel: Hotel[];
+
+  @HasMany(() => Hotel, {
+    foreignKey: 'prepared_opr_guid',
+    sourceKey: 'guid',
+    as: 'hotelOpr'
+  })
+  declare hotelOpr: Hotel[];
+
+  @HasMany(() => Airway, {
+    foreignKey: 'opr_guid',
+    sourceKey: 'guid',
+    as: 'airway'
+  })
+  declare airway: Airway[];
+
+  @HasMany(() => Airway, {
+    foreignKey: 'prepared_opr_guid',
+    sourceKey: 'guid',
+    as: 'airwayOpr'
+  })
+  declare airwayOpr: Airway[];
+
+  @HasMany(() => Railway, {
+    foreignKey: 'opr_guid',
+    sourceKey: 'guid',
+    as: 'railway'
+  })
+  declare railway: Railway[];
+
+  @HasMany(() => Railway, {
+    foreignKey: 'prepared_opr_guid',
+    sourceKey: 'guid',
+    as: 'railwayOpr'
+  })
+  declare railwayOpr: Railway[];
+
+  @HasMany(() => Tour, {
+    foreignKey: 'opr_guid',
+    sourceKey: 'guid',
+    as: 'tour'
+  })
+  declare tour: Tour[];
+
+  @HasMany(() => Tour, {
+    foreignKey: 'prepared_opr_guid',
+    sourceKey: 'guid',
+    as: 'tourOpr'
+  })
+  declare tourOpr: Tour[];
 }
