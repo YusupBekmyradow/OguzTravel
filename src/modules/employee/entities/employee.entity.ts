@@ -16,6 +16,8 @@ import { Hotel } from "../../hotel/entities/hotel.entity";
 import { Airway } from "../../airway/entities/airway.entity";
 import { Railway } from "../../railway/entities/railway.entity";
 import { Tour } from "../../tour/entities/tour.entity";
+import { Transfer } from "../../transfer/entities/transfer.entity";
+import { Package } from "../../package/entities/package.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -240,4 +242,33 @@ export class Employee extends Model<Employee> {
     as: 'tourOpr'
   })
   declare tourOpr: Tour[];
+
+  @HasMany(() => Transfer, {
+    foreignKey: 'opr_guid',
+    sourceKey: 'guid',
+    as: 'transfer'
+  })
+  declare transfer: Transfer[];
+
+  @HasMany(() => Transfer, {
+    sourceKey: 'guid',
+    foreignKey: 'prepared_opr_guid',
+    as: 'transferOpr'
+  })
+  declare transferOpr: Transfer[];
+
+  @HasMany(() => Package, {
+    foreignKey: 'opr_guid',
+    sourceKey: 'guid',
+    as: 'package'
+  })
+  declare package: Package[];
+
+  @HasMany(() => Package, {
+    sourceKey: 'guid',
+    foreignKey: 'prepared_opr_guid',
+    as: 'packageOpr'
+  })
+  declare packageOpr: Package[];
+
 }

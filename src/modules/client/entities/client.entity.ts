@@ -8,6 +8,8 @@ import { Hotel } from "../../hotel/entities/hotel.entity";
 import { Airway } from "../../airway/entities/airway.entity";
 import { Railway } from "../../railway/entities/railway.entity";
 import { Tour } from "../../tour/entities/tour.entity";
+import { Transfer } from "../../transfer/entities/transfer.entity";
+import { Package } from "../../package/entities/package.entity";
 
 
 @Table({
@@ -129,4 +131,16 @@ export class Client extends Model<Client> {
     sourceKey: 'guid'
   })
   declare tour: Tour[];
+
+  @HasMany(() => Transfer, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare transfer: Transfer[];
+
+  @HasMany(() => Package, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid'
+  })
+  declare package: Package[];
 }

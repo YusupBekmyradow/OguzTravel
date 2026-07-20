@@ -1,4 +1,6 @@
-import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate } from "sequelize-typescript";
+import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate, BelongsTo } from "sequelize-typescript";
+import { Employee } from "../../employee/entities/employee.entity";
+import { Client } from "../../client/entities/client.entity";
 
 @Table({
     tableName: 'tbl_package',
@@ -27,23 +29,23 @@ export class Package extends Model<Package> {
     })
     declare application_date: Date;
 
-    //   type: DataType.UUID,
-    //   allowNull: true
-    // })
-    // declare opr_guid: string;
+    @Column({
+        type: DataType.UUID,
+        allowNull: false
+    })
+    declare opr_guid: string;
 
-    // @Column({
-    //   type: DataType.UUID,
-    //   allowNull: true
-    // })
-    // declare client_guid: string;
+    @Column({
+        type: DataType.UUID,
+        allowNull: false
+    })
+    declare client_guid: string;
 
-    // @Column({
-    //   type: DataType.UUID,
-    //   allowNull: false
-    // })
-    // declare prepared_opr_guid: string;
-
+    @Column({
+        type: DataType.UUID,
+        allowNull: false
+    })
+    declare prepared_opr_guid: string;
 
     @Column({
         type: DataType.STRING,
@@ -80,6 +82,24 @@ export class Package extends Model<Package> {
         allowNull: true
     })
     declare note?: string;
+
+    @BelongsTo(() => Employee, {
+        foreignKey: 'opr_guid',
+        targetKey: 'guid'
+    })
+    declare operator: Employee;
+
+    @BelongsTo(() => Client, {
+        foreignKey: 'client_guid',
+        targetKey: 'guid'
+    })
+    declare client: Client;
+
+    @BelongsTo(() => Employee, {
+        foreignKey: 'prepared_opr_guid',
+        targetKey: 'guid'
+    })
+    declare preparedOpr: Employee;
 
     @BeforeSave
     @BeforeUpdate

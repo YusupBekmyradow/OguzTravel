@@ -1,34 +1,42 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Query } from '@nestjs/common';
 import { TransferService } from './transfer.service';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 import { UpdateTransferDto } from './dto/update-transfer.dto';
+import { ApiTags, ApiBody } from '@nestjs/swagger';
 
+@ApiTags('Transfer')
 @Controller('transfer')
 export class TransferController {
-  constructor(private readonly transferService: TransferService) {}
+  constructor(private readonly transferService: TransferService) { }
 
-  @Post()
-  create(@Body() createTransferDto: CreateTransferDto) {
-    return this.transferService.create(createTransferDto);
+  @Post('/add-transfer')
+  async create(@Body() createDto: CreateTransferDto) {
+    return this.transferService.addTransfer(createDto);
   }
 
-  @Get()
-  findAll() {
-    return this.transferService.findAll();
+  @Get('/get-transfers')
+  async findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.transferService.getAllTransfer(Number(page), Number(limit));
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.transferService.findOne(+id);
+  @Patch('/update-transfer')
+  async update(@Body() updateDto: UpdateTransferDto) {
+    return this.transferService.updateTransfer(updateDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTransferDto: UpdateTransferDto) {
-    return this.transferService.update(+id, updateTransferDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.transferService.remove(+id);
+  @Delete('/delete-transfer')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
+  async remove(@Body('guid') guid: string) {
+    return this.transferService.deleteTransfer(guid);
   }
 }
