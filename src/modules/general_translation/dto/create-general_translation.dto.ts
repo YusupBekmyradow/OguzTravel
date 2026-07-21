@@ -39,11 +39,6 @@ export class CreateGeneralTranslationDto {
   @IsNotEmpty()
   declare completed_time: string;
 
-  @ApiPropertyOptional({ example: false })
-  @IsBoolean()
-  @IsOptional()
-  declare status: boolean;
-
   @ApiProperty()
   @IsNumber()
   @IsNotEmpty()
@@ -78,5 +73,10 @@ export class CreateGeneralTranslationDto {
   @ApiProperty({ example: 'false' })
   @IsString()
   @IsNotEmpty()
-  declare is_paid: string;
+  declare status: string;
+
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
+  declare is_paid: boolean;
 }

@@ -60,11 +60,11 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   declare completed_time: string;
 
   @Column({
-    type: DataType.BOOLEAN,
+    type: DataType.STRING,
     allowNull: false,
-    defaultValue: false
+    defaultValue: 'false'
   })
-  declare status: boolean;
+  declare status: string;
 
   @Column({
     type: DataType.INTEGER,
@@ -111,11 +111,12 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   declare note?: string;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.BOOLEAN,
     allowNull: false,
-    defaultValue: 'false'
+    defaultValue: false
   })
-  declare is_paid: string;
+  declare is_paid: boolean;
+
 
   @BelongsTo(() => Employee, {
     foreignKey: 'opr_guid',

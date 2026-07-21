@@ -67,17 +67,10 @@ export class GeneralTranslationService {
         ...createDto
       } as any, { transaction: t });
 
-      const isPaidStr = String(createDto.is_paid);
-      const isPaidNum = Number(createDto.is_paid);
-
-      if (isPaidStr === 'true' || isPaidStr === '1' || (!isNaN(isPaidNum) && isPaidNum > 0)) {
-        const paymentAmount = (!isNaN(isPaidNum) && isPaidNum > 0)
-          ? isPaidNum
-          : (translation.price || 0);
-
+      if (createDto.is_paid === true) {
         await this.transPaymentRepo.create({
           translation_guid: translation.guid,
-          amount: paymentAmount,
+          amount: translation.price || 0,
           payment_date: new Date(),
           opr_guid: createDto.opr_guid
         } as any, { transaction: t });
