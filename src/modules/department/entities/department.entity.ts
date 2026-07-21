@@ -6,7 +6,7 @@ import { Employee } from '../../employee/entities/employee.entity';
   timestamps: true
 })
 
-export class Department extends Model<Department>{
+export class Department extends Model<Department> {
 
   @Column({
     primaryKey: true,
@@ -21,7 +21,7 @@ export class Department extends Model<Department>{
     type: DataType.JSONB,
     allowNull: false,
   })
-  declare name:{
+  declare name: {
     tk: string;
     ru: string;
     en: string;
@@ -29,7 +29,9 @@ export class Department extends Model<Department>{
 
   @HasMany(() => Employee, {
     foreignKey: 'department_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare employees: Employee[];
 }

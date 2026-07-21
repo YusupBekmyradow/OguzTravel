@@ -147,40 +147,43 @@ export class B2b extends Model<B2b> {
     targetKey: 'guid',
     foreignKey: 'assignment_opr_guid',
     as: 'assignment_operator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare assignment_operator: Employee;
 
   @BelongsTo(() => Employee, {
     targetKey: 'guid',
     foreignKey: 'receiver_opr_guid',
-    as: 'receiver_operator'
+    as: 'receiver_operator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare receiver_operator: Employee;
 
   @BelongsTo(() => Client, {
     targetKey: 'guid',
-    foreignKey: 'client_guid'
+    foreignKey: 'client_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare client: Client;
 
-  @Column({
-    type: DataType.STRING,
-    allowNull: false
-  })
-  declare pnr: string;
-
   @BelongsTo(() => Tstatus, {
     targetKey: 'guid',
-    foreignKey: 'status_guid'
+    foreignKey: 'status_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare tstatus: Tstatus;
 
   @HasMany(() => TicketPayment, {
     foreignKey: 'b2b_guid',
     sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare ticketPayment: TicketPayment[];
-
   @BeforeSave
   @BeforeUpdate
   static calculateProfit(instance: B2b) {

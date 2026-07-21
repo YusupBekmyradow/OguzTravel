@@ -70,9 +70,9 @@ export class CreateGeneralTranslationDto {
   @IsOptional()
   declare price?: number;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   declare note?: string;
 
   @ApiProperty()

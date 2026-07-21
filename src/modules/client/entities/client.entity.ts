@@ -79,68 +79,89 @@ export class Client extends Model<Client> {
 
   @HasMany(() => B2b, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare b2b: B2b[];
 
   @HasMany(() => TurkishAirline, {
     foreignKey: 'client_guid',
     sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare turkishAirline: TurkishAirline[];
 
   @HasMany(() => Visa, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visa: Visa[];
 
   @HasMany(() => RefferalLetter, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare refferalLetter: RefferalLetter[];
 
-
   @HasMany(() => GeneralTranslation, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare generalTranslation: GeneralTranslation[];
 
   @HasMany(() => Hotel, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare hotel: Hotel[];
 
   @HasMany(() => Airway, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare airway: Airway[];
 
   @HasMany(() => Railway, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare railway: Railway[];
 
   @HasMany(() => Tour, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare tour: Tour[];
 
   @HasMany(() => Transfer, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare transfer: Transfer[];
 
   @HasMany(() => Package, {
     foreignKey: 'client_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare package: Package[];
 }
