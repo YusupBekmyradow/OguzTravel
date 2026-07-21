@@ -111,10 +111,11 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   declare note?: string;
 
   @Column({
-    type: DataType.BOOLEAN,
+    type: DataType.STRING,
     allowNull: false,
+    defaultValue: 'false'
   })
-  declare is_paid: boolean;
+  declare is_paid: string;
 
   @BelongsTo(() => Employee, {
     foreignKey: 'opr_guid',

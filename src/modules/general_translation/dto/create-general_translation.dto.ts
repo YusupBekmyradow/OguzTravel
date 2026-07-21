@@ -75,8 +75,8 @@ export class CreateGeneralTranslationDto {
   @IsOptional()
   declare note?: string;
 
-  @ApiProperty()
-  @IsBoolean()
+  @ApiProperty({ example: 'false' })
+  @IsString()
   @IsNotEmpty()
-  declare is_paid: boolean;
+  declare is_paid: string;
 }

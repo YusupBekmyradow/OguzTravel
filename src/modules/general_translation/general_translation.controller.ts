@@ -22,7 +22,7 @@ export class GeneralTranslationController {
     return this.translationService.getAllGeneralTranslation(Number(page), Number(limit));
   }
 
-  @Patch('/update-translation/:guid')
+  @Patch('/update-translation')
   async update(
     @Body() updateDto: UpdateGeneralTranslationDto
   ) {

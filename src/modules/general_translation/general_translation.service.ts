@@ -9,11 +9,15 @@ import { Translator } from '../translator/entities/translator.entity';
 import { Office } from '../office/entities/office.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
+import { Sequelize } from 'sequelize-typescript';
+import { TransPayment } from '../trans_payment/entities/trans_payment.entity';
 
 @Injectable()
 export class GeneralTranslationService {
   constructor(
-    @InjectModel(GeneralTranslation) private translationRepository: typeof GeneralTranslation
+    @InjectModel(GeneralTranslation) private translationRepository: typeof GeneralTranslation,
+    @InjectModel(TransPayment) private transPaymentRepo: typeof TransPayment,
+    private sequelize: Sequelize,
   ) { }
 
   private getIncludes() {
@@ -27,14 +31,65 @@ export class GeneralTranslationService {
     ];
   }
 
+  private getAttributes() {
+    return {
+      include: [
+        [
+          Sequelize.literal(`(
+            SELECT ROUND(COALESCE(SUM(amount), 0)::numeric, 2)
+            FROM "tbl_trans_payments" AS tp
+            WHERE tp.translation_guid = "GeneralTranslation"."guid"
+          )`),
+          'totalPaid'
+        ],
+        [
+          Sequelize.literal(`(
+            SELECT 
+              CASE 
+                WHEN SUM(tp.amount) IS NULL OR SUM(tp.amount) = 0 THEN '0%'
+                WHEN "GeneralTranslation".price > 0 
+                THEN CONCAT(ROUND(((SUM(tp.amount) / "GeneralTranslation".price) * 100)::numeric, 2), '%')
+                ELSE '100%' 
+              END
+            FROM "tbl_trans_payments" AS tp
+            WHERE tp.translation_guid = "GeneralTranslation"."guid"
+          )`),
+          'paidPercentage'
+        ]
+      ]
+    };
+  }
+
   async addGeneralTranslation(createDto: CreateGeneralTranslationDto) {
+    const t = await this.sequelize.transaction();
     try {
-      const translation = await this.translationRepository.create({ ...createDto } as any);
+      const translation = await this.translationRepository.create({
+        ...createDto
+      } as any, { transaction: t });
+
+      const isPaidStr = String(createDto.is_paid);
+      const isPaidNum = Number(createDto.is_paid);
+
+      if (isPaidStr === 'true' || isPaidStr === '1' || (!isNaN(isPaidNum) && isPaidNum > 0)) {
+        const paymentAmount = (!isNaN(isPaidNum) && isPaidNum > 0)
+          ? isPaidNum
+          : (translation.price || 0);
+
+        await this.transPaymentRepo.create({
+          translation_guid: translation.guid,
+          amount: paymentAmount,
+          payment_date: new Date(),
+          opr_guid: createDto.opr_guid
+        } as any, { transaction: t });
+      }
+
+      await t.commit();
 
       const newTranslation = await this.translationRepository.findOne({
         where: { guid: translation.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid']
+          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid'],
+          include: this.getAttributes().include as any
         },
         include: this.getIncludes()
       });
@@ -54,7 +109,8 @@ export class GeneralTranslationService {
 
       const { rows, count } = await this.translationRepository.findAndCountAll({
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid']
+          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid'],
+          include: this.getAttributes().include as any
         },
         include: this.getIncludes(),
         order: [['index_number', 'DESC']],
@@ -75,22 +131,34 @@ export class GeneralTranslationService {
 
 
   async updateGeneralTranslation(updateDto: UpdateGeneralTranslationDto) {
+    const t = await this.sequelize.transaction();
     try {
-      const [affectedCount] = await this.translationRepository.update(updateDto, {
-        where: { guid: updateDto.guid }
+      const translation = await this.translationRepository.findOne({
+        where: { guid: updateDto.guid },
+        transaction: t
       });
-      if (affectedCount === 0) return errorResponse(HttpStatuses.NOT_FOUND, 'Translation not found');
+
+      if (!translation) {
+        await t.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Translation not found');
+      }
+
+      await translation.update(updateDto as any, { transaction: t });
+
+      await t.commit();
 
       const updatedTranslation = await this.translationRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid']
+          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid'],
+          include: this.getAttributes().include as any
         },
         include: this.getIncludes()
       });
 
       return { status: 200, data: updatedTranslation, message: 'Translation updated successfully' };
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
     }
   }
