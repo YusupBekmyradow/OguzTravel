@@ -18,6 +18,8 @@ import { Railway } from "../../railway/entities/railway.entity";
 import { Tour } from "../../tour/entities/tour.entity";
 import { Transfer } from "../../transfer/entities/transfer.entity";
 import { Package } from "../../package/entities/package.entity";
+import { HarPayment } from "../../har_payment/entities/har_payment.entity";
+import { TtpPayment } from "../../ttp_payment/entities/ttp_payment.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -270,5 +272,19 @@ export class Employee extends Model<Employee> {
     as: 'packageOpr'
   })
   declare packageOpr: Package[];
+
+  @HasMany(() => HarPayment, {
+    sourceKey: 'guid',
+    foreignKey: 'opr_guid',
+    as: 'harPaymentOpr'
+  })
+  declare harPaymentOpr: HarPayment[];
+
+  @HasMany(() => TtpPayment, {
+    sourceKey: 'guid',
+    foreignKey: 'opr_guid',
+    as: 'ttpPaymentOpr'
+  })
+  declare ttpPayment: TtpPayment[];
 
 }

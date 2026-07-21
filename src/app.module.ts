@@ -23,7 +23,6 @@ import { VisaPackageModule } from './modules/visa_package/visa_package.module';
 import { VisaPaymentModule } from './modules/visa_payment/visa_payment.module';
 import { RefferalLetterModule } from './modules/refferal_letter/refferal_letter.module';
 import { GeneralTranslationModule } from './modules/general_translation/general_translation.module';
-import { TransStatusModule } from './modules/trans_status/trans_status.module';
 import { TranslatorModule } from './modules/translator/translator.module';
 import { TransPaymentModule } from './modules/trans_payment/trans_payment.module';
 import { HotelModule } from './modules/hotel/hotel.module';
@@ -32,6 +31,8 @@ import { AirwayModule } from './modules/airway/airway.module';
 import { TourModule } from './modules/tour/tour.module';
 import { TransferModule } from './modules/transfer/transfer.module';
 import { PackageModule } from './modules/package/package.module';
+import { HarPaymentModule } from './modules/har_payment/har_payment.module';
+import { TtpPaymentModule } from './modules/ttp_payment/ttp_payment.module';
 dotenv.config();
 
 @Module({
@@ -59,7 +60,6 @@ dotenv.config();
     VisaPackageModule,
     VisaPaymentModule,
     RefferalLetterModule,
-    TransStatusModule,
     TranslatorModule,
     GeneralTranslationModule,
     TransPaymentModule,
@@ -68,7 +68,9 @@ dotenv.config();
     RailwayModule,
     TourModule,
     TransferModule,
-    PackageModule
+    PackageModule,
+    HarPaymentModule,
+    TtpPaymentModule
   ],
   controllers: [AppController],
   providers: [

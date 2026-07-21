@@ -1,6 +1,5 @@
 import { BelongsTo, Column, DataType, HasMany, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
-import { TransStatus } from "../../trans_status/entities/trans_status.entity";
 import { Translator } from "../../translator/entities/translator.entity";
 import { Client } from "../../client/entities/client.entity";
 import { TransPayment } from "../../trans_payment/entities/trans_payment.entity";
@@ -61,10 +60,11 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   declare completed_time: string;
 
   @Column({
-    type: DataType.UUID,
-    allowNull: false
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   })
-  declare status_guid: string;
+  declare status: boolean;
 
   @Column({
     type: DataType.INTEGER,
@@ -110,6 +110,12 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   })
   declare note?: string;
 
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+  })
+  declare is_paid: boolean;
+
   @BelongsTo(() => Employee, {
     foreignKey: 'opr_guid',
     targetKey: 'guid'
@@ -121,12 +127,6 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
     targetKey: 'guid'
   })
   declare client: Client;
-
-  @BelongsTo(() => TransStatus, {
-    foreignKey: 'status_guid',
-    targetKey: 'guid'
-  })
-  declare status: TransStatus;
 
   @BelongsTo(() => Translator, {
     foreignKey: 'translator_guid',

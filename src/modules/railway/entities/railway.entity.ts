@@ -1,6 +1,7 @@
-import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate, BelongsTo } from "sequelize-typescript";
+import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate, BelongsTo, HasMany } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Client } from "../../client/entities/client.entity";
+import { HarPayment } from "../../har_payment/entities/har_payment.entity";
 
 @Table({
     tableName: 'tbl_railway',
@@ -130,6 +131,12 @@ export class Railway extends Model<Railway> {
         targetKey: 'guid'
     })
     declare preparedOpr: Employee;
+
+    @HasMany(() => HarPayment, {
+        sourceKey: 'guid',
+        foreignKey: 'railway_guid',
+    })
+    declare harPaymentOpr: HarPayment[];
 
     @BeforeSave
     @BeforeUpdate

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID } from "class-validator";
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID } from "class-validator";
 
 export class CreateGeneralTranslationDto {
 
@@ -39,10 +39,10 @@ export class CreateGeneralTranslationDto {
   @IsNotEmpty()
   declare completed_time: string;
 
-  @ApiProperty()
-  @IsUUID()
-  @IsNotEmpty()
-  declare status_guid: string;
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
+  declare status: boolean;
 
   @ApiProperty()
   @IsNumber()
@@ -74,4 +74,9 @@ export class CreateGeneralTranslationDto {
   @IsString()
   @IsNotEmpty()
   declare note?: string;
+
+  @ApiProperty()
+  @IsBoolean()
+  @IsNotEmpty()
+  declare is_paid: boolean;
 }

@@ -5,7 +5,6 @@ import { InjectModel } from '@nestjs/sequelize';
 import { GeneralTranslation } from './entities/general_translation.entity';
 import { Employee } from '../employee/entities/employee.entity';
 import { Client } from '../client/entities/client.entity';
-import { TransStatus } from '../trans_status/entities/trans_status.entity';
 import { Translator } from '../translator/entities/translator.entity';
 import { Office } from '../office/entities/office.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
@@ -24,7 +23,6 @@ export class GeneralTranslationService {
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
       },
       { model: Client, attributes: ['guid', 'fullName'] },
-      { model: TransStatus, attributes: ['guid', 'name'] },
       { model: Translator, attributes: ['guid', 'fullName'] },
     ];
   }

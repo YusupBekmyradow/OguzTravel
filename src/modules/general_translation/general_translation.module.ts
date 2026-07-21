@@ -5,7 +5,6 @@ import { SequelizeModule } from '@nestjs/sequelize';
 import { GeneralTranslation } from './entities/general_translation.entity';
 import { EmployeeModule } from '../employee/employee.module';
 import { ClientModule } from '../client/client.module';
-import { TransStatusModule } from '../trans_status/trans_status.module';
 import { TranslatorModule } from '../translator/translator.module';
 
 @Module({
@@ -13,7 +12,6 @@ import { TranslatorModule } from '../translator/translator.module';
     SequelizeModule.forFeature([GeneralTranslation]),
     EmployeeModule,
     ClientModule,
-    TransStatusModule,
     TranslatorModule,
   ],
   controllers: [GeneralTranslationController],

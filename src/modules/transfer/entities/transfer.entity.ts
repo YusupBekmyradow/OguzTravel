@@ -1,6 +1,7 @@
-import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate, BelongsTo } from "sequelize-typescript";
+import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate, BelongsTo, HasMany } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Client } from "../../client/entities/client.entity";
+import { TtpPayment } from "../../ttp_payment/entities/ttp_payment.entity";
 
 @Table({
     tableName: 'tbl_transfer',
@@ -125,6 +126,12 @@ export class Transfer extends Model<Transfer> {
         targetKey: 'guid'
     })
     declare preparedOpr: Employee;
+
+    @HasMany(() => TtpPayment, {
+        sourceKey: 'guid',
+        foreignKey: 'transfer_guid',
+    })
+    declare ttpPayment: TtpPayment[];
 
     @BeforeSave
     @BeforeUpdate
