@@ -31,7 +31,9 @@ export class VisaCategory extends Model<VisaCategory> {
 
   @HasMany(() => VisaPackage, {
     foreignKey: 'category_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visaPackage: VisaPackage[];
 }

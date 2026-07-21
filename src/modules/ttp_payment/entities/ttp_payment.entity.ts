@@ -71,19 +71,25 @@ export class TtpPayment extends Model<TtpPayment> {
 
   @BelongsTo(() => Tour, {
     targetKey: 'guid',
-    foreignKey: 'tour_guid'
+    foreignKey: 'tour_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare tour: Tour;
 
   @BelongsTo(() => Transfer, {
     targetKey: 'guid',
-    foreignKey: 'transfer_guid'
+    foreignKey: 'transfer_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare transfer: Transfer;
 
   @BelongsTo(() => Package, {
     targetKey: 'guid',
-    foreignKey: 'package_guid'
+    foreignKey: 'package_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare package: Package;
 
@@ -91,6 +97,8 @@ export class TtpPayment extends Model<TtpPayment> {
     targetKey: 'guid',
     foreignKey: 'opr_guid',
     as: 'operator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare operator: Employee;
 

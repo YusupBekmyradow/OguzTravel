@@ -57,7 +57,9 @@ export class TurkishPayment extends Model<TurkishPayment> {
 
     @BelongsTo(() => TurkishAirline, {
         targetKey: 'guid',
-        foreignKey: 'turkish_airline_guid'
+        foreignKey: 'turkish_airline_guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare turkishAirline: TurkishAirline;
 
@@ -65,6 +67,8 @@ export class TurkishPayment extends Model<TurkishPayment> {
         targetKey: 'guid',
         foreignKey: 'opr_guid',
         as: 'operator',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare operator: Employee;
 }

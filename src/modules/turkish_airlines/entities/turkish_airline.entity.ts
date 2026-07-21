@@ -167,41 +167,52 @@ export class TurkishAirline extends Model<TurkishAirline> {
     @BelongsTo(() => Employee, {
         targetKey: 'guid',
         foreignKey: 'assignment_opr_guid',
-        as: 'ta_assignment_operator'
+        as: 'ta_assignment_operator',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare assignment_operator: Employee;
 
     @BelongsTo(() => Employee, {
         targetKey: 'guid',
         foreignKey: 'receiver_opr_guid',
-        as: 'ta_receiver_operator'
+        as: 'ta_receiver_operator',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare receiver_operator: Employee;
 
     @BelongsTo(() => Client, {
         targetKey: 'guid',
-        foreignKey: 'client_guid'
+        foreignKey: 'client_guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare client: Client;
 
     @BelongsTo(() => Tstatus, {
         targetKey: 'guid',
-        foreignKey: 'status_guid'
+        foreignKey: 'status_guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare tstatus: Tstatus;
 
     @BelongsTo(() => Office, {
         targetKey: 'guid',
-        foreignKey: 'office_guid'
+        foreignKey: 'office_guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare office: Office;
 
     @HasMany(() => TurkishPayment, {
         foreignKey: 'turkish_airline_guid',
         sourceKey: 'guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare turkishPayment: TurkishPayment[];
-
     @BeforeSave
     @BeforeUpdate
     static calculateAndRoundPrices(instance: TurkishAirline) {

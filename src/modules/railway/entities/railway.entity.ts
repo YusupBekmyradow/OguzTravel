@@ -116,25 +116,33 @@ export class Railway extends Model<Railway> {
 
     @BelongsTo(() => Employee, {
         foreignKey: 'opr_guid',
-        targetKey: 'guid'
+        targetKey: 'guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare operator: Employee;
 
     @BelongsTo(() => Client, {
         foreignKey: 'client_guid',
-        targetKey: 'guid'
+        targetKey: 'guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare client: Client;
 
     @BelongsTo(() => Employee, {
         foreignKey: 'prepared_opr_guid',
-        targetKey: 'guid'
+        targetKey: 'guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare preparedOpr: Employee;
 
     @HasMany(() => HarPayment, {
         sourceKey: 'guid',
         foreignKey: 'railway_guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare harPaymentOpr: HarPayment[];
 

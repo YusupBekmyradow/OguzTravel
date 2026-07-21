@@ -118,25 +118,33 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
 
   @BelongsTo(() => Employee, {
     foreignKey: 'opr_guid',
-    targetKey: 'guid'
+    targetKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare operator: Employee;
 
   @BelongsTo(() => Client, {
     foreignKey: 'client_guid',
-    targetKey: 'guid'
+    targetKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare client: Client;
 
   @BelongsTo(() => Translator, {
     foreignKey: 'translator_guid',
-    targetKey: 'guid'
+    targetKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare translator: Translator;
 
   @HasMany(() => TransPayment, {
     foreignKey: 'translation_guid',
     sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare transPayment: TransPayment[];
 }

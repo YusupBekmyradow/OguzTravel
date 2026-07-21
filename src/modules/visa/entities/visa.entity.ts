@@ -103,56 +103,71 @@ export class Visa extends Model<Visa> {
 
   @BelongsTo(() => Client, {
     targetKey: 'guid',
-    foreignKey: 'client_guid'
+    foreignKey: 'client_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare client: Client;
 
   @BelongsTo(() => VisaPackage, {
     targetKey: 'guid',
     foreignKey: 'package_guid',
-    as: 'package'
+    as: 'package',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare package: VisaPackage;
 
   @BelongsTo(() => VisaPackage, {
     targetKey: 'guid',
     foreignKey: 'service_guid',
-    as: 'service'
+    as: 'service',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare service: VisaPackage;
 
   @BelongsTo(() => VisaPackage, {
     targetKey: 'guid',
     foreignKey: 'hotel_booking_guid',
-    as: 'hotel_booking'
-
+    as: 'hotel_booking',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare hotel_booking: VisaPackage;
 
   @BelongsTo(() => VisaPackage, {
     targetKey: 'guid',
     foreignKey: 'translation_guid',
-    as: 'translation'
+    as: 'translation',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare translation: VisaPackage;
 
   @BelongsTo(() => VisaPackage, {
     targetKey: 'guid',
     foreignKey: 'courier_guid',
-    as: 'courier'
+    as: 'courier',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare courier: VisaPackage;
 
   @HasMany(() => VisaPayment, {
     foreignKey: 'visa_guid',
     sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visaPayment: VisaPayment[];
 
   @BelongsTo(() => Employee, {
     targetKey: 'guid',
     foreignKey: 'receiver_opr_guid',
-    as: 'receiveroperator'
+    as: 'receiveroperator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare receiver_operator: Employee;
 }

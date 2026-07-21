@@ -98,25 +98,33 @@ export class Tour extends Model<Tour> {
 
     @BelongsTo(() => Employee, {
         foreignKey: 'opr_guid',
-        targetKey: 'guid'
+        targetKey: 'guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare operator: Employee;
 
     @BelongsTo(() => Client, {
         foreignKey: 'client_guid',
-        targetKey: 'guid'
+        targetKey: 'guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare client: Client;
 
     @BelongsTo(() => Employee, {
         foreignKey: 'prepared_opr_guid',
-        targetKey: 'guid'
+        targetKey: 'guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare preparedOpr: Employee;
 
     @HasMany(() => TtpPayment, {
         sourceKey: 'guid',
         foreignKey: 'tour_guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare ttpPayment: TtpPayment[];
 

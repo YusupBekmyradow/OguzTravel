@@ -116,13 +116,17 @@ export class RefferalLetter extends Model<RefferalLetter> {
     @BelongsTo(() => Employee, {
         targetKey: 'guid',
         foreignKey: 'received_opr_guid',
-        as: 'refferaloperator'
+        as: 'refferaloperator',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare employee: Employee;
 
     @BelongsTo(() => Client, {
         targetKey: 'guid',
-        foreignKey: 'client_guid'
+        foreignKey: 'client_guid',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
     })
     declare client: Client;
 }

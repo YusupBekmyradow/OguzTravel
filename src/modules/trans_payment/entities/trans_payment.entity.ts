@@ -57,7 +57,9 @@ export class TransPayment extends Model<TransPayment> {
 
   @BelongsTo(() => GeneralTranslation, {
     targetKey: 'guid',
-    foreignKey: 'translation_guid'
+    foreignKey: 'translation_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare generalTranslation: GeneralTranslation;
 
@@ -65,6 +67,8 @@ export class TransPayment extends Model<TransPayment> {
     targetKey: 'guid',
     foreignKey: 'opr_guid',
     as: 'transoperator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare operator: Employee;
 

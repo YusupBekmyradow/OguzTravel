@@ -31,7 +31,9 @@ export class Translator extends Model<Translator> {
 
   @HasMany(() => GeneralTranslation, {
     foreignKey: 'translator_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare generalTranslation: GeneralTranslation[];
 }

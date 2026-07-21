@@ -29,9 +29,10 @@ export class Position extends Model<Position> {
 
   @HasMany(() => Employee, {
     foreignKey: 'position_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare employees: Employee[];
-  
 }
 

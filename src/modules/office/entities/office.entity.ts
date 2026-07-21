@@ -41,13 +41,17 @@ export class Office extends Model<Office> {
 
   @HasMany(() => Employee, {
     foreignKey: 'office_guid',
-    sourceKey: 'guid'
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare employees: Employee[];
 
   @HasMany(() => TurkishAirline, {
     foreignKey: 'office_guid',
     sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare turkishAirline: TurkishAirline[];
 }

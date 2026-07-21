@@ -71,19 +71,25 @@ export class HarPayment extends Model<HarPayment> {
 
   @BelongsTo(() => Hotel, {
     targetKey: 'guid',
-    foreignKey: 'hotel_guid'
+    foreignKey: 'hotel_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare hotel: Hotel;
 
   @BelongsTo(() => Airway, {
     targetKey: 'guid',
-    foreignKey: 'airway_guid'
+    foreignKey: 'airway_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare airway: Airway;
 
   @BelongsTo(() => Railway, {
     targetKey: 'guid',
-    foreignKey: 'railway_guid'
+    foreignKey: 'railway_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare railway: Railway;
 
@@ -91,6 +97,8 @@ export class HarPayment extends Model<HarPayment> {
     targetKey: 'guid',
     foreignKey: 'opr_guid',
     as: 'operator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare operator: Employee;
 }

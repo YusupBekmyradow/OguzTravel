@@ -58,7 +58,9 @@ export class TicketPayment extends Model<TicketPayment> {
 
   @BelongsTo(() => B2b, {
     targetKey: 'guid',
-    foreignKey: 'b2b_guid'
+    foreignKey: 'b2b_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare b2b: B2b;
 
@@ -66,6 +68,8 @@ export class TicketPayment extends Model<TicketPayment> {
     targetKey: 'guid',
     foreignKey: 'opr_guid',
     as: 'operator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare operator: Employee;
 }

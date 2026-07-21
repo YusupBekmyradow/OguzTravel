@@ -64,7 +64,9 @@ export class VisaPayment extends Model<VisaPayment> {
 
   @BelongsTo(() => Visa, {
     targetKey: 'guid',
-    foreignKey: 'visa_guid'
+    foreignKey: 'visa_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visa: Visa;
 
@@ -72,6 +74,8 @@ export class VisaPayment extends Model<VisaPayment> {
     targetKey: 'guid',
     foreignKey: 'opr_guid',
     as: 'visaoperator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare operator: Employee;
 }

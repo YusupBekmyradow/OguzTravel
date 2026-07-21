@@ -77,7 +77,9 @@ export class User extends Model<User> {
 
   @BelongsTo(() => Employee, {
     foreignKey: 'employee_guid',
-    targetKey: 'guid'
+    targetKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare employee: Employee;
 

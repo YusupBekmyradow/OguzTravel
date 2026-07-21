@@ -73,42 +73,54 @@ export class VisaPackage extends Model<VisaPackage> {
 
   @BelongsTo(() => VisaCategory, {
     targetKey: 'guid',
-    foreignKey: 'category_guid'
+    foreignKey: 'category_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visaCategory: VisaCategory;
 
   @HasMany(() => Visa, {
     foreignKey: 'package_guid',
     sourceKey: 'guid',
-    as: 'package'
+    as: 'package',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visapackage: Visa[];
 
   @HasMany(() => Visa, {
     foreignKey: 'service_guid',
     sourceKey: 'guid',
-    as: 'service'
+    as: 'service',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visaservice: Visa[];
 
   @HasMany(() => Visa, {
     foreignKey: 'hotel_booking_guid',
     sourceKey: 'guid',
-    as: 'hotel_booking'
+    as: 'hotel_booking',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visahotel_booking: Visa[];
 
   @HasMany(() => Visa, {
     foreignKey: 'translation_guid',
     sourceKey: 'guid',
-    as: 'translation'
+    as: 'translation',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visatranslation: Visa[];
 
   @HasMany(() => Visa, {
     foreignKey: 'courier_guid',
     sourceKey: 'guid',
-    as: 'courier'
+    as: 'courier',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
   })
   declare visacourier: Visa[];
 }
