@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID } from "class-validator";
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID } from "class-validator";
 
 export class CreateHotelDto {
 
@@ -68,4 +68,9 @@ export class CreateHotelDto {
     @IsString()
     @IsOptional()
     declare note?: string;
+
+    @ApiPropertyOptional({ example: false })
+    @IsBoolean()
+    @IsOptional()
+    declare is_paid: boolean;
 }

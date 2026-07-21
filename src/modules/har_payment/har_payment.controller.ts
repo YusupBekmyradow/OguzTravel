@@ -1,34 +1,43 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Query } from '@nestjs/common';
 import { HarPaymentService } from './har_payment.service';
 import { CreateHarPaymentDto } from './dto/create-har_payment.dto';
 import { UpdateHarPaymentDto } from './dto/update-har_payment.dto';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Har_Payment')
 @Controller('har-payment')
 export class HarPaymentController {
-  constructor(private readonly harPaymentService: HarPaymentService) {}
+  constructor(private readonly harPaymentService: HarPaymentService) { }
 
-  @Post()
+  @Post('/add-har-payment')
   create(@Body() createHarPaymentDto: CreateHarPaymentDto) {
-    return this.harPaymentService.create(createHarPaymentDto);
+    return this.harPaymentService.addHarPayment(createHarPaymentDto);
   }
 
-  @Get()
-  findAll() {
-    return this.harPaymentService.findAll();
+  @Get('/get-all-har-payment')
+  async findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('guid') guid: string
+  ) {
+    return this.harPaymentService.getAllHarPayments(Number(page), Number(limit), guid);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.harPaymentService.findOne(+id);
+  @Patch('/update-har-payment')
+  async update(@Body() updateHarPaymentDto: UpdateHarPaymentDto) {
+    return this.harPaymentService.updateHarPayment(updateHarPaymentDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateHarPaymentDto: UpdateHarPaymentDto) {
-    return this.harPaymentService.update(+id, updateHarPaymentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.harPaymentService.remove(+id);
+  @Delete('/delete-har-payment')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
+  async remove(@Body('guid') guid: string) {
+    return this.harPaymentService.deleteHarPayment(guid);
   }
 }

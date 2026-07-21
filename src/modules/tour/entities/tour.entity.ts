@@ -96,6 +96,13 @@ export class Tour extends Model<Tour> {
     })
     declare note?: string;
 
+    @Column({
+        type: DataType.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    })
+    declare is_paid: boolean
+
     @BelongsTo(() => Employee, {
         foreignKey: 'opr_guid',
         targetKey: 'guid',

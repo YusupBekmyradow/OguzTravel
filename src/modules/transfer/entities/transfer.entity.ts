@@ -102,6 +102,12 @@ export class Transfer extends Model<Transfer> {
     })
     declare system: string;
 
+    @Column({
+        type: DataType.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    })
+    declare is_paid: boolean
 
     @Column({
         type: DataType.TEXT,

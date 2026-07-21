@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class CreateAirwayDto {
 
@@ -67,4 +67,9 @@ export class CreateAirwayDto {
     @IsString()
     @IsOptional()
     declare note?: string;
+
+    @ApiPropertyOptional({ example: false })
+    @IsBoolean()
+    @IsOptional()
+    declare is_paid: boolean;
 }
