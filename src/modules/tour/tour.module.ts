@@ -5,10 +5,11 @@ import { SequelizeModule } from '@nestjs/sequelize';
 import { Tour } from './entities/tour.entity';
 import { EmployeeModule } from '../employee/employee.module';
 import { ClientModule } from '../client/client.module';
+import { TtpPayment } from '../ttp_payment/entities/ttp_payment.entity';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([Tour]),
+    SequelizeModule.forFeature([Tour, TtpPayment]),
     EmployeeModule,
     ClientModule
   ],

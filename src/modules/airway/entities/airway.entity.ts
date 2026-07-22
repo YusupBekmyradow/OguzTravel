@@ -82,7 +82,14 @@ export class Airway extends Model<Airway> {
         type: DataType.DECIMAL(12, 2),
         allowNull: false
     })
-    declare cost: number;
+    declare net_fare: number;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: false,
+        defaultValue: 'USD'
+    })
+    declare currency: string;
 
     @Column({
         type: DataType.DECIMAL(12, 2),
@@ -150,7 +157,7 @@ export class Airway extends Model<Airway> {
     @BeforeSave
     @BeforeUpdate
     static calculateProfit(instance: Airway) {
-        const cost = Number(instance.cost) || 0;
+        const cost = Number(instance.net_fare) || 0;
         const price = Number(instance.price) || 0;
         instance.profit = price - cost;
     }

@@ -50,7 +50,12 @@ export class CreateTransferDto {
   @ApiProperty()
   @IsNumber()
   @IsNotEmpty()
-  declare cost: number;
+  declare net_fare: number;
+
+  @ApiPropertyOptional({ default: 'USD' })
+  @IsString()
+  @IsOptional()
+  declare currency?: string;
 
   @ApiProperty()
   @IsNumber()

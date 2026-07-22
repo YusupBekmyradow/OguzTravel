@@ -66,7 +66,7 @@ export class GeneralTranslationService {
     try {
       const translation = await this.translationRepository.create({
         ...createDto
-      } as any, { transaction: t });
+      } as any, { hooks: true, transaction: t });
 
       if (createDto.is_paid === true) {
         await this.transPaymentRepo.create({

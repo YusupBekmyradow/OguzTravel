@@ -86,9 +86,17 @@ export class Railway extends Model<Railway> {
 
     @Column({
         type: DataType.DECIMAL(12, 2),
-        allowNull: false
+        allowNull: false,
+        defaultValue: 0
     })
-    declare cost: number;
+    declare net_fare: number;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: false,
+        defaultValue: 'USD'
+    })
+    declare currency: string;
 
     @Column({
         type: DataType.DECIMAL(12, 2),
@@ -156,7 +164,7 @@ export class Railway extends Model<Railway> {
     @BeforeSave
     @BeforeUpdate
     static calculateProfit(instance: Railway) {
-        const cost = Number(instance.cost) || 0;
+        const cost = Number(instance.net_fare) || 0;
         const price = Number(instance.price) || 0;
         instance.profit = price - cost;
     }

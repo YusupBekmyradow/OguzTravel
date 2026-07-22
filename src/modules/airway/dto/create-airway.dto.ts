@@ -47,11 +47,16 @@ export class CreateAirwayDto {
     @IsNumber()
     @IsNotEmpty()
     declare passenger_count: number;
-
+    
     @ApiProperty()
     @IsNumber()
     @IsNotEmpty()
-    declare cost: number;
+    declare net_fare: number;
+
+    @ApiPropertyOptional({ default: 'USD' })
+    @IsString()
+    @IsOptional()
+    declare currency?: string;
 
     @ApiProperty()
     @IsNumber()

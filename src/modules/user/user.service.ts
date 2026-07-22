@@ -45,7 +45,6 @@ export class UserService {
       const { password, refresh_token, ...userResponse } = plainUser;
       return successResponse(HttpStatuses.CREATED, userResponse, 'User created successfully');
     } catch (error) {
-      console.log(error)
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'User creation failed', error);
     }
   }

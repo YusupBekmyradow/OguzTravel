@@ -8,11 +8,15 @@ import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Office } from '../office/entities/office.entity';
+import { Sequelize } from 'sequelize-typescript';
+import { HarPayment } from '../har_payment/entities/har_payment.entity';
 
 @Injectable()
 export class AirwayService {
   constructor(
-    @InjectModel(Airway) private airwayRepository: typeof Airway
+    @InjectModel(Airway) private airwayRepository: typeof Airway,
+    @InjectModel(HarPayment) private harPaymentRepo: typeof HarPayment,
+    private sequelize: Sequelize,
   ) { }
 
   private getIncludes() {
@@ -26,13 +30,53 @@ export class AirwayService {
     ];
   }
 
+  private getAttributes() {
+    return {
+      include: [
+        [
+          Sequelize.literal(`(
+            SELECT ROUND(COALESCE(SUM(amount), 0)::numeric, 2)
+            FROM "tbl_HAR_payments" AS hp
+            WHERE hp.airway_guid = "Airway"."guid"
+          )`),
+          'totalPaid'
+        ],
+        [
+          Sequelize.literal(`(
+            SELECT 
+              CASE 
+                WHEN SUM(hp.amount) IS NULL OR SUM(hp.amount) = 0 THEN '0%'
+                WHEN "Airway".price > 0 
+                THEN CONCAT(ROUND(((SUM(hp.amount) / "Airway".price) * 100)::numeric, 2), '%')
+                ELSE '100%' 
+              END
+            FROM "tbl_HAR_payments" AS hp
+            WHERE hp.airway_guid = "Airway"."guid"
+          )`),
+          'paidPercentage'
+        ]
+      ]
+    };
+  }
+
   async addAirway(createDto: CreateAirwayDto) {
+    const t = await this.sequelize.transaction();
     try {
-      const airway = await this.airwayRepository.create({ ...createDto } as any, { hooks: true });
+      const airway = await this.airwayRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
+      if (createDto.is_paid === true) {
+        await this.harPaymentRepo.create({
+          airway_guid: airway.guid,
+          amount: airway.price || 0,
+          payment_date: new Date(),
+          opr_guid: createDto.opr_guid
+        } as any, { transaction: t });
+      }
+      await t.commit();
       const newAirway = await this.airwayRepository.findOne({
         where: { guid: airway.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid']
+          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          include: this.getAttributes().include as any
         },
         include: this.getIncludes()
       });
@@ -50,7 +94,8 @@ export class AirwayService {
 
       const { rows, count } = await this.airwayRepository.findAndCountAll({
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid']
+          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          include: this.getAttributes().include as any
         },
         include: this.getIncludes(),
         order: [['index_number', 'DESC']],
@@ -84,7 +129,8 @@ export class AirwayService {
       const updatedAirway = await this.airwayRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid']
+          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          include: this.getAttributes().include as any
         },
         include: this.getIncludes()
       });
