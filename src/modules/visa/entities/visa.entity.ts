@@ -101,6 +101,8 @@ export class Visa extends Model<Visa> {
   })
   declare note?: string;
 
+  //is_paid
+
   @BelongsTo(() => Client, {
     targetKey: 'guid',
     foreignKey: 'client_guid',

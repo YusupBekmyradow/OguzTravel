@@ -11,6 +11,7 @@ import { errorResponse, successResponse } from '../../helpers/responseFunctions'
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Sequelize } from 'sequelize-typescript';
 import { TransPayment } from '../trans_payment/entities/trans_payment.entity';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class GeneralTranslationService {
@@ -94,6 +95,7 @@ export class GeneralTranslationService {
   }
 
 
+
   async getAllGeneralTranslation(page: number = 1, limit: number = 10) {
     try {
       const currentPage = Math.max(1, Number(page));
@@ -119,6 +121,94 @@ export class GeneralTranslationService {
       };
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Translation fetching error', error);
+    }
+  }
+
+
+  async searchAndFilterTranslations(filters: {
+    search?: string;
+    received_day?: string;
+    received_time?: string;
+    opr_guid?: string;
+    completed_time?: string;
+    completed_day?: string;
+    translator_guid?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    try {
+      const page = Math.max(1, Number(filters.page || 1));
+      const limit = Math.max(1, Number(filters.limit || 10));
+      const offset = (page - 1) * limit;
+
+      const whereConditions: any = {};
+
+      if (filters.received_day && filters.received_day.trim() !== '') {
+        whereConditions.received_day = filters.received_day;
+      }
+      if (filters.received_time && filters.received_time.trim() !== '') {
+        whereConditions[Op.and] = whereConditions[Op.and] || [];
+        whereConditions[Op.and].push(
+          Sequelize.where(
+            Sequelize.cast(Sequelize.col('GeneralTranslation.received_time'), 'TEXT'),
+            { [Op.iLike]: `%${filters.received_time.trim()}%` }
+          )
+        );
+      }
+      if (filters.opr_guid && filters.opr_guid.trim() !== '') {
+        whereConditions.opr_guid = filters.opr_guid;
+      }
+      if (filters.completed_time && filters.completed_time.trim() !== '') {
+        whereConditions[Op.and] = whereConditions[Op.and] || [];
+        whereConditions[Op.and].push(
+          Sequelize.where(
+            Sequelize.cast(Sequelize.col('GeneralTranslation.completed_time'), 'TEXT'),
+            { [Op.iLike]: `%${filters.completed_time.trim()}%` }
+          )
+        );
+      }
+      if (filters.completed_day && filters.completed_day.trim() !== '') {
+        whereConditions.completed_day = filters.completed_day;
+      }
+      if (filters.translator_guid && filters.translator_guid.trim() !== '') {
+        whereConditions.translator_guid = filters.translator_guid;
+      }
+
+      if (filters.search && filters.search.trim() !== '') {
+        const searchTerm = `%${filters.search.trim()}%`;
+        whereConditions[Op.or] = [
+          { source_to_target: { [Op.iLike]: searchTerm } },
+          { '$client.fullName$': { [Op.iLike]: searchTerm } },
+          { '$translator.fullName$': { [Op.iLike]: searchTerm } }
+        ];
+      }
+
+      const { rows, count } = await this.translationRepository.findAndCountAll({
+        where: whereConditions,
+        attributes: {
+          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid'],
+          include: this.getAttributes().include as any
+        },
+        include: this.getIncludes(),
+        order: [['index_number', 'DESC']],
+        limit: limit,
+        offset: offset,
+        distinct: true,
+      });
+
+      return {
+        status: 200,
+        data: rows,
+        meta: {
+          totalItems: count,
+          totalPages: Math.ceil(count / limit),
+          currentPage: page,
+          itemsPerPage: limit
+        },
+        message: 'Filtered translations fetched successfully'
+      };
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Filtering and search failed', error);
     }
   }
 

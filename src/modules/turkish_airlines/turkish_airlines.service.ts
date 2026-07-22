@@ -75,7 +75,6 @@ export class TurkishAirlinesService {
       if (!newTurkishAirline) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
       }
-
       return {
         status: 201,
         data: newTurkishAirline,

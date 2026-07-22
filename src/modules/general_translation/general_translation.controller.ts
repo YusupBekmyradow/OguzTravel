@@ -3,6 +3,7 @@ import { GeneralTranslationService } from './general_translation.service';
 import { CreateGeneralTranslationDto } from './dto/create-general_translation.dto';
 import { UpdateGeneralTranslationDto } from './dto/update-general_translation.dto';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { FilterGeneralTranslationDto } from './dto/get-general-translations.dto';
 
 @ApiTags('General Translation')
 @Controller('general-translation')
@@ -20,6 +21,11 @@ export class GeneralTranslationController {
     @Query('limit') limit: number = 10,
   ) {
     return this.translationService.getAllGeneralTranslation(Number(page), Number(limit));
+  }
+
+  @Get('/get-trans-search-filter')
+  async searchAndFilter(@Query() query: FilterGeneralTranslationDto) {
+    return await this.translationService.searchAndFilterTranslations(query);
   }
 
   @Patch('/update-translation')
