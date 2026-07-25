@@ -26,7 +26,10 @@ export class RailwayService {
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
       },
       { model: Client, attributes: ['guid', 'fullName'] },
-      { model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'] },
+      {
+        model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'],
+        include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
+      },
     ];
   }
 
