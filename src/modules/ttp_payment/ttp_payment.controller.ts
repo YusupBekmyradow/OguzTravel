@@ -18,9 +18,15 @@ export class TtpPaymentController {
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-    @Query('guid') guid: string
+    @Query('tour_guid') tour_guid?: string,
+    @Query('transfer_guid') transfer_guid?: string,
+    @Query('package_guid') package_guid?: string,
   ) {
-    return this.ttpPaymentService.getAllTtpPayments(Number(page), Number(limit), guid);
+    return this.ttpPaymentService.getAllTtpPayments(Number(page), Number(limit), {
+      tour_guid,
+      transfer_guid,
+      package_guid
+    });
   }
 
   @Patch('/update-ttp-payment')

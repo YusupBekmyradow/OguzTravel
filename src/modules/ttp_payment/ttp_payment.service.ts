@@ -7,7 +7,7 @@ import { Sequelize } from 'sequelize-typescript';
 import { Employee } from '../employee/entities/employee.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
-import { QueryTypes, Op } from 'sequelize';
+import { QueryTypes } from 'sequelize';
 
 @Injectable()
 export class TtpPaymentService {
@@ -15,55 +15,89 @@ export class TtpPaymentService {
     @InjectModel(TtpPayment) private ttpPaymentRepo: typeof TtpPayment,
     private sequelize: Sequelize,
   ) { }
+  private getTargetInfo(data: any) {
+    if (data.tour_guid) return { guid: data.tour_guid, table: 'tbl_tour', col: 'tour_guid' };
+    if (data.transfer_guid) return { guid: data.transfer_guid, table: 'tbl_transfer', col: 'transfer_guid' };
+    if (data.package_guid) return { guid: data.package_guid, table: 'tbl_package', col: 'package_guid' };
+    return null;
+  }
+
+  private async getTtpPaymentStats(target: { guid: string, table: string, col: string }) {
+    const stats = await this.sequelize.query(`
+      SELECT 
+        target.guid as "target_guid",
+        target.price as "total_price",
+        COALESCE(SUM(tp.amount), 0) as "paid_amount"
+      FROM ${target.table} target
+      LEFT JOIN "tbl_TTP_payments" tp ON tp.${target.col} = target.guid
+      WHERE target.guid = :guid
+      GROUP BY target.guid, target.price
+    `, {
+      replacements: { guid: target.guid },
+      type: QueryTypes.SELECT
+    });
+
+    const row = (stats[0] as any) || { total_price: 0, paid_amount: 0 };
+    const total = Number(row.total_price);
+    const paid = Number(row.paid_amount);
+
+    return {
+      total_sales: total,
+      total_paid: paid,
+      remaining: total - paid
+    };
+  }
 
   async addTtpPayment(createDto: CreateTtpPaymentDto) {
     try {
       const payment = await this.ttpPaymentRepo.create({ ...createDto } as any);
-
       const createdPayment = await this.ttpPaymentRepo.findByPk(payment.guid, {
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
-      if (!createdPayment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
-      }
 
-      const targetGuid = this.extractGuid(createDto);
-      if (!targetGuid) {
-        return errorResponse(HttpStatuses.BAD_REQUEST, 'A valid reference guid (tour, transfer or package) must be provided');
-      }
+      if (!createdPayment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
 
-      const stats = await this.getTtpPaymentStats(targetGuid);
+      const target = this.getTargetInfo(createDto);
+      if (!target) return errorResponse(HttpStatuses.BAD_REQUEST, 'A valid reference guid must be provided');
+
+      const stats = await this.getTtpPaymentStats(target);
       return successResponse(HttpStatuses.CREATED, { ...createdPayment.toJSON(), stats }, 'Payment created successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Payment creation failed', error);
     }
   }
 
-  async getAllTtpPayments(page: number = 1, limit: number = 10, guid: string) {
+  async getAllTtpPayments(page: number, limit: number, filters: { tour_guid?: string, transfer_guid?: string, package_guid?: string }) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
 
-      if (!guid) {
-        return errorResponse(HttpStatuses.BAD_REQUEST, 'guid is required');
+      const where: any = {};
+      let target: any = null;
+
+      if (filters.tour_guid) {
+        where.tour_guid = filters.tour_guid;
+        target = { guid: filters.tour_guid, table: 'tbl_tour', col: 'tour_guid' };
+      } else if (filters.transfer_guid) {
+        where.transfer_guid = filters.transfer_guid;
+        target = { guid: filters.transfer_guid, table: 'tbl_transfer', col: 'transfer_guid' };
+      } else if (filters.package_guid) {
+        where.package_guid = filters.package_guid;
+        target = { guid: filters.package_guid, table: 'tbl_package', col: 'package_guid' };
+      } else {
+        return errorResponse(HttpStatuses.BAD_REQUEST, 'At least one guid is required');
       }
 
       const { rows, count } = await this.ttpPaymentRepo.findAndCountAll({
-        where: {
-          [Op.or]: [
-            { tour_guid: guid },
-            { transfer_guid: guid },
-            { package_guid: guid }
-          ]
-        },
+        where,
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }],
         order: [['index_number', 'DESC']],
         limit: currentLimit,
         offset: offset,
       });
 
-      const stats = await this.getTtpPaymentStats(guid);
+      const stats = await this.getTtpPaymentStats(target);
 
       return successResponse(HttpStatuses.OK, {
         data: rows,
@@ -81,22 +115,17 @@ export class TtpPaymentService {
       if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
 
       await this.ttpPaymentRepo.update(updateDto as any, { where: { guid: updateDto.guid } });
-
       const updated = await this.ttpPaymentRepo.findOne({
         where: { guid: updateDto.guid },
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
 
-      if (!updated) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
-      }
+      if (!updated) return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
 
-      const targetGuid = this.extractGuid(updated);
-      if (!targetGuid) {
-        return errorResponse(HttpStatuses.BAD_REQUEST, 'Target reference missing');
-      }
+      const target = this.getTargetInfo(updated);
+      if (!target) return errorResponse(HttpStatuses.BAD_REQUEST, 'Target reference missing');
 
-      const stats = await this.getTtpPaymentStats(targetGuid);
+      const stats = await this.getTtpPaymentStats(target);
       return successResponse(HttpStatuses.OK, { ...updated.toJSON(), stats }, 'Payment updated successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update error', error);
@@ -108,56 +137,15 @@ export class TtpPaymentService {
       const payment = await this.ttpPaymentRepo.findOne({ where: { guid } });
       if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
 
-      const targetGuid = this.extractGuid(payment);
+      const target = this.getTargetInfo(payment);
       await this.ttpPaymentRepo.destroy({ where: { guid } });
 
-      if (!targetGuid) {
-        return successResponse(HttpStatuses.OK, null, 'Payment deleted successfully');
-      }
+      if (!target) return successResponse(HttpStatuses.OK, null, 'Payment deleted successfully');
 
-      const stats = await this.getTtpPaymentStats(targetGuid);
+      const stats = await this.getTtpPaymentStats(target);
       return successResponse(HttpStatuses.OK, stats, 'Payment deleted successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete error', error);
     }
-  }
-
-  private extractGuid(obj: { tour_guid?: string; transfer_guid?: string; package_guid?: string }) {
-    return obj.tour_guid || obj.transfer_guid || obj.package_guid || null;
-  }
-
-  private async getTtpPaymentStats(guid: string) {
-    const stats = await this.sequelize.query(`
-      SELECT 
-        target.guid as "target_guid",
-        target.price as "total_price",
-        COALESCE(SUM(tp.amount), 0) as "paid_amount"
-      FROM (
-        SELECT guid, price FROM tbl_tour WHERE guid = :guid
-        UNION
-        SELECT guid, price FROM tbl_transfer WHERE guid = :guid
-        UNION
-        SELECT guid, price FROM tbl_package WHERE guid = :guid
-      ) target
-      LEFT JOIN "tbl_TTP_payments" tp ON (
-        tp.tour_guid = target.guid OR 
-        tp.transfer_guid = target.guid OR 
-        tp.package_guid = target.guid
-      )
-      GROUP BY target.guid, target.price
-    `, {
-      replacements: { guid },
-      type: QueryTypes.SELECT
-    });
-
-    const row = (stats[0] as any) || { total_price: 0, paid_amount: 0 };
-    const total = Number(row.total_price);
-    const paid = Number(row.paid_amount);
-
-    return {
-      total_sales: total,
-      total_paid: paid,
-      remaining: total - paid
-    };
   }
 }

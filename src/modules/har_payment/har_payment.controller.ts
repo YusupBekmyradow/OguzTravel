@@ -18,9 +18,15 @@ export class HarPaymentController {
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-    @Query('guid') guid: string
+    @Query('hotel_guid') hotel_guid?: string,
+    @Query('airway_guid') airway_guid?: string,
+    @Query('railway_guid') railway_guid?: string,
   ) {
-    return this.harPaymentService.getAllHarPayments(Number(page), Number(limit), guid);
+    return this.harPaymentService.getAllHarPayments(Number(page), Number(limit), {
+      hotel_guid,
+      airway_guid,
+      railway_guid
+    });
   }
 
   @Patch('/update-har-payment')

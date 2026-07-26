@@ -14,6 +14,11 @@ export class TurkishAirlinesController {
     return this.turkishAirlinesService.addTurkishAirline(createTurkishAirlineDto);
   }
 
+  @Get('/get-tukish-airlines-report')
+  async getReport(@Query('year_month') year_month: string) {
+    return this.turkishAirlinesService.getTurkishReport(year_month);
+  }
+
   @Get('/get-all-turkish-airlines')
   async findAll(
     @Query('page') page: number = 1,

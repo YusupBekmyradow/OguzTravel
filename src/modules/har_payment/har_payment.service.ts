@@ -28,43 +28,49 @@ export class HarPaymentService {
         return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
       }
 
-      const targetGuid = this.extractGuid(createDto);
-      if (!targetGuid) {
+      const target = this.getTargetInfo(createDto);
+      if (!target) {
         return errorResponse(HttpStatuses.BAD_REQUEST, 'A valid reference guid must be provided');
       }
 
-      const stats = await this.getHarPaymentStats(targetGuid);
+      const stats = await this.getHarPaymentStats(target);
       return successResponse(HttpStatuses.CREATED, { ...createdPayment.toJSON(), stats }, 'Payment created successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Payment creation failed', error);
     }
   }
 
-  async getAllHarPayments(page: number = 1, limit: number = 10, guid: string) {
+
+  async getAllHarPayments(page: number, limit: number, filters: { hotel_guid?: string, airway_guid?: string, railway_guid?: string }) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
 
-      if (!guid) {
-        return errorResponse(HttpStatuses.BAD_REQUEST, 'guid is required');
-      }
+      const where: any = {};
+      let target: any = null;
 
+      if (filters.hotel_guid) {
+        where.hotel_guid = filters.hotel_guid;
+        target = { guid: filters.hotel_guid, table: 'tbl_hotel', col: 'hotel_guid' };
+      } else if (filters.airway_guid) {
+        where.airway_guid = filters.airway_guid;
+        target = { guid: filters.airway_guid, table: 'tbl_airway', col: 'airway_guid' };
+      } else if (filters.railway_guid) {
+        where.railway_guid = filters.railway_guid;
+        target = { guid: filters.railway_guid, table: 'tbl_railway', col: 'railway_guid' };
+      } else {
+        return errorResponse(HttpStatuses.BAD_REQUEST, 'At least one guid is required');
+      }
       const { rows, count } = await this.harPaymentRepo.findAndCountAll({
-        where: {
-          [Op.or]: [
-            { hotel_guid: guid },
-            { airway_guid: guid },
-            { railway_guid: guid }
-          ]
-        },
+        where,
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }],
         order: [['index_number', 'DESC']],
         limit: currentLimit,
         offset: offset,
       });
 
-      const stats = await this.getHarPaymentStats(guid);
+      const stats = await this.getHarPaymentStats(target);
 
       return successResponse(HttpStatuses.OK, {
         data: rows,
@@ -76,47 +82,43 @@ export class HarPaymentService {
     }
   }
 
+
+
   async updateHarPayment(updateDto: UpdateHarPaymentDto) {
     try {
       const payment = await this.harPaymentRepo.findOne({ where: { guid: updateDto.guid } });
       if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
 
       await this.harPaymentRepo.update(updateDto as any, { where: { guid: updateDto.guid } });
-
       const updated = await this.harPaymentRepo.findOne({
         where: { guid: updateDto.guid },
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
 
-      if (!updated) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
-      }
+      if (!updated) return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
 
-      const targetGuid = this.extractGuid(updated);
-      if (!targetGuid) {
-        return errorResponse(HttpStatuses.BAD_REQUEST, 'Target reference missing');
-      }
+      const target = this.getTargetInfo(updated);
+      if (!target) return errorResponse(HttpStatuses.BAD_REQUEST, 'Target reference missing');
 
-      const stats = await this.getHarPaymentStats(targetGuid);
+      const stats = await this.getHarPaymentStats(target);
       return successResponse(HttpStatuses.OK, { ...updated.toJSON(), stats }, 'Payment updated successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update error', error);
     }
   }
 
+
   async deleteHarPayment(guid: string) {
     try {
       const payment = await this.harPaymentRepo.findOne({ where: { guid } });
       if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
 
-      const targetGuid = this.extractGuid(payment);
+      const target = this.getTargetInfo(payment);
       await this.harPaymentRepo.destroy({ where: { guid } });
 
-      if (!targetGuid) {
-        return successResponse(HttpStatuses.OK, null, 'Payment deleted successfully');
-      }
+      if (!target) return successResponse(HttpStatuses.OK, null, 'Payment deleted successfully');
 
-      const stats = await this.getHarPaymentStats(targetGuid);
+      const stats = await this.getHarPaymentStats(target);
       return successResponse(HttpStatuses.OK, stats, 'Payment deleted successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete error', error);
@@ -124,32 +126,25 @@ export class HarPaymentService {
   }
 
 
-  private extractGuid(obj: { hotel_guid?: string; airway_guid?: string; railway_guid?: string }) {
-    return obj.hotel_guid || obj.airway_guid || obj.railway_guid || null;
+  private getTargetInfo(data: any) {
+    if (data.hotel_guid) return { guid: data.hotel_guid, table: 'tbl_hotel', col: 'hotel_guid' };
+    if (data.airway_guid) return { guid: data.airway_guid, table: 'tbl_airway', col: 'airway_guid' };
+    if (data.railway_guid) return { guid: data.railway_guid, table: 'tbl_railway', col: 'railway_guid' };
+    return null;
   }
 
-
-  private async getHarPaymentStats(guid: string) {
+  private async getHarPaymentStats(target: { guid: string, table: string, col: string }) {
     const stats = await this.sequelize.query(`
       SELECT 
         target.guid as "target_guid",
         target.price as "total_price",
         COALESCE(SUM(hp.amount), 0) as "paid_amount"
-      FROM (
-        SELECT guid, price FROM tbl_hotel WHERE guid = :guid
-        UNION
-        SELECT guid, price FROM tbl_airway WHERE guid = :guid
-        UNION
-        SELECT guid, price FROM tbl_railway WHERE guid = :guid
-      ) target
-      LEFT JOIN "tbl_HAR_payments" hp ON (
-        hp.hotel_guid = target.guid OR 
-        hp.airway_guid = target.guid OR 
-        hp.railway_guid = target.guid
-      )
+      FROM ${target.table} target
+      LEFT JOIN "tbl_HAR_payments" hp ON hp.${target.col} = target.guid
+      WHERE target.guid = :guid
       GROUP BY target.guid, target.price
     `, {
-      replacements: { guid },
+      replacements: { guid: target.guid },
       type: QueryTypes.SELECT
     });
 
