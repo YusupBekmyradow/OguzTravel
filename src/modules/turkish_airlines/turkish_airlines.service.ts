@@ -30,98 +30,169 @@ export class TurkishAirlinesService {
 
 
 
+  // async getTurkishReport(yearMonth: string) {
+  //   try {
+  //     const [year, month] = yearMonth.split('-').map(Number);
+  //     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  //     const lastDay = new Date(year, month, 0).getDate();
+  //     const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+  //     const listQuery = `
+  //     SELECT 
+  //         TO_CHAR(d.flight_date, 'DD') AS datetime,
+  //         o."fullName" AS full_name,
+  //         o."shortName" AS shortName,
+  //         COALESCE(SUM(t.base_fare), 0) AS base_fare_sum,
+  //         COALESCE(SUM(t.quoted_price), 0) AS quoted_price_sum
+  //     FROM tbl_offices AS o
+  //     CROSS JOIN (
+  //         SELECT generate_series(:startDate::date, :endDate::date, '1 day'::interval)::date AS flight_date
+  //     ) AS d
+  //     LEFT JOIN tbl_turkish_airlines AS t 
+  //         ON t.office_guid = o.guid 
+  //         AND DATE(t.datetime) = d.flight_date
+  //     GROUP BY d.flight_date, o."fullName", o."shortName"
+  //     ORDER BY d.flight_date ASC, o."fullName" ASC;
+  //   `;
+
+  //     const dailyTotalsQuery = `
+  //     SELECT 
+  //         TO_CHAR(d.flight_date, 'DD') AS datetime,
+  //         COALESCE(SUM(t.base_fare), 0) AS daily_total_base,
+  //         COALESCE(SUM(t.quoted_price), 0) AS daily_total_quoted
+  //     FROM (
+  //         SELECT generate_series(:startDate::date, :endDate::date, '1 day'::interval)::date AS flight_date
+  //     ) AS d
+  //     LEFT JOIN tbl_turkish_airlines AS t ON DATE(t.datetime) = d.flight_date
+  //     GROUP BY d.flight_date
+  //     ORDER BY d.flight_date ASC;
+  //   `;
+
+  //     const footerQuery = `
+  //     SELECT 
+  //         o."shortName" AS office,
+  //         COALESCE(SUM(t.base_fare), 0) AS total_base,
+  //         COALESCE(SUM(t.quoted_price), 0) AS total_quoted
+  //     FROM tbl_offices AS o
+  //     LEFT JOIN tbl_turkish_airlines AS t 
+  //         ON t.office_guid = o.guid 
+  //         AND TO_CHAR(t.datetime, 'YYYY-MM') = :yearMonth
+  //     GROUP BY o."shortName"
+  //     ORDER BY o."shortName" ASC;
+  //   `;
+
+  //     const [data, dailyTotals, footerResult] = await Promise.all([
+  //       this.sequelize.query(listQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+  //       this.sequelize.query(dailyTotalsQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
+  //       this.sequelize.query(footerQuery, { replacements: { yearMonth }, type: QueryTypes.SELECT })
+  //     ]);
+
+  //     const footer = (footerResult as FooterRow[]).map(item => ({
+  //       ...item,
+  //       profit: Number(item.total_quoted) - Number(item.total_base)
+  //     }));
+
+  //     const totals = footer.reduce((acc, curr) => {
+  //       acc.total_base += Number(curr.total_base || 0);
+  //       acc.total_quoted += Number(curr.total_quoted || 0);
+  //       acc.profit += Number(curr.profit || 0);
+  //       return acc;
+  //     }, { total_base: 0, total_quoted: 0, profit: 0 });
+
+  //     const workingDaysCount = (dailyTotals as any[]).filter(day =>
+  //       Number(day.daily_total_base || 0) > 0 || Number(day.daily_total_quoted || 0) > 0
+  //     ).length;
+
+  //     const grandTotal = {
+  //       month_total_base: totals.total_base,
+  //       month_total_quoted: totals.total_quoted,
+  //       month_profit: totals.profit,
+  //       working_days_count: workingDaysCount
+  //     };
+
+  //     const footerWithPercent = footer.map((item) => ({
+  //       ...item,
+  //       percentage: grandTotal.month_profit !== 0
+  //         ? ((Number(item.profit) / grandTotal.month_profit) * 100).toFixed(2) + '%'
+  //         : '0.00%'
+  //     }));
+
+  //     return {
+  //       status: 200,
+  //       data,
+  //       dailyTotals,
+  //       footer: footerWithPercent,
+  //       grandTotal,
+  //       message: 'Report generated successfully'
+  //     };
+  //   } catch (error: any) {
+  //     return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Report generation failed', error);
+  //   }
+  // }
+
+
   async getTurkishReport(yearMonth: string) {
     try {
       const [year, month] = yearMonth.split('-').map(Number);
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const lastDay = new Date(year, month, 0).getDate();
       const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-      const listQuery = `
-      SELECT 
-          TO_CHAR(d.flight_date, 'DD') AS datetime,
-          o."fullName" AS full_name,
-          o."shortName" AS shortName,
-          COALESCE(SUM(t.base_fare), 0) AS base_fare_sum,
-          COALESCE(SUM(t.quoted_price), 0) AS quoted_price_sum
-      FROM tbl_offices AS o
-      CROSS JOIN (
+
+      const reportQuery = `
+      WITH date_series AS (
           SELECT generate_series(:startDate::date, :endDate::date, '1 day'::interval)::date AS flight_date
-      ) AS d
-      LEFT JOIN tbl_turkish_airlines AS t 
-          ON t.office_guid = o.guid 
-          AND DATE(t.datetime) = d.flight_date
-      GROUP BY d.flight_date, o."fullName", o."shortName"
-      ORDER BY d.flight_date ASC, o."fullName" ASC;
-    `;
-
-      const dailyTotalsQuery = `
+      ),
+      raw_data AS (
+          SELECT 
+              d.flight_date,
+              o."fullName" AS full_name,
+              o."shortName" AS shortName,
+              COALESCE(SUM(t.base_fare), 0) AS base_fare,
+              COALESCE(SUM(t.quoted_price), 0) AS quoted_price
+          FROM tbl_offices AS o
+          CROSS JOIN date_series AS d
+          LEFT JOIN tbl_turkish_airlines AS t ON t.office_guid = o.guid AND DATE(t.datetime) = d.flight_date
+          GROUP BY d.flight_date, o."fullName", o."shortName"
+      )
       SELECT 
-          TO_CHAR(d.flight_date, 'DD') AS datetime,
-          COALESCE(SUM(t.base_fare), 0) AS daily_total_base,
-          COALESCE(SUM(t.quoted_price), 0) AS daily_total_quoted
-      FROM (
-          SELECT generate_series(:startDate::date, :endDate::date, '1 day'::interval)::date AS flight_date
-      ) AS d
-      LEFT JOIN tbl_turkish_airlines AS t ON DATE(t.datetime) = d.flight_date
-      GROUP BY d.flight_date
-      ORDER BY d.flight_date ASC;
+        (SELECT json_agg(r) FROM (SELECT TO_CHAR(flight_date, 'DD') AS datetime, full_name, shortname, base_fare AS base_fare_sum, quoted_price AS quoted_price_sum FROM raw_data ORDER BY flight_date, shortname) r) AS data,
+        
+        (SELECT json_agg(d) FROM (SELECT TO_CHAR(flight_date, 'DD') AS datetime, SUM(base_fare) AS daily_total_base, SUM(quoted_price) AS daily_total_quoted FROM raw_data GROUP BY flight_date ORDER BY flight_date) d) AS "dailyTotals",
+        
+        (SELECT json_agg(f) FROM (
+            SELECT 
+                shortName AS office, 
+                SUM(base_fare) AS total_base, 
+                SUM(quoted_price) AS total_quoted,
+                (SUM(quoted_price) - SUM(base_fare)) AS profit
+            FROM raw_data 
+            GROUP BY shortName
+        ) f) AS footer,
+        
+        (SELECT json_build_object(
+            'month_total_base', SUM(base_fare),
+            'month_total_quoted', SUM(quoted_price),
+            'month_profit', SUM(quoted_price - base_fare),
+            'working_days_count', COUNT(DISTINCT flight_date) FILTER (WHERE base_fare > 0 OR quoted_price > 0)
+        ) FROM raw_data) AS "grandTotal"
     `;
 
-      const footerQuery = `
-      SELECT 
-          o."shortName" AS office,
-          COALESCE(SUM(t.base_fare), 0) AS total_base,
-          COALESCE(SUM(t.quoted_price), 0) AS total_quoted
-      FROM tbl_offices AS o
-      LEFT JOIN tbl_turkish_airlines AS t 
-          ON t.office_guid = o.guid 
-          AND TO_CHAR(t.datetime, 'YYYY-MM') = :yearMonth
-      GROUP BY o."shortName"
-      ORDER BY o."shortName" ASC;
-    `;
+      const [result] = await this.sequelize.query(reportQuery, {
+        replacements: { startDate, endDate },
+        type: QueryTypes.SELECT
+      });
 
-      const [data, dailyTotals, footerResult] = await Promise.all([
-        this.sequelize.query(listQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
-        this.sequelize.query(dailyTotalsQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
-        this.sequelize.query(footerQuery, { replacements: { yearMonth }, type: QueryTypes.SELECT })
-      ]);
-
-      const footer = (footerResult as FooterRow[]).map(item => ({
+      const footerWithPercent = (result as any).footer.map((item: any) => ({
         ...item,
-        profit: Number(item.total_quoted) - Number(item.total_base)
-      }));
-
-      const totals = footer.reduce((acc, curr) => {
-        acc.total_base += Number(curr.total_base || 0);
-        acc.total_quoted += Number(curr.total_quoted || 0);
-        acc.profit += Number(curr.profit || 0);
-        return acc;
-      }, { total_base: 0, total_quoted: 0, profit: 0 });
-
-      const workingDaysCount = (dailyTotals as any[]).filter(day =>
-        Number(day.daily_total_base || 0) > 0 || Number(day.daily_total_quoted || 0) > 0
-      ).length;
-
-      const grandTotal = {
-        month_total_base: totals.total_base,
-        month_total_quoted: totals.total_quoted,
-        month_profit: totals.profit,
-        working_days_count: workingDaysCount
-      };
-
-      const footerWithPercent = footer.map((item) => ({
-        ...item,
-        percentage: grandTotal.month_profit !== 0
-          ? ((Number(item.profit) / grandTotal.month_profit) * 100).toFixed(2) + '%'
+        percentage: (result as any).grandTotal.month_profit !== 0
+          ? ((Number(item.profit) / (result as any).grandTotal.month_profit) * 100).toFixed(2) + '%'
           : '0.00%'
       }));
-
       return {
         status: 200,
-        data,
-        dailyTotals,
+        data: (result as any).data || [],
+        dailyTotals: (result as any).dailyTotals || [],
         footer: footerWithPercent,
-        grandTotal,
+        grandTotal: (result as any).grandTotal,
         message: 'Report generated successfully'
       };
     } catch (error: any) {
@@ -131,7 +202,7 @@ export class TurkishAirlinesService {
 
 
 
-
+  
   private getTurkishAirlineIncludes() {
     return [
       {
