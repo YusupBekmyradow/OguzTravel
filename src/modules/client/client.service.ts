@@ -8,6 +8,7 @@ import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { off } from 'process';
 import { Op } from 'sequelize';
 import { filter } from 'rxjs';
+import { UpdatePassportDto } from './dto/updata-passport.dto';
 
 @Injectable()
 export class ClientService {
@@ -105,6 +106,44 @@ export class ClientService {
       return successResponse(HttpStatuses.OK, null, 'Client deleted successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
+    }
+  }
+
+
+
+
+  async updatePassportToHistory(updatePassportDto: UpdatePassportDto) {
+    try {
+      const {
+        guid,
+        passport_number,
+        passportExpiryDate,
+        passportCountryOfIssue
+      } = updatePassportDto;
+      const client = await this.clientRepository.findByPk(guid);
+      if (!client) {
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Client not found');
+      }
+      if (client.passport_number) {
+        const oldPassportData = {
+          passport_number: client.passport_number,
+          passportExpiryDate: client.passportExpiryDate,
+          passportCountryOfIssue: client.passportCountryOfIssue,
+          archivedAt: new Date()
+        };
+        const history = Array.isArray(client.passportHistory)
+          ? [...client.passportHistory]
+          : [];
+        history.push(oldPassportData);
+        client.passportHistory = history;
+      }
+      client.passport_number = passport_number;
+      client.passportExpiryDate = passportExpiryDate;
+      client.passportCountryOfIssue = passportCountryOfIssue;
+      await client.save();
+      return successResponse(HttpStatuses.OK, client, 'Passport archived and updated successfully');
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Passport update failed', error);
     }
   }
 }

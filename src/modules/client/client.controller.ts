@@ -3,6 +3,7 @@ import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { UpdatePassportDto } from './dto/updata-passport.dto';
 
 @ApiTags('Clients')
 @Controller('client')
@@ -47,5 +48,11 @@ export class ClientController {
   })
   async remove(@Body('guid') guid: string) {
     return this.clientService.deleteClient(guid);
+  }
+
+
+  @Patch('update-passport')
+  updatePassport(@Body() updatePassportDto: UpdatePassportDto) {
+    return this.clientService.updatePassportToHistory(updatePassportDto);
   }
 }

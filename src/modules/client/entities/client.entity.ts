@@ -77,6 +77,13 @@ export class Client extends Model<Client> {
   })
   declare index_number: number;
 
+  @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    defaultValue: []
+  })
+  declare passportHistory: any[];
+
   @HasMany(() => B2b, {
     foreignKey: 'client_guid',
     sourceKey: 'guid',
