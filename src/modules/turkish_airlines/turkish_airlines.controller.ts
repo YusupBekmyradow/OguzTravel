@@ -27,6 +27,11 @@ export class TurkishAirlinesController {
     return this.turkishAirlinesService.getAllTurkishAirline(Number(page), Number(limit));
   }
 
+  @Get('/get-turkish-status-month')
+  async getStatusReportByMonth(@Query('yearMonth') yearMonth: string) {
+    return await this.turkishAirlinesService.getStatusReportByMonth(yearMonth);
+  }
+
   @Patch('/update-turkish-airlines')
   update(@Body() updateTurkishAirlineDto: UpdateTurkishAirlineDto) {
     return this.turkishAirlinesService.updateTurkishAirline(updateTurkishAirlineDto);

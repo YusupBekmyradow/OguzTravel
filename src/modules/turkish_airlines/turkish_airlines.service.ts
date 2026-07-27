@@ -303,6 +303,64 @@ export class TurkishAirlinesService {
   }
 
 
+
+  async getStatusReportByMonth(yearMonth: string) {
+    try {
+      const [year, month] = yearMonth.split('-').map(Number);
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month, 0).getDate();
+      const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+
+      const [result] = await this.sequelize.query(`
+        WITH monthly_data AS (
+            SELECT 
+                t.status_guid,
+                t.guid
+            FROM tbl_turkish_airlines AS t
+            WHERE t.datetime >= :startDate::timestamp 
+              AND t.datetime < (:endDate::date + INTERVAL '1 day')
+        ),
+        total_count AS (
+            SELECT COUNT(guid) AS overall_count FROM monthly_data
+        ),
+        grouped_data AS (
+            SELECT 
+                s.guid AS status_guid,
+                s.name AS status_name,
+                COUNT(t.guid) AS ticket_count
+            FROM "tbl_Tstatuses" AS s
+            LEFT JOIN monthly_data AS t ON t.status_guid = s.guid
+            GROUP BY s.guid, s.name
+        )
+        SELECT 
+            (SELECT json_agg(
+                json_build_object(
+                    'status_guid', g.status_guid,
+                    'status_name', g.status_name,
+                    'ticket_count', g.ticket_count,
+                    'percentage', CASE 
+                        WHEN tc.overall_count > 0 
+                        THEN ROUND((g.ticket_count::numeric / tc.overall_count) * 100, 2) || '%' 
+                        ELSE '0.00%' 
+                    END
+                )
+            ) FROM grouped_data g CROSS JOIN total_count tc) AS status_distribution;
+      `, {
+        replacements: { startDate, endDate },
+        type: QueryTypes.SELECT
+      });
+
+      return {
+        status: 200,
+        data: (result as any).status_distribution || [],
+        message: 'Status report generated successfully'
+      };
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Report generation failed', error);
+    }
+  }
+
+
   async updateTurkishAirline(updateDto: UpdateTurkishAirlineDto) {
     try {
       const turkishAirline = await this.turkishAirlineRepo.findByPk(updateDto.guid);
