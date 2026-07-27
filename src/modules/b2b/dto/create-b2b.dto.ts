@@ -35,9 +35,9 @@ export class CreateB2bDto {
   @IsNotEmpty()
   declare status_guid: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   declare pnr: string;
 
   @ApiProperty()

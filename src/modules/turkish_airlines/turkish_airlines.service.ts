@@ -160,12 +160,13 @@ export class TurkishAirlinesService {
         
         (SELECT json_agg(f) FROM (
             SELECT 
-                shortName AS office, 
+                full_name,
+                shortName,
                 SUM(base_fare) AS total_base, 
                 SUM(quoted_price) AS total_quoted,
                 (SUM(quoted_price) - SUM(base_fare)) AS profit
             FROM raw_data 
-            GROUP BY shortName
+          GROUP BY full_name, shortName
         ) f) AS footer,
         
         (SELECT json_build_object(
@@ -202,7 +203,7 @@ export class TurkishAirlinesService {
 
 
 
-  
+
   private getTurkishAirlineIncludes() {
     return [
       {

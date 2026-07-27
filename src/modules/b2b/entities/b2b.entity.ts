@@ -67,6 +67,12 @@ export class B2b extends Model<B2b> {
 
   @Column({
     type: DataType.STRING,
+    allowNull: true,
+  })
+  declare pnr: string;
+
+  @Column({
+    type: DataType.STRING,
     allowNull: false
   })
   declare route: string;
