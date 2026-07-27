@@ -112,7 +112,8 @@ export class ClientService {
 
 
 
-  async updatePassportToHistory(updatePassportDto: UpdatePassportDto) {
+async updatePassportToHistory(updatePassportDto: UpdatePassportDto) {
+    const transaction = await this.clientRepository.sequelize?.transaction();
     try {
       const {
         guid,
@@ -120,29 +121,41 @@ export class ClientService {
         passportExpiryDate,
         passportCountryOfIssue
       } = updatePassportDto;
-      const client = await this.clientRepository.findByPk(guid);
+
+      const client = await this.clientRepository.findByPk(guid, { transaction });
       if (!client) {
+        await transaction?.rollback();
         return errorResponse(HttpStatuses.NOT_FOUND, 'Client not found');
       }
-      if (client.passport_number) {
+
+      if (client.passport_number && client.passport_number !== passport_number) {
         const oldPassportData = {
           passport_number: client.passport_number,
           passportExpiryDate: client.passportExpiryDate,
           passportCountryOfIssue: client.passportCountryOfIssue,
+          passport_count: client.passport_count || 1,
           archivedAt: new Date()
         };
+
         const history = Array.isArray(client.passportHistory)
           ? [...client.passportHistory]
           : [];
+        
         history.push(oldPassportData);
         client.passportHistory = history;
+
+        client.passport_count = (client.passport_count || 1) + 1;
       }
       client.passport_number = passport_number;
       client.passportExpiryDate = passportExpiryDate;
       client.passportCountryOfIssue = passportCountryOfIssue;
-      await client.save();
+
+      await client.save({ transaction });
+      await transaction?.commit();
+
       return successResponse(HttpStatuses.OK, client, 'Passport archived and updated successfully');
     } catch (error) {
+      await transaction?.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Passport update failed', error);
     }
   }

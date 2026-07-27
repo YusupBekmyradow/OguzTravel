@@ -44,6 +44,12 @@ export class Visa extends Model<Visa> {
   declare client_guid: string;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  declare passport_count: number;
+
+  @Column({
     type: DataType.JSONB,
     allowNull: true,
     defaultValue: { phone: null, name: null }

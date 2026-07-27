@@ -64,6 +64,13 @@ export class Client extends Model<Client> {
   declare passportCountryOfIssue?: string;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 1,
+  })
+  declare passport_count: number;
+
+  @Column({
     type: DataType.STRING,
     allowNull: true
   })

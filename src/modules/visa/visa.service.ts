@@ -13,7 +13,8 @@ import { Office } from '../office/entities/office.entity';
 @Injectable()
 export class VisaService {
   constructor(
-    @InjectModel(Visa) private visaRepository: typeof Visa
+    @InjectModel(Visa) private visaRepository: typeof Visa,
+    @InjectModel(Client) private clientRepository: typeof Client
   ) { }
 
   private getVisaIncludes() {
@@ -22,7 +23,7 @@ export class VisaService {
         model: Employee, as: 'receiveroperator', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
       },
-      { model: Client, attributes: ['guid', 'fullName', 'phone_number', 'passport_number', 'dateOfBirth'] },
+      { model: Client, attributes: ['guid', 'fullName', 'phone_number', 'passport_number', 'dateOfBirth', 'passport_count', 'passportHistory'] },
       { model: VisaPackage, as: 'package', attributes: ['guid', 'name', 'price', 'sale_price'] },
       { model: VisaPackage, as: 'service', attributes: ['guid', 'name', 'price', 'sale_price'] },
       { model: VisaPackage, as: 'hotel_booking', attributes: ['guid', 'name', 'price', 'sale_price'] },
@@ -31,10 +32,37 @@ export class VisaService {
     ];
   }
 
+  private formatVisaPassport(visa: any) {
+    if (!visa || !visa.client) return visa;
+    const visaJson = visa.toJSON ? visa.toJSON() : visa;
+    const client = visaJson.client;
+    if (visaJson.passport_count && client.passport_count && visaJson.passport_count !== client.passport_count) {
+      if (Array.isArray(client.passportHistory)) {
+        const oldPassport = client.passportHistory.find(
+          (p: any) => p.passport_count === visaJson.passport_count
+        );
+        if (oldPassport) {
+          client.passport_number = oldPassport.passport_number;
+          client.passportExpiryDate = oldPassport.passportExpiryDate;
+          client.passportCountryOfIssue = oldPassport.passportCountryOfIssue;
+        }
+      }
+    }
+    delete client.passportHistory;
+    return visaJson;
+  }
+
+
   async addVisa(createVisaDto: CreateVisaDto) {
     try {
+      const client = await this.clientRepository.findByPk(createVisaDto.client_guid);
+      if (!client) {
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Client not found for this visa');
+      }
+
       const visa = await this.visaRepository.create({
-        ...createVisaDto
+        ...createVisaDto,
+        passport_count: client.passport_count || 1,
       } as any);
       const newVisa = await this.visaRepository.findOne({
         where: { guid: visa.guid },
@@ -46,9 +74,10 @@ export class VisaService {
       if (!newVisa) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'Visa not found')
       }
+      const formattedVisa = this.formatVisaPassport(newVisa);
       return {
         status: 201,
-        data: newVisa,
+        data: formattedVisa,
         message: 'Visa created successfully'
       }
     } catch (error: any) {
@@ -73,9 +102,10 @@ export class VisaService {
         offset: Number(offset),
       });
 
+      const formattedRows = rows.map(row => this.formatVisaPassport(row));
       return {
         status: 200,
-        data: rows,
+        data: formattedRows,
         meta: {
           totalItems: count,
           totalPages: Math.ceil(count / limit),
@@ -91,7 +121,20 @@ export class VisaService {
 
   async updateVisa(updateDto: UpdateVisaDto) {
     try {
-      const [affectedCount] = await this.visaRepository.update(updateDto, {
+      const existingVisa = await this.visaRepository.findByPk(updateDto.guid);
+      if (!existingVisa) {
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Visa not found');
+      }
+      let updateData: any = { ...updateDto };
+      if (updateDto.client_guid && updateDto.client_guid !== existingVisa.client_guid) {
+        const client = await this.clientRepository.findByPk(updateDto.client_guid);
+        if (client) {
+          updateData.passport_count = client.passport_count || 1;
+        }
+      } else {
+        updateData.passport_count = existingVisa.passport_count;
+      }
+      const [affectedCount] = await this.visaRepository.update(updateData, {
         where: { guid: updateDto.guid }
       });
       if (affectedCount === 0) return errorResponse(HttpStatuses.NOT_FOUND, 'Visa not found');
@@ -103,9 +146,10 @@ export class VisaService {
         },
         include: this.getVisaIncludes()
       });
+      const formattedVisa = this.formatVisaPassport(newVisa);
       return {
         status: 200,
-        data: newVisa,
+        data: formattedVisa,
         message: 'Visa updated successfully'
       };
     } catch (error: any) {
