@@ -17,6 +17,7 @@ export class B2bService {
   constructor(
     @InjectModel(B2b) private b2bRepository: typeof B2b,
     @InjectModel(TicketPayment) private ticketPaymentRepo: typeof TicketPayment,
+    @InjectModel(Client) private clientRepository: typeof Client,
     private sequelize: Sequelize,
   ) { }
 
@@ -30,7 +31,7 @@ export class B2bService {
         model: Employee, as: 'receiver_operator', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
       },
-      { model: Client, attributes: ['guid', 'fullName', 'passport_number', 'passportCountryOfIssue'] },
+      { model: Client, attributes: ['guid', 'fullName', 'passport_number', 'passportCountryOfIssue', 'passport_count', 'passportHistory'] },
       { model: Tstatus, attributes: ['guid', 'name'] }
     ];
   }
@@ -65,12 +66,38 @@ export class B2bService {
     };
   }
 
+
+  private formatB2bPassport(b2bItem: any) {
+    if (!b2bItem || !b2bItem.client) return b2bItem;
+    const b2bJson = b2bItem.toJSON ? b2bItem.toJSON() : b2bItem;
+    const client = b2bJson.client;
+
+    if (b2bJson.passport_count && client.passport_count && b2bJson.passport_count !== client.passport_count) {
+      if (Array.isArray(client.passportHistory)) {
+        const oldPassport = client.passportHistory.find(
+          (p: any) => p.passport_count === b2bJson.passport_count
+        );
+        if (oldPassport) {
+          client.passport_number = oldPassport.passport_number;
+          client.passportExpiryDate = oldPassport.passportExpiryDate;
+          client.passportCountryOfIssue = oldPassport.passportCountryOfIssue;
+        }
+      }
+    }
+    delete client.passportHistory;
+    return b2bJson;
+  }
+
+
   async addB2b(createB2bDto: CreateB2bDto) {
     const t = await this.sequelize.transaction();
     try {
+      const client = await this.clientRepository.findByPk(createB2bDto.client_guid, { transaction: t });
+
       const b2b = await this.b2bRepository.create({
         ...createB2bDto,
-        profit: Number(createB2bDto.sale_price) - Number(createB2bDto.net_price)
+        profit: Number(createB2bDto.sale_price) - Number(createB2bDto.net_price),
+        passport_count: client ? (client.passport_count || 1) : 1
       } as any, { transaction: t });
 
       if (createB2bDto.is_paid === true) {
@@ -87,12 +114,15 @@ export class B2bService {
         include: this.getB2bIncludes(),
         attributes: { include: this.getB2bAttributes().include as any }
       });
+
       if (!newB2b) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'B2b not found')
       }
+
+      const formattedData = this.formatB2bPassport(newB2b);
       return {
         status: 201,
-        data: newB2b,
+        data: formattedData,
         message: 'B2b created successfully'
       }
     } catch (error: any) {
@@ -100,6 +130,7 @@ export class B2bService {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'B2b creation failes', error)
     }
   }
+
 
 
   async getAllB2b(page: number = 1, limit: number = 10) {
@@ -115,9 +146,12 @@ export class B2bService {
         limit: Number(limit),
         offset: Number(offset),
       });
+
+      const formattedRows = rows.map(row => this.formatB2bPassport(row));
+
       return {
         status: 200,
-        data: rows,
+        data: formattedRows,
         meta: {
           totalItems: count,
           totalPages: Math.ceil(count / limit),
@@ -132,35 +166,42 @@ export class B2bService {
 
 
 
+
   async updateB2b(updateDto: UpdateB2bDto) {
     const t = await this.sequelize.transaction();
     try {
-      const b2b = await this.b2bRepository.findOne({
+      const existingB2b = await this.b2bRepository.findOne({
         where: { guid: updateDto.guid },
         transaction: t
       });
-
-      if (!b2b) {
+      if (!existingB2b) {
         await t.rollback();
         return errorResponse(HttpStatuses.NOT_FOUND, 'B2b not found');
       }
-
-      await b2b.update(updateDto, { transaction: t });
-
-      await t.commit();
-
+      let updateData: any = { ...updateDto };
+      const targetClientGuid = updateDto.client_guid || existingB2b.client_guid;
+      const client = await this.clientRepository.findByPk(targetClientGuid, { transaction: t });
+      if (client) {
+        updateData.passport_count = client.passport_count || 1;
+      } else {
+        updateData.passport_count = existingB2b.passport_count;
+      }
+      await existingB2b.update(updateData, { transaction: t });
       const updatedB2b = await this.b2bRepository.findOne({
         where: { guid: updateDto.guid },
         include: this.getB2bIncludes(),
-        attributes: { include: this.getB2bAttributes().include as any }
+        attributes: { include: this.getB2bAttributes().include as any },
+        transaction: t
       });
-
-      return { status: 200, data: updatedB2b, message: 'B2b updated successfully' };
+      await t.commit();
+      const formattedData = this.formatB2bPassport(updatedB2b);
+      return { status: 200, data: formattedData, message: 'B2b updated successfully' };
     } catch (error: any) {
       await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
     }
   }
+
 
   async deleteB2b(guid: string) {
     try {

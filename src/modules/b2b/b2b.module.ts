@@ -8,11 +8,12 @@ import { EmployeeModule } from '../employee/employee.module';
 import { TstatusModule } from '../tstatus/tstatus.module';
 import { TicketPaymentModule } from '../ticket_payment/ticket_payment.module';
 import { TicketPayment } from '../ticket_payment/entities/ticket_payment.entity';
+import { Client } from '../client/entities/client.entity';
 
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([B2b, TicketPayment]),
+    SequelizeModule.forFeature([B2b, TicketPayment, Client]),
     EmployeeModule,
     ClientModule,
     TstatusModule,

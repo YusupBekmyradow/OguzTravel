@@ -5,10 +5,11 @@ import { RefferalLetter } from './entities/refferal_letter.entity';
 import { EmployeeModule } from '../employee/employee.module';
 import { ClientModule } from '../client/client.module';
 import { SequelizeModule } from '@nestjs/sequelize';
+import { Client } from '../client/entities/client.entity';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([RefferalLetter]),
+    SequelizeModule.forFeature([RefferalLetter, Client]),
     EmployeeModule,
     ClientModule,
   ],

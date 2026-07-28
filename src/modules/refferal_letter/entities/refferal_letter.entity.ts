@@ -43,6 +43,13 @@ export class RefferalLetter extends Model<RefferalLetter> {
     declare client_guid: string;
 
     @Column({
+        type: DataType.INTEGER,
+        allowNull: true,
+        defaultValue: 1
+    })
+    declare passport_count: number;
+
+    @Column({
         type: DataType.STRING,
         allowNull: false
     })

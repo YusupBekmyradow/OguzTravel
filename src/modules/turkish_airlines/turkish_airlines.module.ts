@@ -7,10 +7,11 @@ import { EmployeeModule } from '../employee/employee.module';
 import { ClientModule } from '../client/client.module';
 import { OfficeModule } from '../office/office.module';
 import { TstatusModule } from '../tstatus/tstatus.module';
+import { Client } from '../client/entities/client.entity';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([TurkishAirline]),
+    SequelizeModule.forFeature([TurkishAirline, Client]),
     EmployeeModule,
     ClientModule,
     TstatusModule,

@@ -8,11 +8,14 @@ import { RefferalLetter } from './entities/refferal_letter.entity';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { Office } from '../office/entities/office.entity';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class RefferalLetterService {
   constructor(
-    @InjectModel(RefferalLetter) private refferalLetterRepo: typeof RefferalLetter
+    @InjectModel(RefferalLetter) private refferalLetterRepo: typeof RefferalLetter,
+    @InjectModel(Client) private clientRepository: typeof Client,
+    private sequelize: Sequelize
   ) { }
 
   private getRefferalLetterIncludes() {
@@ -27,32 +30,69 @@ export class RefferalLetterService {
             attributes: ['guid', 'fullName', 'shortName']
           }
         ]
-      }, { model: Client, attributes: ['guid', 'fullName', 'passport_number', 'dateOfBirth', 'gender'] }
+      }, { model: Client, attributes: ['guid', 'fullName', 'passport_number', 'dateOfBirth', 'gender', 'passport_count', 'passportHistory'] }
     ];
   }
 
-  async addRefferalLetter(createDto: CreateRefferalLetterDto) {
-    try {
-      const refferalLetter = await this.refferalLetterRepo.create({
-        ...createDto,
-      } as any);
 
+  private formatRefferalLetterPassport(letter: any) {
+    if (!letter || !letter.client) return letter;
+    const letterJson = letter.toJSON ? letter.toJSON() : letter;
+    const client = letterJson.client;
+
+    if (letterJson.passport_count && client.passport_count && letterJson.passport_count !== client.passport_count) {
+      if (Array.isArray(client.passportHistory)) {
+        const oldPassport = client.passportHistory.find(
+          (p: any) => p.passport_count === letterJson.passport_count
+        );
+        if (oldPassport) {
+          client.passport_number = oldPassport.passport_number;
+          client.passportExpiryDate = oldPassport.passportExpiryDate;
+          client.passportCountryOfIssue = oldPassport.passportCountryOfIssue;
+        }
+      }
+    }
+    delete client.passportHistory;
+    return letterJson;
+  }
+
+
+
+  async addRefferalLetter(createDto: CreateRefferalLetterDto) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      const client = await this.clientRepository.findByPk(createDto.client_guid, { transaction });
+
+      const refferalLetter = await this.refferalLetterRepo.create(
+        {
+          ...createDto,
+          passport_count: client ? (client.passport_count || 1) : 1,
+        } as any,
+        { transaction }
+      );
       const newRefferalLetter = await this.refferalLetterRepo.findOne({
         where: { guid: refferalLetter.guid },
-        include: this.getRefferalLetterIncludes()
+        include: this.getRefferalLetterIncludes(),
+        transaction
       });
+      await transaction.commit();
+
       if (!newRefferalLetter) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'ReferenceLetter not found')
+        return errorResponse(HttpStatuses.NOT_FOUND, 'ReferenceLetter not found');
       }
+      const formattedData = this.formatRefferalLetterPassport(newRefferalLetter);
       return {
         status: 201,
-        data: newRefferalLetter,
+        data: formattedData,
         message: 'RefferalLetter created successfully'
-      }
+      };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'RefferalLetter creation failes', error)
+      await transaction.rollback();
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'RefferalLetter creation failed', error);
     }
   }
+
+
 
   async getAllRefferalLetter(page: number = 1, limit: number = 10) {
     try {
@@ -66,10 +106,11 @@ export class RefferalLetterService {
         limit: Number(limit),
         offset: Number(offset),
       });
+      const formattedRows = rows.map(row => this.formatRefferalLetterPassport(row));
 
       return {
         status: 200,
-        data: rows,
+        data: formattedRows,
         meta: {
           totalItems: count,
           totalPages: Math.ceil(count / limit),
@@ -82,26 +123,46 @@ export class RefferalLetterService {
     }
   }
 
+
+
   async updateRefferalLetter(updateDto: UpdateRefferalLetterDto) {
+    const transaction = await this.sequelize.transaction();
     try {
-      const [affectedCount] = await this.refferalLetterRepo.update(updateDto, {
-        where: { guid: updateDto.guid }
-      });
-      if (affectedCount === 0) return errorResponse(HttpStatuses.NOT_FOUND, 'RefferalLetter not found');
+      const existingLetter = await this.refferalLetterRepo.findByPk(updateDto.guid, { transaction });
+      if (!existingLetter) {
+        await transaction.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, 'RefferalLetter not found');
+      }
+      let updateData: any = { ...updateDto };
+      const targetClientGuid = updateDto.client_guid || existingLetter.client_guid;
+
+      const client = await this.clientRepository.findByPk(targetClientGuid, { transaction });
+      if (client) {
+        updateData.passport_count = client.passport_count || 1;
+      } else {
+        updateData.passport_count = existingLetter.passport_count;
+      }
+      await existingLetter.update(updateData, { transaction });
 
       const newRefferalLetter = await this.refferalLetterRepo.findOne({
         where: { guid: updateDto.guid },
-        include: this.getRefferalLetterIncludes()
+        include: this.getRefferalLetterIncludes(),
+        transaction
       });
+      await transaction.commit();
+      const formattedData = this.formatRefferalLetterPassport(newRefferalLetter);
       return {
         status: 200,
-        data: newRefferalLetter,
+        data: formattedData,
         message: 'RefferalLetter updated successfully'
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error)
+      await transaction.rollback();
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
     }
   }
+
+
 
   async deleteRefferalLetter(guid: string) {
     try {

@@ -25,6 +25,7 @@ interface FooterRow {
 export class TurkishAirlinesService {
   constructor(
     @InjectModel(TurkishAirline) private turkishAirlineRepo: typeof TurkishAirline,
+    @InjectModel(Client) private clientRepository: typeof Client,
     private sequelize: Sequelize
   ) { }
 
@@ -203,7 +204,6 @@ export class TurkishAirlinesService {
 
 
 
-
   private getTurkishAirlineIncludes() {
     return [
       {
@@ -219,6 +219,7 @@ export class TurkishAirlinesService {
       { model: Office, attributes: ['guid', 'fullName', 'shortName'] }
     ];
   }
+
 
   private getTurkishAttributes() {
     return [
@@ -247,10 +248,16 @@ export class TurkishAirlinesService {
     ];
   }
 
+
   async addTurkishAirline(createTurkishAirlineDto: CreateTurkishAirlineDto) {
     try {
+      const client = await this.clientRepository.findByPk(createTurkishAirlineDto.client_guid);
+
       const turkishAirline = await this.turkishAirlineRepo.create(
-        { ...createTurkishAirlineDto } as any,
+        {
+          ...createTurkishAirlineDto,
+          passport_count: client ? (client.passport_count || 1) : 1
+        } as any,
         { hooks: true }
       );
       const newTurkishAirline = await this.turkishAirlineRepo.findOne({
@@ -273,6 +280,27 @@ export class TurkishAirlinesService {
   }
 
 
+  private formatTurkishAirlinePassport(airline: any) {
+    if (!airline || !airline.client) return airline;
+    const airlineJson = airline.toJSON ? airline.toJSON() : airline;
+    const client = airlineJson.client;
+    if (airlineJson.passport_count && client.passport_count && airlineJson.passport_count !== client.passport_count) {
+      if (Array.isArray(client.passportHistory)) {
+        const oldPassport = client.passportHistory.find(
+          (p: any) => p.passport_count === airlineJson.passport_count
+        );
+        if (oldPassport) {
+          client.passport_number = oldPassport.passport_number;
+          client.passportExpiryDate = oldPassport.passportExpiryDate;
+          client.passportCountryOfIssue = oldPassport.passportCountryOfIssue;
+        }
+      }
+    }
+    delete client.passportHistory;
+    return airlineJson;
+  }
+
+
   async getAllTurkishAirline(page: number = 1, limit: number = 10) {
     try {
       const currentPage = Math.max(1, Number(page));
@@ -286,10 +314,10 @@ export class TurkishAirlinesService {
         limit: Number(limit),
         offset: Number(offset),
       });
-
+      const formattedRows = rows.map(row => this.formatTurkishAirlinePassport(row));
       return {
         status: 200,
-        data: rows,
+        data: formattedRows,
         meta: {
           totalItems: count,
           totalPages: Math.ceil(count / limit),
@@ -301,7 +329,6 @@ export class TurkishAirlinesService {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TurkishAirline fetching error', error);
     }
   }
-
 
 
   async getStatusReportByMonth(yearMonth: string) {
@@ -361,24 +388,33 @@ export class TurkishAirlinesService {
   }
 
 
+
   async updateTurkishAirline(updateDto: UpdateTurkishAirlineDto) {
     try {
       const turkishAirline = await this.turkishAirlineRepo.findByPk(updateDto.guid);
       if (!turkishAirline) return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
-
-      await turkishAirline.update(updateDto);
-
+      let updateData: any = { ...updateDto };
+      if (updateDto.client_guid && updateDto.client_guid !== turkishAirline.client_guid) {
+        const client = await this.clientRepository.findByPk(updateDto.client_guid);
+        if (client) {
+          updateData.passport_count = client.passport_count || 1;
+        }
+      } else if (!updateDto.client_guid) {
+        updateData.passport_count = turkishAirline.passport_count;
+      }
+      await turkishAirline.update(updateData);
       const updatedTurkishAirline = await this.turkishAirlineRepo.findOne({
         where: { guid: updateDto.guid },
         include: this.getTurkishAirlineIncludes(),
         attributes: { include: this.getTurkishAttributes() as any }
       });
-
-      return { status: 200, data: updatedTurkishAirline, message: 'TurkishAirline updated successfully' };
+      const formattedData = this.formatTurkishAirlinePassport(updatedTurkishAirline);
+      return { status: 200, data: formattedData, message: 'TurkishAirline updated successfully' };
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
     }
   }
+
 
   async deleteTurkishAirline(guid: string) {
     try {

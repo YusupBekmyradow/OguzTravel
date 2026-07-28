@@ -54,6 +54,13 @@ export class B2b extends Model<B2b> {
   declare client_guid: string;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+    defaultValue: 1
+  })
+  declare passport_count: number;
+
+  @Column({
     type: DataType.UUID,
     allowNull: false
   })

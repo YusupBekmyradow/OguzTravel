@@ -73,10 +73,16 @@ export class TurkishAirline extends Model<TurkishAirline> {
 
     @Column({
         type: DataType.STRING,
-        unique: true,
         allowNull: false,
     })
     declare ticket_number: string;
+
+    @Column({
+        type: DataType.INTEGER,
+        allowNull: true,
+        defaultValue: 1
+    })
+    declare passport_count: number;
 
     @Column({
         type: DataType.STRING,
