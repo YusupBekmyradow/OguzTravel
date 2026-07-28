@@ -33,6 +33,7 @@ import { TransferModule } from './modules/transfer/transfer.module';
 import { PackageModule } from './modules/package/package.module';
 import { HarPaymentModule } from './modules/har_payment/har_payment.module';
 import { TtpPaymentModule } from './modules/ttp_payment/ttp_payment.module';
+import { InboundModule } from './modules/inbound/inbound.module';
 dotenv.config();
 
 @Module({
@@ -70,7 +71,8 @@ dotenv.config();
     TransferModule,
     PackageModule,
     HarPaymentModule,
-    TtpPaymentModule
+    TtpPaymentModule,
+    InboundModule
   ],
   controllers: [AppController],
   providers: [
