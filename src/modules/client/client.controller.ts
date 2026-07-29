@@ -22,10 +22,11 @@ export class ClientController {
     @Query('search') search?: string,
     @Query('gender') gender?: string,
     @Query('passportExpiryDate') passportExpiryDate?: string,
+    @Query('passportIssueDate') passportIssueDate?: string,
   ) {
     const filters = {
       gender,
-      passportExpiryDate
+      passportExpiryDate, passportIssueDate
     };
     return this.clientService.getAllClient(Number(page), Number(limit), search,
       filters);

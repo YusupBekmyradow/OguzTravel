@@ -30,7 +30,7 @@ export class ClientService {
 
   async getAllClient(page: number = 1, limit: number = 10,
     search?: string,
-    filters?: { gender?: string, passportExpiryDate?: string }
+    filters?: { gender?: string, passportExpiryDate?: string, passportIssueDate?: string }
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
@@ -54,6 +54,10 @@ export class ClientService {
 
       if (filters?.passportExpiryDate) {
         whereClause.passportExpiryDate = filters.passportExpiryDate;
+      }
+
+      if (filters?.passportIssueDate) {
+        whereClause.passportIssueDate = filters.passportIssueDate;
       }
 
       const { count, rows } = await this.clientRepository.findAndCountAll({
@@ -80,6 +84,7 @@ export class ClientService {
   }
 
 
+
   async updateClient(updateClientDto: UpdateClientDto) {
     try {
       const client = await this.clientRepository.findByPk(updateClientDto.guid);
@@ -88,13 +93,15 @@ export class ClientService {
       }
       await client.update({
         ...updateClientDto
-      });
+      } as any);
       await client.reload();
       return successResponse(HttpStatuses.OK, client, 'Client updated successfully')
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error)
     }
   }
+
+  
 
   async deleteClient(guid: string) {
     try {
@@ -112,14 +119,15 @@ export class ClientService {
 
 
 
-async updatePassportToHistory(updatePassportDto: UpdatePassportDto) {
+  async updatePassportToHistory(updatePassportDto: UpdatePassportDto) {
     const transaction = await this.clientRepository.sequelize?.transaction();
     try {
       const {
         guid,
         passport_number,
         passportExpiryDate,
-        passportCountryOfIssue
+        passportCountryOfIssue,
+        passportIssueDate
       } = updatePassportDto;
 
       const client = await this.clientRepository.findByPk(guid, { transaction });
@@ -133,6 +141,7 @@ async updatePassportToHistory(updatePassportDto: UpdatePassportDto) {
           passport_number: client.passport_number,
           passportExpiryDate: client.passportExpiryDate,
           passportCountryOfIssue: client.passportCountryOfIssue,
+          passportIssueDate: client.passportIssueDate,
           passport_count: client.passport_count || 1,
           archivedAt: new Date()
         };
@@ -140,7 +149,7 @@ async updatePassportToHistory(updatePassportDto: UpdatePassportDto) {
         const history = Array.isArray(client.passportHistory)
           ? [...client.passportHistory]
           : [];
-        
+
         history.push(oldPassportData);
         client.passportHistory = history;
 
@@ -149,6 +158,7 @@ async updatePassportToHistory(updatePassportDto: UpdatePassportDto) {
       client.passport_number = passport_number;
       client.passportExpiryDate = passportExpiryDate;
       client.passportCountryOfIssue = passportCountryOfIssue;
+      client.passportIssueDate = passportIssueDate;
 
       await client.save({ transaction });
       await transaction?.commit();

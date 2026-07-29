@@ -19,17 +19,45 @@ export class TurkishAirlinesController {
     return this.turkishAirlinesService.getTurkishReport(year_month);
   }
 
-  @Get('/get-all-turkish-airlines')
-  async findAll(
+
+  @Get('/get-tukish-airlines')
+  async getAllTurkishAirline(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('datetime') datetime?: string,
+    @Query('assignment_opr_guid') assignment_opr_guid?: string,
+    @Query('receiver_opr_guid') receiver_opr_guid?: string,
+    @Query('status_guid') status_guid?: string,
+    @Query('flight_date') flight_date?: string,
+    @Query('is_paid') is_paid?: boolean | string,
+    @Query('office_guid') office_guid?: string,
   ) {
-    return this.turkishAirlinesService.getAllTurkishAirline(Number(page), Number(limit));
+    const filters = {
+      datetime,
+      assignment_opr_guid,
+      receiver_opr_guid,
+      status_guid,
+      flight_date,
+      is_paid,
+      office_guid,
+    };
+
+    return await this.turkishAirlinesService.getAllTurkishAirline(
+      Number(page),
+      Number(limit),
+      filters,
+    );
   }
+
 
   @Get('/get-turkish-status-month')
   async getStatusReportByMonth(@Query('yearMonth') yearMonth: string) {
     return await this.turkishAirlinesService.getStatusReportByMonth(yearMonth);
+  }
+
+  @Get('get-turkish-quarter')
+  async getQuarterReport(@Query('quarter') quarter: number) {
+    return await this.turkishAirlinesService.getQuarterTurkishAirline(quarter);
   }
 
   @Patch('/update-turkish-airlines')

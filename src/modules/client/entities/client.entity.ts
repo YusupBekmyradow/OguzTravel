@@ -58,6 +58,12 @@ export class Client extends Model<Client> {
   declare passportExpiryDate?: Date;
 
   @Column({
+    type: DataType.DATEONLY,
+    allowNull: true
+  })
+  declare passportIssueDate?: Date;
+
+  @Column({
     type: DataType.STRING,
     allowNull: true
   })
@@ -90,6 +96,13 @@ export class Client extends Model<Client> {
     defaultValue: []
   })
   declare passportHistory: any[];
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  })
+  declare vip?: boolean;
 
   @HasMany(() => B2b, {
     foreignKey: 'client_guid',

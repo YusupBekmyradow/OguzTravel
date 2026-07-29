@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
-import { IsIn, IsDate, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional, IsDateString } from "class-validator";
+import { IsIn, IsDate, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional, IsDateString, IsBoolean } from "class-validator";
 
 
 export class CreateClientDto {
@@ -31,6 +31,11 @@ export class CreateClientDto {
     declare passportExpiryDate?: Date;
 
     @ApiPropertyOptional()
+    @IsDateString()
+    @IsOptional()
+    declare passportIssueDate?: Date;
+
+    @ApiPropertyOptional()
     @IsString()
     @IsOptional()
     declare passportCountryOfIssue?: string;
@@ -40,4 +45,8 @@ export class CreateClientDto {
     @IsOptional()
     declare gender?: string;
 
+    @ApiPropertyOptional()
+    @IsBoolean()
+    @IsOptional()
+    declare vip?: boolean;
 }

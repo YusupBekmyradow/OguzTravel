@@ -22,4 +22,9 @@ export class UpdatePassportDto {
   @IsString()
   @IsOptional()
   declare passportCountryOfIssue?: string;
+
+  @ApiPropertyOptional()
+  @IsDateString()
+  @IsOptional()
+  declare passportIssueDate?: Date;
 }

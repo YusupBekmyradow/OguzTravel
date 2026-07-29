@@ -10,7 +10,7 @@ import { Office } from '../office/entities/office.entity';
 import { Client } from '../client/entities/client.entity';
 import { Tstatus } from '../tstatus/entities/tstatus.entity';
 import { Sequelize } from 'sequelize-typescript';
-import { QueryTypes } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 
 interface FooterRow {
   office: string;
@@ -28,108 +28,6 @@ export class TurkishAirlinesService {
     @InjectModel(Client) private clientRepository: typeof Client,
     private sequelize: Sequelize
   ) { }
-
-
-
-  // async getTurkishReport(yearMonth: string) {
-  //   try {
-  //     const [year, month] = yearMonth.split('-').map(Number);
-  //     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-  //     const lastDay = new Date(year, month, 0).getDate();
-  //     const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-  //     const listQuery = `
-  //     SELECT 
-  //         TO_CHAR(d.flight_date, 'DD') AS datetime,
-  //         o."fullName" AS full_name,
-  //         o."shortName" AS shortName,
-  //         COALESCE(SUM(t.base_fare), 0) AS base_fare_sum,
-  //         COALESCE(SUM(t.quoted_price), 0) AS quoted_price_sum
-  //     FROM tbl_offices AS o
-  //     CROSS JOIN (
-  //         SELECT generate_series(:startDate::date, :endDate::date, '1 day'::interval)::date AS flight_date
-  //     ) AS d
-  //     LEFT JOIN tbl_turkish_airlines AS t 
-  //         ON t.office_guid = o.guid 
-  //         AND DATE(t.datetime) = d.flight_date
-  //     GROUP BY d.flight_date, o."fullName", o."shortName"
-  //     ORDER BY d.flight_date ASC, o."fullName" ASC;
-  //   `;
-
-  //     const dailyTotalsQuery = `
-  //     SELECT 
-  //         TO_CHAR(d.flight_date, 'DD') AS datetime,
-  //         COALESCE(SUM(t.base_fare), 0) AS daily_total_base,
-  //         COALESCE(SUM(t.quoted_price), 0) AS daily_total_quoted
-  //     FROM (
-  //         SELECT generate_series(:startDate::date, :endDate::date, '1 day'::interval)::date AS flight_date
-  //     ) AS d
-  //     LEFT JOIN tbl_turkish_airlines AS t ON DATE(t.datetime) = d.flight_date
-  //     GROUP BY d.flight_date
-  //     ORDER BY d.flight_date ASC;
-  //   `;
-
-  //     const footerQuery = `
-  //     SELECT 
-  //         o."shortName" AS office,
-  //         COALESCE(SUM(t.base_fare), 0) AS total_base,
-  //         COALESCE(SUM(t.quoted_price), 0) AS total_quoted
-  //     FROM tbl_offices AS o
-  //     LEFT JOIN tbl_turkish_airlines AS t 
-  //         ON t.office_guid = o.guid 
-  //         AND TO_CHAR(t.datetime, 'YYYY-MM') = :yearMonth
-  //     GROUP BY o."shortName"
-  //     ORDER BY o."shortName" ASC;
-  //   `;
-
-  //     const [data, dailyTotals, footerResult] = await Promise.all([
-  //       this.sequelize.query(listQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
-  //       this.sequelize.query(dailyTotalsQuery, { replacements: { startDate, endDate }, type: QueryTypes.SELECT }),
-  //       this.sequelize.query(footerQuery, { replacements: { yearMonth }, type: QueryTypes.SELECT })
-  //     ]);
-
-  //     const footer = (footerResult as FooterRow[]).map(item => ({
-  //       ...item,
-  //       profit: Number(item.total_quoted) - Number(item.total_base)
-  //     }));
-
-  //     const totals = footer.reduce((acc, curr) => {
-  //       acc.total_base += Number(curr.total_base || 0);
-  //       acc.total_quoted += Number(curr.total_quoted || 0);
-  //       acc.profit += Number(curr.profit || 0);
-  //       return acc;
-  //     }, { total_base: 0, total_quoted: 0, profit: 0 });
-
-  //     const workingDaysCount = (dailyTotals as any[]).filter(day =>
-  //       Number(day.daily_total_base || 0) > 0 || Number(day.daily_total_quoted || 0) > 0
-  //     ).length;
-
-  //     const grandTotal = {
-  //       month_total_base: totals.total_base,
-  //       month_total_quoted: totals.total_quoted,
-  //       month_profit: totals.profit,
-  //       working_days_count: workingDaysCount
-  //     };
-
-  //     const footerWithPercent = footer.map((item) => ({
-  //       ...item,
-  //       percentage: grandTotal.month_profit !== 0
-  //         ? ((Number(item.profit) / grandTotal.month_profit) * 100).toFixed(2) + '%'
-  //         : '0.00%'
-  //     }));
-
-  //     return {
-  //       status: 200,
-  //       data,
-  //       dailyTotals,
-  //       footer: footerWithPercent,
-  //       grandTotal,
-  //       message: 'Report generated successfully'
-  //     };
-  //   } catch (error: any) {
-  //     return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Report generation failed', error);
-  //   }
-  // }
-
 
   async getTurkishReport(yearMonth: string) {
     try {
@@ -236,8 +134,8 @@ export class TurkishAirlinesService {
         SELECT 
           CASE 
             WHEN SUM(tp.amount) IS NULL OR SUM(tp.amount) = 0 THEN '0%'
-            WHEN "TurkishAirline".total_price > 0 
-            THEN CONCAT(ROUND(((SUM(tp.amount) / "TurkishAirline".total_price) * 100)::numeric, 2), '%')
+            WHEN "TurkishAirline".quoted_price > 0 
+            THEN CONCAT(ROUND(((SUM(tp.amount) / "TurkishAirline".quoted_price) * 100)::numeric, 2), '%')
             ELSE '100%'
           END
         FROM "tbl_turkish_payments" AS tp
@@ -301,18 +199,62 @@ export class TurkishAirlinesService {
   }
 
 
-  async getAllTurkishAirline(page: number = 1, limit: number = 10) {
+  async getAllTurkishAirline(page: number = 1, limit: number = 10,
+    filters: {
+      datetime?: string;
+      assignment_opr_guid?: string;
+      receiver_opr_guid?: string;
+      status_guid?: string;
+      flight_date?: string;
+      is_paid?: boolean | string;
+      office_guid?: string;
+    } = {}
+  ) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
 
+      const whereCondition: any = {};
+      if (filters.datetime) {
+        const dateOnly = filters.datetime.includes('T')
+          ? filters.datetime.split('T')[0]
+          : filters.datetime.trim();
+        whereCondition.datetime = this.sequelize.where(
+          this.sequelize.fn('date', this.sequelize.col('datetime')),
+          '=',
+          dateOnly
+        );
+      }
+      if (filters.assignment_opr_guid) {
+        whereCondition.assignment_opr_guid = filters.assignment_opr_guid;
+      }
+      if (filters.receiver_opr_guid) {
+        whereCondition.receiver_opr_guid = filters.receiver_opr_guid;
+      }
+      if (filters.status_guid) {
+        whereCondition.status_guid = filters.status_guid;
+      }
+      if (filters.flight_date) {
+        const dateOnly = filters.flight_date.includes('T')
+          ? filters.flight_date.split('T')[0]
+          : filters.flight_date.trim();
+        whereCondition.flight_date = dateOnly;
+      }
+      if (filters.is_paid !== undefined && filters.is_paid !== '') {
+        whereCondition.is_paid = String(filters.is_paid) === 'true' || filters.is_paid === true;
+      }
+      if (filters.office_guid) {
+        whereCondition.office_guid = filters.office_guid;
+      }
       const { rows, count } = await this.turkishAirlineRepo.findAndCountAll({
+        where: whereCondition,
         include: this.getTurkishAirlineIncludes(),
         attributes: { include: this.getTurkishAttributes() as any },
         order: [['index_number', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
+        subQuery: false
       });
       const formattedRows = rows.map(row => this.formatTurkishAirlinePassport(row));
       return {
@@ -329,6 +271,7 @@ export class TurkishAirlinesService {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TurkishAirline fetching error', error);
     }
   }
+
 
 
   async getStatusReportByMonth(yearMonth: string) {
@@ -384,6 +327,47 @@ export class TurkishAirlinesService {
       };
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Report generation failed', error);
+    }
+  }
+
+
+
+  async getQuarterTurkishAirline(quarter: number) {
+    try {
+      const currentYear = new Date().getFullYear();
+      const previousYear = currentYear - 1;
+      const rawData: any = await this.sequelize.query(
+        `SELECT 
+         EXTRACT(YEAR FROM datetime)::int AS year,
+         ROUND(SUM(base_fare)::numeric, 2) AS total_base_fare,
+         ROUND(SUM(quoted_price)::numeric, 2) AS total_quoted_price,
+         ROUND(SUM(quoted_price - base_fare)::numeric, 2) AS profit
+       FROM tbl_turkish_airlines
+       WHERE EXTRACT(QUARTER FROM datetime) = :quarter
+         AND EXTRACT(YEAR FROM datetime) IN (:currentYear, :previousYear)
+       GROUP BY EXTRACT(YEAR FROM datetime)
+       ORDER BY year ASC`,
+        {
+          replacements: { quarter, currentYear, previousYear },
+          type: QueryTypes.SELECT,
+        },
+      );
+      const profit2025 = Number(rawData.find((item: any) => item.year === previousYear)?.profit || 0);
+      const profit2026 = Number(rawData.find((item: any) => item.year === currentYear)?.profit || 0);
+      let percentage = "0%";
+      if (profit2025 > 0) {
+        const calc = (profit2026 / profit2025) * 100;
+        percentage = `${Math.round(calc)}%`;
+      }
+      return {
+        status: 200,
+        data: rawData,
+        achievement_percentage: percentage,
+        message: 'Quarter report fetched successfully'
+      };
+
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Quarter report failed', error);
     }
   }
 
