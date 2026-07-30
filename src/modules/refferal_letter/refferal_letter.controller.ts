@@ -15,13 +15,24 @@ export class RefferalLetterController {
     return this.refferalLetterService.addRefferalLetter(createDto);
   }
 
-  @Get('/getAll-refferal-letter')
-  async findAll(
+  @Get('/get-all-refferal-letter')
+  async getAllRefferalLetter(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('received_opr_guid') received_opr_guid?: string,
+    @Query('departure_date') departure_date?: string,
+    @Query('return_date') return_date?: string,
+    @Query('contract_date') contract_date?: string,
   ) {
-    return this.refferalLetterService.getAllRefferalLetter(Number(page), Number(limit));
+    const filters = {
+      received_opr_guid,
+      departure_date,
+      return_date,
+      contract_date,
+    };
+    return await this.refferalLetterService.getAllRefferalLetter(Number(page), Number(limit), filters);
   }
+
 
   @Patch('/update-refferal-letter')
   async update(@Body() updateDto: UpdateRefferalLetterDto) {

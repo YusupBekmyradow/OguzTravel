@@ -11,6 +11,7 @@ import { Tstatus } from '../tstatus/entities/tstatus.entity';
 import { Office } from '../office/entities/office.entity';
 import { Sequelize } from 'sequelize-typescript';
 import { TicketPayment } from '../ticket_payment/entities/ticket_payment.entity';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class B2bService {
@@ -132,21 +133,63 @@ export class B2bService {
   }
 
 
-
-  async getAllB2b(page: number = 1, limit: number = 10) {
+  async getAllB2b(
+    page: number = 1,
+    limit: number = 10,
+    filters?: {
+      datetime?: string | Date;
+      assignment_opr_guid?: string;
+      receiver_opr_guid?: string;
+      status_guid?: string;
+      travel_type?: number;
+      flight_date?: string | Date;
+      is_paid?: boolean;
+    }
+  ) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
+      const whereConditions: any = {};
 
+      if (filters) {
+        if (filters.datetime) {
+          const year = new Date(filters.datetime).getFullYear();
+          if (!isNaN(year)) {
+            const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
+            const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+            whereConditions.datetime = {
+              [Op.between]: [startDate, endDate],
+            };
+          }
+        }
+        if (filters.assignment_opr_guid) {
+          whereConditions.assignment_opr_guid = filters.assignment_opr_guid;
+        }
+        if (filters.receiver_opr_guid) {
+          whereConditions.receiver_opr_guid = filters.receiver_opr_guid;
+        }
+        if (filters.status_guid) {
+          whereConditions.status_guid = filters.status_guid;
+        }
+        if (filters.travel_type !== undefined && filters.travel_type !== null) {
+          whereConditions.travel_type = Number(filters.travel_type);
+        }
+        if (filters.flight_date) {
+          whereConditions.flight_date = filters.flight_date;
+        }
+        if (filters.is_paid !== undefined && filters.is_paid !== null) {
+          whereConditions.is_paid = filters.is_paid;
+        }
+      }
       const { rows, count } = await this.b2bRepository.findAndCountAll({
+        where: whereConditions,
         include: this.getB2bIncludes(),
         attributes: { include: this.getB2bAttributes().include as any },
         order: [['index_number', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
       });
-
       const formattedRows = rows.map(row => this.formatB2bPassport(row));
 
       return {
@@ -155,15 +198,14 @@ export class B2bService {
         meta: {
           totalItems: count,
           totalPages: Math.ceil(count / limit),
-          currentPage: currentPage
+          currentPage: currentPage,
         },
-        message: 'B2b fetched successfully'
+        message: 'B2b fetched successfully',
       };
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'B2b fetching error', error);
     }
   }
-
 
 
 

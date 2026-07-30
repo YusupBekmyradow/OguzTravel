@@ -9,6 +9,7 @@ import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { Office } from '../office/entities/office.entity';
 import { Sequelize } from 'sequelize-typescript';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class RefferalLetterService {
@@ -94,29 +95,70 @@ export class RefferalLetterService {
 
 
 
-  async getAllRefferalLetter(page: number = 1, limit: number = 10) {
+
+  async getAllRefferalLetter(
+    page: number = 1,
+    limit: number = 10,
+    filters?: {
+      received_opr_guid?: string;
+      departure_date?: string | Date;
+      return_date?: string | Date;
+      contract_date?: string | Date;
+    }
+  ) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
+      const whereConditions: any = {};
+      if (filters) {
+        if (filters.received_opr_guid) {
+          whereConditions.received_opr_guid = filters.received_opr_guid;
+        }
+        if (filters.departure_date) {
+          const dateStr = new Date(filters.departure_date).toISOString().split('T')[0];
+          const startDate = new Date(`${dateStr}T00:00:00.000Z`);
+          const endDate = new Date(`${dateStr}T23:59:59.999Z`);
+          whereConditions.departure_date = {
+            [Op.between]: [startDate, endDate],
+          };
+        }
 
+        if (filters.return_date) {
+          const dateStr = new Date(filters.return_date).toISOString().split('T')[0];
+          const startDate = new Date(`${dateStr}T00:00:00.000Z`);
+          const endDate = new Date(`${dateStr}T23:59:59.999Z`);
+          whereConditions.return_date = {
+            [Op.between]: [startDate, endDate],
+          };
+        }
+
+        if (filters.contract_date) {
+          const dateStr = new Date(filters.contract_date).toISOString().split('T')[0];
+          const startDate = new Date(`${dateStr}T00:00:00.000Z`);
+          const endDate = new Date(`${dateStr}T23:59:59.999Z`);
+          whereConditions.contract_date = {
+            [Op.between]: [startDate, endDate],
+          };
+        }
+      }
       const { rows, count } = await this.refferalLetterRepo.findAndCountAll({
+        where: whereConditions,
         include: this.getRefferalLetterIncludes(),
         order: [['index_number', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
       });
       const formattedRows = rows.map(row => this.formatRefferalLetterPassport(row));
-
       return {
         status: 200,
         data: formattedRows,
         meta: {
           totalItems: count,
           totalPages: Math.ceil(count / limit),
-          currentPage: currentPage
+          currentPage: currentPage,
         },
-        message: 'RefferalLetter fetched successfully'
+        message: 'RefferalLetter fetched successfully',
       };
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'RefferalLetter fetching error', error);
@@ -124,7 +166,7 @@ export class RefferalLetterService {
   }
 
 
-
+  
   async updateRefferalLetter(updateDto: UpdateRefferalLetterDto) {
     const transaction = await this.sequelize.transaction();
     try {

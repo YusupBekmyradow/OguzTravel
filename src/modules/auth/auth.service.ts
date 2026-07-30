@@ -58,7 +58,7 @@ export class AuthService {
       const comparePassword = await bcrypt.compare(signInAuthDto.password, existUser.password ?? '');
       if (!comparePassword) return errorResponse(HttpStatuses.FORBIDDEN, 'password invalid');
 
-      const payload = { phone: existUser.phone_number, guid: existUser.guid, role: existUser.role };
+      const payload = { phone_number: existUser.phone_number, guid: existUser.guid, role: existUser.role, permissions: existUser.permissions };
 
       const access_token = await this.jwtService.signAsync(payload, { expiresIn: '7d' });
       const refresh_token = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
