@@ -18,9 +18,15 @@ export class VisaPaymentController {
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-    @Query('visa_guid') visa_guid: string
+    @Query('visa_guid') visa_guid?: string,
+    @Query('inbound_guid') inbound_guid?: string,
   ) {
-    return this.visaPaymentService.getAllVisaPayment(Number(page), Number(limit), visa_guid);
+    return this.visaPaymentService.getAllVisaPayment(
+      Number(page),
+      Number(limit),
+      visa_guid,
+      inbound_guid
+    );
   }
 
   @Patch('/update-visa-payment')

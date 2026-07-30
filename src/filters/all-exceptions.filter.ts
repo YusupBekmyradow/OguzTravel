@@ -13,29 +13,40 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
     const request = ctx.getRequest();
-
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
-
-    const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : (exception as any).message || 'Internal server error occurred';
-
-    if (status >= HttpStatus.BAD_REQUEST) {
-      logger.error(`Server Error [${request.method}] ${request.url}`, {
+   let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+    } else if (exception && typeof exception === 'object' && 'status' in exception) {
+      status = Number(exception['status']) || HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+  let errorMessage: any;
+    if (exception instanceof HttpException) {
+      errorMessage = exception.getResponse();
+    } else if (exception instanceof Error) {
+      errorMessage = exception.stack || exception.message;
+    } else if (exception && typeof exception === 'object' && 'errorMessage' in exception) {
+      errorMessage = exception['errorMessage'];
+    } else {
+      errorMessage = exception;
+    }
+  if (status >= HttpStatus.BAD_REQUEST) {
+      logger.error(`Server Error [${request.method}] ${request.url} - Status: ${status}`, {
         status,
-        error: exception instanceof Error ? exception.stack : message,
+        path: request.url,
+        method: request.method,
+        error: errorMessage,
       });
     }
 
-    response.status(status).json({
-      statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      message: message,
-    });
+    const responseBody =
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : {
+            status: status,
+            message: (exception as any)?.message || 'Internal server error occurred',
+            errorMessage: (exception as any)?.errorMessage || (exception instanceof Error ? exception.message : exception),
+          };
+
+    response.status(status).json(responseBody);
   }
 }

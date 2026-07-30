@@ -11,7 +11,7 @@ export class InboundController {
 
   @Post('/add-inbound')
   async create(@Body() createInboundDto: CreateInboundDto) {
-    return this.inboundService.create(createInboundDto);
+    return this.inboundService.addInbound(createInboundDto);
   }
 
   @Get('/get-all-inbound')
@@ -19,12 +19,12 @@ export class InboundController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
   ) {
-    return this.inboundService.findAll(Number(page), Number(limit));
+    return this.inboundService.getAllInbound(Number(page), Number(limit));
   }
 
   @Patch('/update-inbound')
   update(@Body() updateInboundDto: UpdateInboundDto) {
-    return this.inboundService.update(updateInboundDto);
+    return this.inboundService.updateInbound(updateInboundDto);
   }
 
   @Delete('/delete-inbound')
@@ -37,6 +37,6 @@ export class InboundController {
     }
   })
   async remove(@Body('guid') guid: string) {
-    return this.inboundService.remove(guid);
+    return this.inboundService.deleteInbound(guid);
   }
 }

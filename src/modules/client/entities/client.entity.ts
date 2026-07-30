@@ -10,6 +10,7 @@ import { Railway } from "../../railway/entities/railway.entity";
 import { Tour } from "../../tour/entities/tour.entity";
 import { Transfer } from "../../transfer/entities/transfer.entity";
 import { Package } from "../../package/entities/package.entity";
+import { Inbound } from "../../inbound/entities/inbound.entity";
 
 
 @Table({
@@ -111,6 +112,15 @@ export class Client extends Model<Client> {
     onUpdate: 'SET NULL'
   })
   declare b2b: B2b[];
+
+  @HasMany(() => Inbound, {
+    foreignKey: 'client_guid',
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
+  })
+  declare inbound: Inbound[];
+
 
   @HasMany(() => TurkishAirline, {
     foreignKey: 'client_guid',

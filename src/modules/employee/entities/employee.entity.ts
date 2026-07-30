@@ -20,6 +20,7 @@ import { Transfer } from "../../transfer/entities/transfer.entity";
 import { Package } from "../../package/entities/package.entity";
 import { HarPayment } from "../../har_payment/entities/har_payment.entity";
 import { TtpPayment } from "../../ttp_payment/entities/ttp_payment.entity";
+import { Inbound } from "../../inbound/entities/inbound.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -343,5 +344,15 @@ export class Employee extends Model<Employee> {
     onUpdate: 'SET NULL'
   })
   declare ttpPayment: TtpPayment[];
+
+  @HasMany(() => Inbound, {
+    foreignKey: 'receiver_opr_guid',
+    sourceKey: 'guid',
+    as: 'INreceiveroperator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
+  })
+  declare inbound: Inbound[];
+
 
 }

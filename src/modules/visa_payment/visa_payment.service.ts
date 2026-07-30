@@ -22,16 +22,19 @@ export class VisaPaymentService {
       const payment = await this.visaPaymentRepo.create({
         ...createDto,
       } as any);
-
       const createdPayment = await this.visaPaymentRepo.findByPk(payment.guid, {
         include: [{ model: Employee, as: 'visaoperator', attributes: ['guid', 'fullName'] }]
       });
-
       if (!createdPayment) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
       }
 
-      const statsResult = await this.getVisaPaymentStats(createDto.visa_guid);
+      let statsResult = {};
+      if (createDto.visa_guid) {
+        statsResult = await this.getVisaPaymentStats(createDto.visa_guid);
+      } else if (createDto.inbound_guid) {
+        statsResult = await this.getInboundPaymentStats(createDto.inbound_guid);
+      }
 
       const combinedData = {
         ...createdPayment.toJSON(),
@@ -44,14 +47,18 @@ export class VisaPaymentService {
   }
 
 
-  async getAllVisaPayment(page: number = 1, limit: number = 10, visa_guid: string) {
+
+  async getAllVisaPayment(page: number = 1, limit: number = 10, visa_guid?: string, inbound_guid?: string) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
+      const whereCondition: any = {};
+      if (visa_guid) whereCondition.visa_guid = visa_guid;
+      if (inbound_guid) whereCondition.inbound_guid = inbound_guid;
 
       const { rows, count } = await this.visaPaymentRepo.findAndCountAll({
-        where: { visa_guid },
+        where: whereCondition,
         include: [
           {
             model: Employee,
@@ -64,8 +71,12 @@ export class VisaPaymentService {
         offset: Number(offset),
       });
 
-      const stats = await this.getVisaPaymentStats(visa_guid);
-
+      let stats = {};
+      if (visa_guid) {
+        stats = await this.getVisaPaymentStats(visa_guid);
+      } else if (inbound_guid) {
+        stats = await this.getInboundPaymentStats(inbound_guid);
+      }
       return {
         status: 200,
         data: rows,
@@ -82,24 +93,26 @@ export class VisaPaymentService {
     }
   }
 
+
+
   async updateVisaPayment(updateDto: UpdateVisaPaymentDto) {
     try {
       const payment = await this.visaPaymentRepo.findOne({ where: { guid: updateDto.guid } });
       if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'VisaPayment not found');
-
       await this.visaPaymentRepo.update(updateDto as any, { where: { guid: updateDto.guid } });
-
       const updatedPayment = await this.visaPaymentRepo.findOne({
         where: { guid: updateDto.guid },
         include: [{ model: Employee, as: 'visaoperator', attributes: ['guid', 'fullName'] }]
       });
-
       if (!updatedPayment) {
         return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
       }
-
-      const stats = await this.getVisaPaymentStats(updatedPayment.visa_guid);
-      const combinedData = {
+      let stats = {};
+      if (updatedPayment.visa_guid) {
+        stats = await this.getVisaPaymentStats(updatedPayment.visa_guid);
+      } else if (updatedPayment.inbound_guid) {
+        stats = await this.getInboundPaymentStats(updatedPayment.inbound_guid);
+      } const combinedData = {
         ...updatedPayment.toJSON(),
         ...stats
       };
@@ -109,16 +122,20 @@ export class VisaPaymentService {
     }
   }
 
+
   async deleteVisaPayment(guid: string) {
     try {
       const payment = await this.visaPaymentRepo.findOne({ where: { guid } });
       if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'VisaPayment not found');
-
       const visa_guid = payment.visa_guid;
+      const inbound_guid = payment.inbound_guid;
       await this.visaPaymentRepo.destroy({ where: { guid } });
-
-      const stats = await this.getVisaPaymentStats(visa_guid);
-      return successResponse(HttpStatuses.OK, stats, 'VisaPayment deleted successfully');
+      let stats = {};
+      if (visa_guid) {
+        stats = await this.getVisaPaymentStats(visa_guid);
+      } else if (inbound_guid) {
+        stats = await this.getInboundPaymentStats(inbound_guid);
+      } return successResponse(HttpStatuses.OK, stats, 'VisaPayment deleted successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete error', error);
     }
@@ -143,7 +160,7 @@ export class VisaPaymentService {
     });
 
     const row = (stats[0] as any) || { total_sales_tmt: 0, total_sales_usd: 0, paid_tmt: 0, paid_usd: 0 };
-    
+
     const tmtTotal = Number(row.total_sales_tmt);
     const usdTotal = Number(row.total_sales_usd);
     const tmtPaid = Number(row.paid_tmt);
@@ -159,6 +176,31 @@ export class VisaPaymentService {
         total_sales: usdTotal,
         total_paid: usdPaid,
         remaining: usdTotal - usdPaid
+      }
+    };
+  }
+
+
+  private async getInboundPaymentStats(inbound_guid: string) {
+    const stats = await this.sequelize.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN currency = 'TMT' THEN amount ELSE 0 END), 0) as "paid_tmt",
+        COALESCE(SUM(CASE WHEN currency = 'USD' THEN amount ELSE 0 END), 0) as "paid_usd"
+      FROM tbl_visa_payments
+      WHERE inbound_guid = :inbound_guid
+    `, {
+      replacements: { inbound_guid },
+      type: QueryTypes.SELECT
+    });
+
+    const row = (stats[0] as any) || { paid_tmt: 0, paid_usd: 0 };
+
+    return {
+      TMT: {
+        total_paid: Number(row.paid_tmt)
+      },
+      USD: {
+        total_paid: Number(row.paid_usd)
       }
     };
   }

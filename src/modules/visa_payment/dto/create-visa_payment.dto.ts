@@ -2,10 +2,15 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsDateString, IsUUID, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreateVisaPaymentDto {
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsUUID()
-  @IsNotEmpty()
+  @IsOptional()
   declare visa_guid: string;
+
+  @ApiPropertyOptional()
+  @IsUUID()
+  @IsOptional()
+  declare inbound_guid: string;
 
   @ApiProperty()
   @IsNumber()

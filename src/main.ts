@@ -7,7 +7,6 @@ import { LoggerInterceptor } from './common/interceptors/logger.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { join } from 'path';
 import * as express from 'express';
-import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 
 async function zero() {
   const logger = new Logger('monster');
@@ -30,7 +29,6 @@ async function zero() {
   app.use('/uploads', express.static(join(process.cwd(), '..', 'uploads')));
 
   app.setGlobalPrefix('api/v1');
-  app.useGlobalFilters(new AllExceptionsFilter());
   const config = new DocumentBuilder()
     .setTitle('Monster')
     .setDescription('Api Documentation')

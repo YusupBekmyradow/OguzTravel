@@ -34,6 +34,8 @@ import { PackageModule } from './modules/package/package.module';
 import { HarPaymentModule } from './modules/har_payment/har_payment.module';
 import { TtpPaymentModule } from './modules/ttp_payment/ttp_payment.module';
 import { InboundModule } from './modules/inbound/inbound.module';
+import { AllExceptionsFilter } from './filters/all-exceptions.filter';
+import { APP_FILTER } from '@nestjs/core';
 dotenv.config();
 
 @Module({
@@ -76,7 +78,11 @@ dotenv.config();
   ],
   controllers: [AppController],
   providers: [
-    AppService
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    }
   ],
 })
 export class AppModule { }
