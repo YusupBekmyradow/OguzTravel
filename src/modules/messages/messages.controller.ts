@@ -42,6 +42,7 @@ export class MessagesController {
     @Query('status') status?: number,
     @Query('due_date') due_date?: string,
     @Query('search') search?: string,
+    @Query('type') type?: string,
   ) {
     return this.messagesService.getAllTasks(page,
       limit,
@@ -50,7 +51,8 @@ export class MessagesController {
       priority,
       status ? Number(status) : undefined,
       due_date,
-      search
+      search,
+      type,
     );
   }
 

@@ -125,7 +125,7 @@ async getAllNotification(
 
 
 
-  async getAllTasks(
+async getAllTasks(
     page: number = 1,
     limit: number = 10,
     assignee_guid?: string,
@@ -134,72 +134,85 @@ async getAllNotification(
     status?: number,
     due_date?: string,
     search?: string,
+    type?: string | boolean,
   ) {
     try {
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
       const offset = (pageNum - 1) * limitNum;
 
-      const whereClause: any = {
-        isMessage: false,
-      };
+      const whereClause: any = { isMessage: false };
 
-      if (priority) {
-        whereClause.priority = priority;
-      }
-      if (status !== undefined) {
-        whereClause.status = Number(status);
-      }
+      if (priority) whereClause.priority = priority;
+      if (status !== undefined) whereClause.status = Number(status);
       if (due_date) {
-        const startDate = `${due_date} 00:00:00`;
-        const endDate = `${due_date} 23:59:59`;
         whereClause.due_date = {
-          [Op.between]: [startDate, endDate],
+          [Op.between]: [`${due_date} 00:00:00`, `${due_date} 23:59:59`],
         };
       }
       const taskAssigneeWhere: any = {};
-      if (assignee_guid) {
-        taskAssigneeWhere.assignee_guid = assignee_guid;
-      }
-      if (isRead !== undefined) {
-        taskAssigneeWhere.isRead = isRead === 'true';
-      }
+      if (assignee_guid) taskAssigneeWhere.assignee_guid = assignee_guid;
+      if (isRead !== undefined) taskAssigneeWhere.isRead = isRead === 'true';
+
       const employeeIncludeWhere: any = {};
-      if (search) {
-        employeeIncludeWhere.fullName = { [Op.iLike]: `%${search}%` };
+      if (search) employeeIncludeWhere.fullName = { [Op.iLike]: `%${search}%` };
+
+      const includeOptions = [
+        {
+          model: User,
+          as: 'admuser',
+          attributes: ['guid', 'phone_number', 'role'],
+          include: [{ model: Employee, attributes: ['guid', 'fullName'] }],
+        },
+        {
+          model: TaskAssignee,
+          as: 'empltaskAssignee',
+          where: Object.keys(taskAssigneeWhere).length > 0 ? taskAssigneeWhere : undefined,
+          required: !!assignee_guid || isRead !== undefined || !!search,
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['guid', 'phone_number', 'role'],
+              include: [
+                {
+                  model: Employee,
+                  as: 'employee',
+                  where: Object.keys(employeeIncludeWhere).length > 0 ? employeeIncludeWhere : undefined,
+                  required: !!search,
+                  attributes: ['guid', 'fullName'],
+                },
+              ],
+            },
+          ],
+        },
+      ];
+
+      const isGrouped = type === true || type === 'true';
+      if (isGrouped) {
+        const allTasks = await this.messageRepository.findAll({
+          where: whereClause,
+          include: includeOptions,
+          order: [['createdAt', 'DESC']],
+        });
+
+        const statusGroups: { [key: number]: any[] } = {};
+        allTasks.forEach((task: any) => {
+          const st = task.status !== undefined && task.status !== null ? Number(task.status) : 0;
+          if (!statusGroups[st]) statusGroups[st] = [];
+          statusGroups[st].push(task);
+        });
+
+        return {
+          status: 200,
+          data: Object.values(statusGroups),
+          message: 'Tasks grouped by status successfully',
+        };
       }
+
       const { rows, count } = await this.messageRepository.findAndCountAll({
         where: whereClause,
-        include: [
-          {
-            model: User,
-            as: 'admuser',
-            attributes: ['guid', 'phone_number', 'role'],
-            include: [{ model: Employee, attributes: ['guid', 'fullName'] }],
-          },
-          {
-            model: TaskAssignee,
-            as: 'empltaskAssignee',
-            where: Object.keys(taskAssigneeWhere).length > 0 ? taskAssigneeWhere : undefined,
-            required: !!assignee_guid || isRead !== undefined || !!search,
-            include: [
-              {
-                model: User,
-                as: 'user',
-                attributes: ['guid', 'phone_number', 'role'],
-                include: [
-                  {
-                    model: Employee,
-                    as: 'employee',
-                    where: Object.keys(employeeIncludeWhere).length > 0 ? employeeIncludeWhere : undefined,
-                    required: !!search,
-                    attributes: ['guid', 'fullName'],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+        include: includeOptions,
         limit: limitNum,
         offset,
         order: [['createdAt', 'DESC']],
@@ -220,23 +233,6 @@ async getAllNotification(
       };
     } catch (error: any) {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Tasks fetch failed', error);
-    }
-  }
-
-
-  async getByGuid(guid: string) {
-    try {
-      const record = await this.findMessageByGuid(guid);
-      if (!record) {
-        return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
-      }
-      return {
-        status: 200,
-        data: record,
-        message: 'Record fetched successfully',
-      };
-    } catch (error: any) {
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Fetch failed', error);
     }
   }
 
