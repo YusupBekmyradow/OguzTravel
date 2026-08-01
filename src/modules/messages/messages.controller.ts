@@ -12,18 +12,20 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) { }
 
+
   @Get('/get-all-notification')
   @ApiBearerAuth('bearerAuth')
   @UseGuards(JwtAuthGuard)
-  @ApiQuery({ name: 'page', required: false })
-  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiQuery({ name: 'isMessage', required: false, type: Boolean })
   async getAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
     @Query('isMessage') isMessage?: string,
+    @Query('userGuid') userGuid?: string,
   ) {
-    return this.messagesService.getAllMessagesOrTasks(page, limit, isMessage);
+    return this.messagesService.getAllMessagesOrTasks(page, limit, isMessage, userGuid);
   }
 
 
@@ -52,7 +54,7 @@ export class MessagesController {
     return this.messagesService.addTask(senderGuid, createDto);
   }
 
-  
+
   @Patch('/update-task')
   @ApiBearerAuth('bearerAuth')
   @UseGuards(JwtAuthGuard)
@@ -60,4 +62,10 @@ export class MessagesController {
     return this.messagesService.updateTask(updateDto);
   }
 
+  @Delete('/delete-taskormessage')
+  @ApiBearerAuth('bearerAuth')
+  @UseGuards(JwtAuthGuard)
+  async delete(@Body('guid') guid: string) {
+    return this.messagesService.deleteMessageOrTask(guid);
+  }
 }

@@ -104,7 +104,7 @@ export class MessagesService {
 
 
 
-  async getAllMessagesOrTasks(page: number = 1, limit: number = 10, isMessage?: string) {
+  async getAllMessagesOrTasks(page: number = 1, limit: number = 10, isMessage?: string, userGuid?: string) {
     try {
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
@@ -114,6 +114,9 @@ export class MessagesService {
       if (isMessage !== undefined) {
         whereClause.isMessage = isMessage === 'true';
       }
+      if (userGuid) {
+        whereClause.assignee_guid = userGuid;
+      }
       const { rows, count } = await this.messageRepository.findAndCountAll({
         where: whereClause,
         include: this.getIncludes(),
@@ -121,7 +124,6 @@ export class MessagesService {
         offset,
         order: [['createdAt', 'DESC']],
       });
-
       const formattedData = rows.map(item => {
         const json = item.toJSON();
 
@@ -129,6 +131,8 @@ export class MessagesService {
           return {
             guid: json.guid,
             index_number: json.index_number,
+            assignee_guid: json.assignee_guid,
+            adm_user_guid: json.adm_user_guid,
             description: json.description,
             isRead: json.isRead,
             isMessage: json.isMessage,
@@ -141,6 +145,8 @@ export class MessagesService {
           return {
             guid: json.guid,
             index_number: json.index_number,
+            assignee_guid: json.assignee_guid,
+            adm_user_guid: json.adm_user_guid,
             title: json.title,
             description: json.description,
             priority: json.priority,
@@ -155,7 +161,6 @@ export class MessagesService {
           };
         }
       });
-
       return {
         status: 200,
         data: formattedData,
@@ -172,7 +177,6 @@ export class MessagesService {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Data fetch failed', error);
     }
   }
-
 
 
 
@@ -232,6 +236,23 @@ export class MessagesService {
       };
     } catch (error: any) {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Task update failed', error);
+    }
+  }
+
+
+  async deleteMessageOrTask(guid: string) {
+    try {
+      const record = await this.messageRepository.findOne({ where: { guid } });
+      if (!record) {
+        return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
+      }
+      await this.messageRepository.destroy({ where: { guid } });
+      return {
+        status: 200,
+        message: 'Record deleted successfully',
+      };
+    } catch (error: any) {
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Delete operation failed', error);
     }
   }
 }
