@@ -8,6 +8,7 @@ import { errorResponse } from '../../helpers/responseFunctions';
 import { Employee } from '../employee/entities/employee.entity';
 import { CreateTaskDto } from './dto/create-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class MessagesService {
@@ -104,17 +105,14 @@ export class MessagesService {
 
 
 
-  async getAllMessagesOrTasks(page: number = 1, limit: number = 10, isMessage?: string, userGuid?: string, isRead?: string) {
+  async getAllNotification(page: number = 1, limit: number = 10, assignee_guid?: string, isRead?: string) {
     try {
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
       const offset = (pageNum - 1) * limitNum;
       const whereClause: any = {};
-      if (isMessage !== undefined) {
-        whereClause.isMessage = isMessage === 'true';
-      }
-      if (userGuid) {
-        whereClause.assignee_guid = userGuid;
+      if (assignee_guid) {
+        whereClause.assignee_guid = assignee_guid;
       }
       if (isRead !== undefined) {
         whereClause.isRead = isRead === 'true';
@@ -180,6 +178,113 @@ export class MessagesService {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Data fetch failed', error);
     }
   }
+
+
+
+
+  async getAllTasks(
+    page: number = 1,
+    limit: number = 10,
+    assignee_guid?: string,
+    isRead?: string,
+    priority?: string,
+    status?: string,
+    due_date?: string,
+    search?: string,
+  ) {
+    try {
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
+
+      const whereClause: any = {
+        isMessage: false,
+      };
+
+      if (assignee_guid) {
+        whereClause.assignee_guid = assignee_guid;
+      }
+      if (isRead !== undefined) {
+        whereClause.isRead = isRead === 'true';
+      }
+      if (priority) {
+        whereClause.priority = priority;
+      }
+      if (status) {
+        whereClause.status = status;
+      }
+      if (due_date) {
+        const startDate = `${due_date} 00:00:00`;
+        const endDate = `${due_date} 23:59:59`;
+        whereClause.due_date = {
+          [Op.between]: [startDate, endDate],
+        };
+      }
+      const includeOptions = this.getIncludes();
+      if (search) {
+        includeOptions.forEach((inc: any) => {
+          if (inc.as === 'empluser' || inc.as === 'admuser' || inc.model === User) {
+            inc.required = true;
+            inc.include = [
+              ...(inc.include || []),
+              {
+                model: Employee,
+                as: 'employee',
+                required: true,
+                where: {
+                  fullName: { [Op.iLike]: `%${search}%` },
+                },
+              },
+            ];
+          }
+        });
+      }
+      const { rows, count } = await this.messageRepository.findAndCountAll({
+        where: whereClause,
+        include: includeOptions,
+        limit: limitNum,
+        offset,
+        order: [['createdAt', 'DESC']],
+      });
+
+      const formattedData = rows.map(item => {
+        const json = item.toJSON();
+        return {
+          guid: json.guid,
+          index_number: json.index_number,
+          assignee_guid: json.assignee_guid,
+          adm_user_guid: json.adm_user_guid,
+          title: json.title,
+          description: json.description,
+          priority: json.priority,
+          status: json.status,
+          due_date: json.due_date,
+          isRead: json.isRead,
+          isMessage: json.isMessage,
+          createdAt: json.createdAt,
+          updatedAt: json.updatedAt,
+          admuser: json.admuser,
+          empluser: json.empluser,
+        };
+      });
+
+      return {
+        status: 200,
+        data: formattedData,
+        meta: {
+          totalItems: count,
+          itemCount: rows.length,
+          itemsPerPage: limitNum,
+          totalPages: Math.ceil(count / limitNum),
+          currentPage: pageNum,
+        },
+        message: 'Tasks fetched successfully',
+      };
+    } catch (error: any) {
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Tasks fetch failed', error);
+    }
+  }
+
 
 
   async addTask(senderGuid: string, createDto: CreateTaskDto) {

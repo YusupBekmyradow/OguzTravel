@@ -18,19 +18,33 @@ export class MessagesController {
   @UseGuards(JwtAuthGuard)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
-  @ApiQuery({ name: 'isMessage', required: false, type: Boolean })
-  @ApiQuery({ name: 'userGuid', required: false, type: String })
-  @ApiQuery({ name: 'isRead', required: false, type: Boolean })
   async getAll(
     @Query('page') page: number,
     @Query('limit') limit: number,
-    @Query('isMessage') isMessage?: string,
-    @Query('userGuid') userGuid?: string,
+    @Query('assignee_guid') assignee_guid?: string,
     @Query('isRead') isRead?: string,
   ) {
-    return this.messagesService.getAllMessagesOrTasks(page, limit, isMessage, userGuid, isRead);
+    return this.messagesService.getAllNotification(page, limit, assignee_guid, isRead);
   }
 
+
+  @Get('/get-all-tasks')
+  @ApiBearerAuth('bearerAuth')
+  @UseGuards(JwtAuthGuard)
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+   async getAllTasks(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+    @Query('assignee_guid') assignee_guid?: string,
+    @Query('isRead') isRead?: string,
+    @Query('priority') priority?: string,
+    @Query('status') status?: string,
+    @Query('due_date') due_date?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.messagesService.getAllTasks(page, limit, assignee_guid, isRead, priority, status, due_date, search);
+  }
 
   @Post('/add-message')
   @ApiBearerAuth('bearerAuth')
