@@ -1,7 +1,8 @@
-import { Table, Model, Column, DataType, BeforeCreate, BeforeUpdate, BelongsTo, Index } from "sequelize-typescript";
+import { Table, Model, Column, DataType, BeforeCreate, BeforeUpdate, BelongsTo, Index, HasMany } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { IsNotEmpty, ValidateIf, IsUUID } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
+import { Message } from "../../messages/entities/message.entity";
 
 @Table({
   tableName: 'tbl_users',
@@ -82,6 +83,22 @@ export class User extends Model<User> {
     onUpdate: 'SET NULL'
   })
   declare employee: Employee;
+
+  @HasMany(() => Message, {
+    foreignKey: 'assignee_guid',
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
+  })
+  declare emplmessage: Message[];
+
+  @HasMany(() => Message, {
+    foreignKey: 'adm_user_guid',
+    sourceKey: 'guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
+  })
+  declare admmessage: Message[];
 
   @BeforeCreate
   @BeforeUpdate

@@ -36,6 +36,7 @@ import { TtpPaymentModule } from './modules/ttp_payment/ttp_payment.module';
 import { InboundModule } from './modules/inbound/inbound.module';
 import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 import { APP_FILTER } from '@nestjs/core';
+import { MessagesModule } from './modules/messages/messages.module';
 dotenv.config();
 
 @Module({
@@ -74,7 +75,8 @@ dotenv.config();
     PackageModule,
     HarPaymentModule,
     TtpPaymentModule,
-    InboundModule
+    InboundModule,
+    MessagesModule
   ],
   controllers: [AppController],
   providers: [
