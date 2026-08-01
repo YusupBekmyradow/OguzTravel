@@ -1,11 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class CreateMessageDto {
-  @ApiProperty()
-  @IsUUID()
+  @ApiProperty({ type: [String], example: ['uuid-1', 'uuid-2'] })
+  @IsArray()
+  @IsUUID('4', { each: true })
   @IsNotEmpty()
-  declare assignee_guid: string;
+  declare assignee_guids: string[];
 
   @ApiPropertyOptional()
   @IsString()

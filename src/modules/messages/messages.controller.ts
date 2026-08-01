@@ -33,18 +33,27 @@ export class MessagesController {
   @UseGuards(JwtAuthGuard)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
-   async getAllTasks(
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+  async getAllTasks(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
     @Query('assignee_guid') assignee_guid?: string,
     @Query('isRead') isRead?: string,
     @Query('priority') priority?: string,
-    @Query('status') status?: string,
+    @Query('status') status?: number,
     @Query('due_date') due_date?: string,
     @Query('search') search?: string,
   ) {
-    return this.messagesService.getAllTasks(page, limit, assignee_guid, isRead, priority, status, due_date, search);
+    return this.messagesService.getAllTasks(page,
+      limit,
+      assignee_guid,
+      isRead,
+      priority,
+      status ? Number(status) : undefined,
+      due_date,
+      search
+    );
   }
+
 
   @Post('/add-message')
   @ApiBearerAuth('bearerAuth')

@@ -1,12 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsDateString, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsBoolean, IsArray, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
 
 
 export class CreateTaskDto {
-  @ApiProperty()
-  @IsUUID()
+  @ApiProperty({ type: [String], example: ['uuid-1', 'uuid-2'] })
+  @IsArray()
+  @IsUUID('4', { each: true })
   @IsNotEmpty()
-  declare assignee_guid: string;
+  declare assignee_guids: string[];
 
   @ApiPropertyOptional()
   @IsString()
@@ -24,9 +25,9 @@ export class CreateTaskDto {
   declare priority?: string;
 
   @ApiPropertyOptional()
-  @IsString()
+  @IsNumber()
   @IsOptional()
-  declare status?: string;
+  declare status?: number;
 
   @ApiPropertyOptional()
   @IsDateString()

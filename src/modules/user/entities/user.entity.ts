@@ -3,6 +3,7 @@ import { Employee } from "../../employee/entities/employee.entity";
 import { IsNotEmpty, ValidateIf, IsUUID } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Message } from "../../messages/entities/message.entity";
+import { TaskAssignee } from "../../messages/entities/task_assignees.entity";
 
 @Table({
   tableName: 'tbl_users',
@@ -84,13 +85,13 @@ export class User extends Model<User> {
   })
   declare employee: Employee;
 
-  @HasMany(() => Message, {
+  @HasMany(() => TaskAssignee, {
     foreignKey: 'assignee_guid',
     sourceKey: 'guid',
     onDelete: 'SET NULL',
     onUpdate: 'SET NULL'
   })
-  declare emplmessage: Message[];
+  declare empltaskAssignee: TaskAssignee[];
 
   @HasMany(() => Message, {
     foreignKey: 'adm_user_guid',

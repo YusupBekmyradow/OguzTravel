@@ -1,5 +1,6 @@
-import { Model, Column, DataType, Table, BelongsTo } from "sequelize-typescript";
+import { Model, Column, DataType, Table, BelongsTo, HasMany } from "sequelize-typescript";
 import { User } from "../../user/entities/user.entity";
+import { TaskAssignee } from "./task_assignees.entity";
 
 @Table({
   tableName: 'tbl_messages',
@@ -26,12 +27,6 @@ export class Message extends Model<Message> {
     type: DataType.UUID,
     allowNull: false
   })
-  declare assignee_guid: string;
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: false
-  })
   declare adm_user_guid: string;
 
   @Column({
@@ -53,10 +48,10 @@ export class Message extends Model<Message> {
   declare priority?: string;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.INTEGER,
     allowNull: true,
   })
-  declare status?: string;
+  declare status?: number;
 
   @Column({
     type: DataType.DATE,
@@ -66,23 +61,17 @@ export class Message extends Model<Message> {
 
   @Column({
     type: DataType.BOOLEAN,
-    defaultValue: false,
-  })
-  declare isRead: boolean;
-
-  @Column({
-    type: DataType.BOOLEAN,
     defaultValue: true,
   })
   declare isMessage: boolean;
 
-  @BelongsTo(() => User, {
-    targetKey: 'guid',
-    foreignKey: 'assignee_guid',
+  @HasMany(() => TaskAssignee, {
+    foreignKey: 'task_guid',
+    sourceKey: 'guid',
     onDelete: 'SET NULL',
     onUpdate: 'SET NULL'
   })
-  declare empluser: User;
+  declare empltaskAssignee: TaskAssignee[];
 
   @BelongsTo(() => User, {
     targetKey: 'guid',
