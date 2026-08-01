@@ -4,11 +4,25 @@ import { IsNotEmpty, ValidateIf, IsUUID } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Message } from "../../messages/entities/message.entity";
 import { TaskAssignee } from "../../messages/entities/task_assignees.entity";
+import { Op } from "sequelize";
 
 @Table({
   tableName: 'tbl_users',
-  timestamps: true
+  timestamps: true,
+  indexes: [
+    {
+      name: 'unique_employee_guid_not_null',
+      unique: true,
+      fields: ['employee_guid'],
+      where: {
+        employee_guid: {
+          [Op.ne]: null,
+        },
+      },
+    },
+  ],
 })
+
 export class User extends Model<User> {
   @Column({
     primaryKey: true,
@@ -18,7 +32,6 @@ export class User extends Model<User> {
   })
   declare guid: string;
 
-  @Index('idx_tbl_users_employee_guid')
   @Column({
     type: DataType.UUID,
     allowNull: true
