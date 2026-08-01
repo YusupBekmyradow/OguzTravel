@@ -104,18 +104,20 @@ export class MessagesService {
 
 
 
-  async getAllMessagesOrTasks(page: number = 1, limit: number = 10, isMessage?: string, userGuid?: string) {
+  async getAllMessagesOrTasks(page: number = 1, limit: number = 10, isMessage?: string, userGuid?: string, isRead?: string) {
     try {
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
       const offset = (pageNum - 1) * limitNum;
-
       const whereClause: any = {};
       if (isMessage !== undefined) {
         whereClause.isMessage = isMessage === 'true';
       }
       if (userGuid) {
         whereClause.assignee_guid = userGuid;
+      }
+      if (isRead !== undefined) {
+        whereClause.isRead = isRead === 'true';
       }
       const { rows, count } = await this.messageRepository.findAndCountAll({
         where: whereClause,
@@ -124,6 +126,7 @@ export class MessagesService {
         offset,
         order: [['createdAt', 'DESC']],
       });
+
       const formattedData = rows.map(item => {
         const json = item.toJSON();
 
@@ -177,7 +180,6 @@ export class MessagesService {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Data fetch failed', error);
     }
   }
-
 
 
   async addTask(senderGuid: string, createDto: CreateTaskDto) {

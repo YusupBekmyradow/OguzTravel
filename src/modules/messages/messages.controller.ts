@@ -19,13 +19,16 @@ export class MessagesController {
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiQuery({ name: 'isMessage', required: false, type: Boolean })
+  @ApiQuery({ name: 'userGuid', required: false, type: String })
+  @ApiQuery({ name: 'isRead', required: false, type: Boolean })
   async getAll(
     @Query('page') page: number,
     @Query('limit') limit: number,
     @Query('isMessage') isMessage?: string,
     @Query('userGuid') userGuid?: string,
+    @Query('isRead') isRead?: string,
   ) {
-    return this.messagesService.getAllMessagesOrTasks(page, limit, isMessage, userGuid);
+    return this.messagesService.getAllMessagesOrTasks(page, limit, isMessage, userGuid, isRead);
   }
 
 
