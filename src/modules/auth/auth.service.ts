@@ -58,7 +58,7 @@ export class AuthService {
       const comparePassword = await bcrypt.compare(signInAuthDto.password, existUser.password ?? '');
       if (!comparePassword) return errorResponse(HttpStatuses.FORBIDDEN, 'password invalid');
 
-      const payload = { phone_number: existUser.phone_number, guid: existUser.guid, role: existUser.role, permissions: existUser.permissions };
+      const payload = { phone_number: existUser.phone_number, guid: existUser.guid, role: existUser.role, permissions: existUser.permissions || [] };
 
       const access_token = await this.jwtService.signAsync(payload, { expiresIn: '7d' });
       const refresh_token = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
@@ -69,7 +69,7 @@ export class AuthService {
         guid: existUser.guid,
         phone_number: existUser.phone_number,
         role: existUser.role,
-        permissions: existUser.permissions,
+        permissions: existUser.permissions || [],
         employee_name: existUser.employee ? existUser.employee.fullName : null,
         position_guid: existUser.employee ? existUser.employee.position_guid : null,
         access_token,
@@ -112,16 +112,52 @@ export class AuthService {
         return errorResponse(HttpStatuses.FORBIDDEN, 'invalid refresh token');
       }
 
-      const newPayload = { phone: existUser.phone_number, guid: existUser.guid, role: existUser.role };
+      const newPayload = {
+        phone_number: existUser.phone_number,
+        guid: existUser.guid,
+        role: existUser.role,
+        permissions: existUser.permissions || [],
+      };
 
       const access_token = await this.jwtService.signAsync(newPayload, { expiresIn: '7d' });
       const new_refresh_token = await this.jwtService.signAsync(newPayload, { expiresIn: '30d' });
 
       await existUser.update({ refresh_token: new_refresh_token });
 
-      return successResponse(HttpStatuses.OK, { access_token, refresh_token: new_refresh_token }, 'token refresh success');
+      return successResponse(HttpStatuses.OK, {
+        access_token,
+        refresh_token: new_refresh_token,
+        permissions: existUser.permissions || [],
+      }, 'token refresh success');
     } catch (error: any) {
       return errorResponse(HttpStatuses.UNAUTHORIZED, 'refresh token expired or invalid');
+    }
+  }
+
+  async getMe(user_guid: string) {
+    try {
+      const existUser = await this.userModel.findOne({
+        where: { guid: user_guid },
+        include: [
+          {
+            model: Employee,
+            attributes: ['fullName', 'position_guid']
+          }
+        ]
+      });
+
+      if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, 'user not found');
+
+      return successResponse(HttpStatuses.OK, {
+        guid: existUser.guid,
+        phone_number: existUser.phone_number,
+        role: existUser.role,
+        permissions: existUser.permissions || [],
+        employee_name: existUser.employee ? existUser.employee.fullName : null,
+        position_guid: existUser.employee ? existUser.employee.position_guid : null,
+      }, 'get profile success');
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'get profile failed');
     }
   }
 

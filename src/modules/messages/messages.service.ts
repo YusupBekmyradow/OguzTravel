@@ -9,6 +9,7 @@ import { Employee } from '../employee/entities/employee.entity';
 import { TaskAssignee } from './entities/task_assignees.entity';
 import { CreateTaskDto } from './dto/create-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { Sequelize } from 'sequelize-typescript';
 import { Op } from 'sequelize';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class MessagesService {
     @InjectModel(Message) private readonly messageRepository: typeof Message,
     @InjectModel(User) private readonly userRepository: typeof User,
     @InjectModel(TaskAssignee) private readonly taskAssigneeRepository: typeof TaskAssignee,
+    private readonly sequelize: Sequelize,
   ) { }
 
   private getIncludes() {
@@ -51,7 +53,7 @@ export class MessagesService {
 
 
 
-async getAllNotification(
+  async getAllNotification(
     page: number = 1,
     limit: number = 10,
     assignee_guid?: string,
@@ -104,6 +106,7 @@ async getAllNotification(
         offset,
         order: [['createdAt', 'DESC']],
         distinct: true,
+        subQuery: false
       });
 
       return {
@@ -125,7 +128,7 @@ async getAllNotification(
 
 
 
-async getAllTasks(
+  async getAllTasks(
     page: number = 1,
     limit: number = 10,
     assignee_guid?: string,
@@ -217,6 +220,7 @@ async getAllTasks(
         offset,
         order: [['createdAt', 'DESC']],
         distinct: true,
+        subQuery: false
       });
 
       return {
@@ -239,16 +243,17 @@ async getAllTasks(
 
 
   async addMessage(senderGuid: string, createDto: CreateMessageDto) {
+    const transaction = await this.sequelize.transaction();
     try {
-      const sender = await this.userRepository.findOne({ where: { guid: senderGuid } });
-      if (!sender) return errorResponse(HttpStatus.NOT_FOUND, 'Sender user not found');
+      const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction, });
+      if (!sender) { await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'Sender user not found'); }
 
       const { assignee_guids, ...messageData } = createDto as any;
       const createdMessage = await this.messageRepository.create({
         ...messageData,
         isMessage: true,
         adm_user_guid: sender.guid,
-      });
+      }, { transaction, });
 
       if (assignee_guids && assignee_guids.length > 0) {
         const assigneeRecords = assignee_guids.map((user_guid: string) => ({
@@ -256,27 +261,29 @@ async getAllTasks(
           assignee_guid: user_guid,
           isRead: false,
         }));
-        await this.taskAssigneeRepository.bulkCreate(assigneeRecords);
-      }
+        await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction, });
+      } await transaction.commit();
       const newMessage = await this.findMessageByGuid(createdMessage.guid);
       return { status: 201, data: newMessage, message: 'Message sent successfully' };
     } catch (error: any) {
+      await transaction.rollback();
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Message creation failed', error);
     }
   }
 
 
   async addTask(senderGuid: string, createDto: CreateTaskDto) {
+    const transaction = await this.sequelize.transaction();
     try {
-      const sender = await this.userRepository.findOne({ where: { guid: senderGuid } });
-      if (!sender) return errorResponse(HttpStatus.NOT_FOUND, 'Sender user not found');
+      const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction, });
+      if (!sender) { await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'Sender user not found'); }
 
       const { assignee_guids, ...taskData } = createDto as any;
       const createdTask = await this.messageRepository.create({
         ...taskData,
         isMessage: false,
         adm_user_guid: sender.guid,
-      });
+      }, { transaction });
 
       if (assignee_guids && assignee_guids.length > 0) {
         const assigneeRecords = assignee_guids.map((user_guid: string) => ({
@@ -284,12 +291,13 @@ async getAllTasks(
           assignee_guid: user_guid,
           isRead: false,
         }));
-        await this.taskAssigneeRepository.bulkCreate(assigneeRecords);
+        await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction, });
       }
-
+      await transaction.commit();
       const newTask = await this.findMessageByGuid(createdTask.guid);
       return { status: 201, data: newTask, message: 'Task sent successfully' };
     } catch (error: any) {
+      await transaction.rollback();
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Task creation failed', error);
     }
   }
@@ -297,27 +305,32 @@ async getAllTasks(
 
 
   async updateMessage(updateDto: UpdateMessageDto) {
+    const transaction = await this.sequelize.transaction();
     try {
       const { guid, assignee_guids, ...updateData } = updateDto as any;
-      const message = await this.messageRepository.findOne({ where: { guid } });
-      if (!message) return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
+      const message = await this.messageRepository.findOne({ where: { guid }, transaction });
+      if (!message) {
+        await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
+      }
 
-      await this.messageRepository.update(updateData, { where: { guid } });
+      await this.messageRepository.update(updateData, { where: { guid }, transaction });
 
       if (assignee_guids) {
-        await this.taskAssigneeRepository.destroy({ where: { task_guid: guid } });
+        await this.taskAssigneeRepository.destroy({ where: { task_guid: guid }, transaction });
         if (assignee_guids.length > 0) {
           const assigneeRecords = assignee_guids.map((user_guid: string) => ({
             task_guid: guid,
             assignee_guid: user_guid,
             isRead: false,
           }));
-          await this.taskAssigneeRepository.bulkCreate(assigneeRecords);
+          await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
         }
       }
+      await transaction.commit();
       const updatedRecord = await this.findMessageByGuid(guid);
       return { status: 200, data: updatedRecord, message: 'Record updated successfully' };
     } catch (error: any) {
+      await transaction.rollback();
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Update failed', error);
     }
   }
@@ -325,26 +338,29 @@ async getAllTasks(
 
 
   async updateTask(updateDto: UpdateTaskDto) {
+    const transaction = await this.sequelize.transaction();
     try {
       const { guid, assignee_guids, ...updateData } = updateDto as any;
-      const task = await this.messageRepository.findOne({ where: { guid } });
+      const task = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!task) {
+        await transaction.rollback();
         return errorResponse(HttpStatus.NOT_FOUND, 'Task not found');
       }
       await this.messageRepository.update(updateData, {
-        where: { guid },
+        where: { guid }, transaction
       });
       if (assignee_guids) {
-        await this.taskAssigneeRepository.destroy({ where: { task_guid: guid } });
+        await this.taskAssigneeRepository.destroy({ where: { task_guid: guid }, transaction });
         if (assignee_guids.length > 0) {
           const assigneeRecords = assignee_guids.map((user_guid: string) => ({
             task_guid: guid,
             assignee_guid: user_guid,
             isRead: false,
           }));
-          await this.taskAssigneeRepository.bulkCreate(assigneeRecords);
+          await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
         }
       }
+      await transaction.commit();
       const updatedTask = await this.findMessageByGuid(guid);
       if (!updatedTask) {
         return errorResponse(HttpStatus.NOT_FOUND, 'Task not found after update');
@@ -355,12 +371,13 @@ async getAllTasks(
         message: 'Task updated successfully',
       };
     } catch (error: any) {
+      await transaction.rollback();
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Task update failed', error);
     }
   }
 
 
-  
+
   async deleteMessageOrTask(guid: string) {
     try {
       const record = await this.messageRepository.findOne({ where: { guid } });

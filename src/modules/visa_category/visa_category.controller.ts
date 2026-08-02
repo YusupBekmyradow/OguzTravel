@@ -1,10 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { VisaCategoryService } from './visa_category.service';
 import { CreateVisaCategoryDto } from './dto/create-visa_category.dto';
 import { UpdateVisaCategoryDto } from './dto/update-visa_category.dto';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Visa Categories')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/visa/applications', '/visa/package')
 @Controller('visa-category')
 export class VisaCategoryController {
   constructor(private readonly visaCategoryService: VisaCategoryService) { }

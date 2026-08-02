@@ -1,10 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { TurkishAirlinesService } from './turkish_airlines.service';
 import { CreateTurkishAirlineDto } from './dto/create-turkish_airline.dto';
 import { UpdateTurkishAirlineDto } from './dto/update-turkish_airline.dto';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('TurkishAirliens')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/ticket/turkish-airlines', '/reports/turkish-airlines')
 @Controller('turkish-airlines')
 export class TurkishAirlinesController {
   constructor(private readonly turkishAirlinesService: TurkishAirlinesService) { }

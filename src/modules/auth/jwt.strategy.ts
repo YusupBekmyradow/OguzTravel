@@ -17,7 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             phone_number: payload.phone_number,
             guid: payload.guid,
             role: payload.role,
-            permissions: payload.permissions
+            permissions: payload.permissions || []
         };
     }
 }

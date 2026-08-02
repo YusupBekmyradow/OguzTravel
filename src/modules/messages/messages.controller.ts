@@ -7,7 +7,13 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateTaskDto } from './dto/create-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+
 @ApiTags('Messages & Tasks')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/notifications', '/tasks')
 @Controller('messages')
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) { }
@@ -15,7 +21,6 @@ export class MessagesController {
 
   @Get('/get-all-notification')
   @ApiBearerAuth('bearerAuth')
-  @UseGuards(JwtAuthGuard)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   async getAll(
@@ -30,7 +35,6 @@ export class MessagesController {
 
   @Get('/get-all-tasks')
   @ApiBearerAuth('bearerAuth')
-  @UseGuards(JwtAuthGuard)
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   async getAllTasks(
@@ -59,7 +63,6 @@ export class MessagesController {
 
   @Post('/add-message')
   @ApiBearerAuth('bearerAuth')
-  @UseGuards(JwtAuthGuard)
   async addMessage(@Req() req, @Body() createDto: CreateMessageDto) {
     const senderGuid = req.user.guid;
     return this.messagesService.addMessage(senderGuid, createDto);
@@ -68,7 +71,6 @@ export class MessagesController {
 
   @Patch('/update-message')
   @ApiBearerAuth('bearerAuth')
-  @UseGuards(JwtAuthGuard)
   async updateMessage(@Body() updateDto: UpdateMessageDto) {
     return this.messagesService.updateMessage(updateDto);
   }
@@ -76,7 +78,6 @@ export class MessagesController {
 
   @Post('/add-task')
   @ApiBearerAuth('bearerAuth')
-  @UseGuards(JwtAuthGuard)
   async addTask(@Req() req, @Body() createDto: CreateTaskDto) {
     const senderGuid = req.user.guid;
     return this.messagesService.addTask(senderGuid, createDto);
@@ -85,14 +86,12 @@ export class MessagesController {
 
   @Patch('/update-task')
   @ApiBearerAuth('bearerAuth')
-  @UseGuards(JwtAuthGuard)
   async updateTask(@Body() updateDto: UpdateTaskDto) {
     return this.messagesService.updateTask(updateDto);
   }
 
   @Delete('/delete-taskormessage')
   @ApiBearerAuth('bearerAuth')
-  @UseGuards(JwtAuthGuard)
   async delete(@Body('guid') guid: string) {
     return this.messagesService.deleteMessageOrTask(guid);
   }

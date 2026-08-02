@@ -1,10 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { RefferalLetterService } from './refferal_letter.service';
 import { CreateRefferalLetterDto } from './dto/create-refferal_letter.dto';
 import { UpdateRefferalLetterDto } from './dto/update-refferal_letter.dto';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Refferal_Letter')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/visa/referal-letters')
 @Controller('refferal-letter')
 export class RefferalLetterController {
   constructor(private readonly refferalLetterService: RefferalLetterService) { }

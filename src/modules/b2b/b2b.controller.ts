@@ -1,11 +1,17 @@
-import { Controller, Get, Post, Body, Patch, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { B2bService } from './b2b.service';
 import { CreateB2bDto } from './dto/create-b2b.dto';
 import { UpdateB2bDto } from './dto/update-b2b.dto';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 
 @ApiTags('B2B')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/ticket/b2b')
 @Controller('b2b')
 export class B2bController {
   constructor(private readonly b2bService: B2bService) { }

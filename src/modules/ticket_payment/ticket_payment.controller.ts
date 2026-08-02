@@ -1,10 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { TicketPaymentService } from './ticket_payment.service';
 import { CreateTicketPaymentDto } from './dto/create-ticket_payment.dto';
 import { UpdateTicketPaymentDto } from './dto/update-ticket_payment.dto';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Ticket_Payment')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/ticket/b2b', '/ticket/turkish-airlines')
 @Controller('ticket-payment')
 export class TicketPaymentController {
   constructor(private readonly ticketPaymentService: TicketPaymentService) { }

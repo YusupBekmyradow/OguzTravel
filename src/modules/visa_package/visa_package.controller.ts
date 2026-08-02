@@ -1,10 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { VisaPackageService } from './visa_package.service';
 import { CreateVisaPackageDto } from './dto/create-visa_package.dto';
 import { UpdateVisaPackageDto } from './dto/update-visa_package.dto';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Visa Packages')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/visa/package')
 @Controller('visa-package')
 export class VisaPackageController {
   constructor(private readonly visaPackageService: VisaPackageService) { }
@@ -27,7 +33,7 @@ export class VisaPackageController {
   ) {
     return this.visaPackageService.getAllVisaPack();
   }
-  
+
   @Patch('/update-visa-package')
   async update(@Body() updateDto: UpdateVisaPackageDto) {
     return this.visaPackageService.updateVisaPackage(updateDto);

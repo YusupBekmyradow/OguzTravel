@@ -1,10 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { VisaPaymentService } from './visa_payment.service';
 import { CreateVisaPaymentDto } from './dto/create-visa_payment.dto';
 import { UpdateVisaPaymentDto } from './dto/update-visa_payment.dto';
-import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Visa_Payment')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/visa/applications', '/intake')
 @Controller('visa-payment')
 export class VisaPaymentController {
   constructor(private readonly visaPaymentService: VisaPaymentService) { }
