@@ -2,10 +2,11 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Quer
 import { MessagesService } from './messages.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateTaskDto } from './dto/create-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { UpdateReadStatusDto } from './dto/update-read-status.dto';
 
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../guards/permissions.guard';
@@ -23,13 +24,26 @@ export class MessagesController {
   @ApiBearerAuth('bearerAuth')
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiQuery({ name: 'assignee_guid', required: false })
+  @ApiQuery({ name: 'isRead', required: false })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'createdAt', required: false})
   async getAll(
     @Query('page') page: number,
     @Query('limit') limit: number,
     @Query('assignee_guid') assignee_guid?: string,
     @Query('isRead') isRead?: string,
+    @Query('search') search?: string,
+    @Query('createdAt') createdAt?: string,
   ) {
-    return this.messagesService.getAllNotification(page, limit, assignee_guid, isRead);
+    return this.messagesService.getAllNotification(
+      page,
+      limit,
+      assignee_guid,
+      isRead,
+      search,
+      createdAt,
+    );
   }
 
 
@@ -94,5 +108,11 @@ export class MessagesController {
   @ApiBearerAuth('bearerAuth')
   async delete(@Body('guid') guid: string) {
     return this.messagesService.deleteMessageOrTask(guid);
+  }
+
+  @Patch('/notification-read')
+  @ApiBearerAuth('bearerAuth')
+  async markAsRead(@Body() updateReadStatusDto: UpdateReadStatusDto) {
+    return this.messagesService.markAsRead(updateReadStatusDto);
   }
 }

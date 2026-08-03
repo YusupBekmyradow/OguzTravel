@@ -21,6 +21,7 @@ import { Package } from "../../package/entities/package.entity";
 import { HarPayment } from "../../har_payment/entities/har_payment.entity";
 import { TtpPayment } from "../../ttp_payment/entities/ttp_payment.entity";
 import { Inbound } from "../../inbound/entities/inbound.entity";
+import { ReportShare } from "../../report_share/entities/report_share.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -354,5 +355,21 @@ export class Employee extends Model<Employee> {
   })
   declare inbound: Inbound[];
 
+  @HasMany(() => ReportShare, {
+    foreignKey: 'assignment_opr_guid',
+    sourceKey: 'guid',
+    as: 'reportAS_operator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
+  })
+  declare rShareOperator: ReportShare[];
 
+  @HasMany(() => ReportShare, {
+    foreignKey: 'receiver_opr_guid',
+    sourceKey: 'guid',
+    as: 'reportRe_operator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
+  })
+  declare rShareRecipient: ReportShare[];
 }

@@ -37,6 +37,8 @@ import { InboundModule } from './modules/inbound/inbound.module';
 import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 import { APP_FILTER } from '@nestjs/core';
 import { MessagesModule } from './modules/messages/messages.module';
+import { ReportModule } from './modules/report/report.module';
+import { ReportShareModule } from './modules/report_share/report_share.module';
 dotenv.config();
 
 @Module({
@@ -76,7 +78,9 @@ dotenv.config();
     HarPaymentModule,
     TtpPaymentModule,
     InboundModule,
-    MessagesModule
+    MessagesModule,
+    ReportModule,
+    ReportShareModule
   ],
   controllers: [AppController],
   providers: [

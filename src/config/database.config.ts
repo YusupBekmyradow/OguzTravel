@@ -30,6 +30,8 @@ import { TtpPayment } from '../modules/ttp_payment/entities/ttp_payment.entity';
 import { Inbound } from '../modules/inbound/entities/inbound.entity';
 import { Message } from '../modules/messages/entities/message.entity';
 import { TaskAssignee } from '../modules/messages/entities/task_assignees.entity';
+import { ReportShare } from '../modules/report_share/entities/report_share.entity';
+import { Report } from '../modules/report/entities/report.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
@@ -48,7 +50,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaCategory,
       VisaPackage, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
-      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee]
+      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, ReportShare]
   };
 };
 

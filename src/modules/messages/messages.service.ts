@@ -9,6 +9,7 @@ import { Employee } from '../employee/entities/employee.entity';
 import { TaskAssignee } from './entities/task_assignees.entity';
 import { CreateTaskDto } from './dto/create-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { UpdateReadStatusDto } from './dto/update-read-status.dto';
 import { Sequelize } from 'sequelize-typescript';
 import { Op } from 'sequelize';
 
@@ -58,6 +59,8 @@ export class MessagesService {
     limit: number = 10,
     assignee_guid?: string,
     isRead?: string,
+    search?: string,
+    createdAt?: string,
   ) {
     try {
       const pageNum = Number(page) || 1;
@@ -71,7 +74,15 @@ export class MessagesService {
       if (isRead !== undefined) {
         taskAssigneeWhere.isRead = isRead === 'true';
       }
-
+      if (createdAt) {
+        whereClause.createdAt = {
+          [Op.between]: [`${createdAt} 00:00:00`, `${createdAt} 23:59:59`],
+        };
+      }
+      const employeeIncludeWhere: any = {};
+      if (search) {
+        employeeIncludeWhere.fullName = { [Op.iLike]: `%${search}%` };
+      }
       const { rows, count } = await this.messageRepository.findAndCountAll({
         where: whereClause,
         include: [
@@ -79,13 +90,13 @@ export class MessagesService {
             model: User,
             as: 'admuser',
             attributes: ['guid', 'phone_number', 'role'],
-            include: [{ model: Employee, attributes: ['guid', 'fullName'] }],
+            include: [{ model: Employee, as: 'employee', attributes: ['guid', 'fullName'] }],
           },
           {
             model: TaskAssignee,
             as: 'empltaskAssignee',
             where: Object.keys(taskAssigneeWhere).length > 0 ? taskAssigneeWhere : undefined,
-            required: !!assignee_guid || isRead !== undefined,
+            required: !!assignee_guid || isRead !== undefined || !!search,
             include: [
               {
                 model: User,
@@ -94,7 +105,9 @@ export class MessagesService {
                 include: [
                   {
                     model: Employee,
-                    as: 'employee',
+                    as: 'employee', 
+                    where: Object.keys(employeeIncludeWhere).length > 0 ? employeeIncludeWhere : undefined,
+                    required: !!search,
                     attributes: ['guid', 'fullName'],
                   },
                 ],
@@ -106,7 +119,7 @@ export class MessagesService {
         offset,
         order: [['createdAt', 'DESC']],
         distinct: true,
-        subQuery: false
+        subQuery: false,
       });
 
       return {
@@ -387,6 +400,45 @@ export class MessagesService {
       return { status: 200, message: 'Record deleted successfully' };
     } catch (error: any) {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Delete operation failed', error);
+    }
+  }
+
+  async markAsRead(updateReadStatusDto: UpdateReadStatusDto) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      const { task_guids, assignee_guids } = updateReadStatusDto;
+      const hasTaskGuids = task_guids && task_guids.length > 0;
+      const hasAssigneeGuids = assignee_guids && assignee_guids.length > 0;
+      if (!hasTaskGuids && !hasAssigneeGuids) {
+        await transaction.rollback();
+        return errorResponse(
+          HttpStatus.BAD_REQUEST,
+          'At least one of task_guids or assignee_guids must be provided',
+        );
+      }
+      const whereClause: any = {};
+      if (hasTaskGuids) {
+        whereClause[Op.or] = [
+          { task_guid: { [Op.in]: task_guids } },
+          { guid: { [Op.in]: task_guids } },
+        ];
+      }
+      if (hasAssigneeGuids) {
+        whereClause.assignee_guid = { [Op.in]: assignee_guids };
+      }
+      const [affectedCount] = await this.taskAssigneeRepository.update(
+        { isRead: true },
+        { where: whereClause, transaction },
+      );
+      await transaction.commit();
+      return {
+        status: 200,
+        data: { updatedCount: affectedCount },
+        message: `Successfully marked ${affectedCount} task(s) as read`,
+      };
+    } catch (error: any) {
+      await transaction.rollback();
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Marking read status failed', error);
     }
   }
 }
