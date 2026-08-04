@@ -39,6 +39,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { MessagesModule } from './modules/messages/messages.module';
 import { ReportModule } from './modules/report/report.module';
 import { ReportShareModule } from './modules/report_share/report_share.module';
+import { ImageUploadModule } from './common/image-upload/image-upload.module';
 dotenv.config();
 
 @Module({
@@ -80,7 +81,8 @@ dotenv.config();
     InboundModule,
     MessagesModule,
     ReportModule,
-    ReportShareModule
+    ReportShareModule,
+    ImageUploadModule
   ],
   controllers: [AppController],
   providers: [

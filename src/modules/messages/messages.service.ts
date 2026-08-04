@@ -12,6 +12,8 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateReadStatusDto } from './dto/update-read-status.dto';
 import { Sequelize } from 'sequelize-typescript';
 import { Op, QueryTypes } from 'sequelize';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class MessagesService {
@@ -388,26 +390,36 @@ export class MessagesService {
   }
 
 
+
+
   async addTask(senderGuid: string, createDto: CreateTaskDto) {
     const transaction = await this.sequelize.transaction();
     try {
-      const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction, });
-      if (!sender) { await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'Sender user not found'); }
-
-      const { assignee_guids, ...taskData } = createDto as any;
+      const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction });
+      if (!sender) {
+        await transaction.rollback();
+        return errorResponse(HttpStatus.NOT_FOUND, 'Sender user not found');
+      }
+      let { assignee_guids, ...taskData } = createDto as any;
+      if (!assignee_guids) {
+        assignee_guids = [];
+      } else if (typeof assignee_guids === 'string') {
+        assignee_guids = [assignee_guids];
+      } else if (!Array.isArray(assignee_guids)) {
+        assignee_guids = Object.values(assignee_guids);
+      }
       const createdTask = await this.messageRepository.create({
         ...taskData,
         isMessage: false,
         adm_user_guid: sender.guid,
       }, { transaction });
-
-      if (assignee_guids && assignee_guids.length > 0) {
+      if (assignee_guids.length > 0) {
         const assigneeRecords = assignee_guids.map((user_guid: string) => ({
           task_guid: createdTask.guid,
           assignee_guid: user_guid,
           isRead: false,
         }));
-        await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction, });
+        await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
       }
       await transaction.commit();
       const newTask = await this.findMessageByGuid(createdTask.guid);
@@ -424,11 +436,14 @@ export class MessagesService {
     const transaction = await this.sequelize.transaction();
     try {
       const { guid, assignee_guids, ...updateData } = updateDto as any;
+
       const message = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!message) {
         await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
       }
-
+      if (!updateData.images || updateData.images.length === 0) {
+        delete updateData.images;
+      }
       await this.messageRepository.update(updateData, { where: { guid }, transaction });
 
       if (assignee_guids) {
@@ -456,25 +471,42 @@ export class MessagesService {
   async updateTask(updateDto: UpdateTaskDto) {
     const transaction = await this.sequelize.transaction();
     try {
-      const { guid, assignee_guids, ...updateData } = updateDto as any;
+      let { guid, assignee_guids, images, ...updateData } = updateDto as any;
+      if (!assignee_guids) {
+        assignee_guids = [];
+      } else if (typeof assignee_guids === 'string') {
+        assignee_guids = [assignee_guids];
+      } else if (!Array.isArray(assignee_guids)) {
+        assignee_guids = Object.values(assignee_guids);
+      }
       const task = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!task) {
         await transaction.rollback();
         return errorResponse(HttpStatus.NOT_FOUND, 'Task not found');
       }
+
+      if (images && images.length > 0 && task.images && Array.isArray(task.images)) {
+        for (const oldImage of task.images) {
+          const filePath = path.join(process.cwd(), oldImage);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        }
+        updateData.images = images.map((file: any) => file.path || file);
+      }
+
       await this.messageRepository.update(updateData, {
         where: { guid }, transaction
       });
-      if (assignee_guids) {
-        await this.taskAssigneeRepository.destroy({ where: { task_guid: guid }, transaction });
-        if (assignee_guids.length > 0) {
-          const assigneeRecords = assignee_guids.map((user_guid: string) => ({
-            task_guid: guid,
-            assignee_guid: user_guid,
-            isRead: false,
-          }));
-          await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
-        }
+
+      await this.taskAssigneeRepository.destroy({ where: { task_guid: guid }, transaction });
+      if (assignee_guids.length > 0) {
+        const assigneeRecords = assignee_guids.map((user_guid: string) => ({
+          task_guid: guid,
+          assignee_guid: user_guid,
+          isRead: false,
+        }));
+        await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
       }
       await transaction.commit();
       const updatedTask = await this.findMessageByGuid(guid);
@@ -494,17 +526,31 @@ export class MessagesService {
 
 
 
+
   async deleteMessageOrTask(guid: string) {
+    const transaction = await this.sequelize.transaction();
     try {
-      const record = await this.messageRepository.findOne({ where: { guid } });
+      const record = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!record) return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
 
-      await this.messageRepository.destroy({ where: { guid } });
+      await this.messageRepository.destroy({ where: { guid }, transaction });
+      await transaction.commit();
+
+      if (record.images && Array.isArray(record.images) && record.images.length > 0) {
+        for (const imagePath of record.images) {
+          const fullPath = path.join(process.cwd(), imagePath);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+          }
+        }
+      }
       return { status: 200, message: 'Record deleted successfully' };
     } catch (error: any) {
+      await transaction.rollback();
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Delete operation failed', error);
     }
   }
+
 
   async markAsRead(updateReadStatusDto: UpdateReadStatusDto) {
     const transaction = await this.sequelize.transaction();

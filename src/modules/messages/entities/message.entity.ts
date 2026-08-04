@@ -65,11 +65,18 @@ export class Message extends Model<Message> {
   })
   declare isMessage: boolean;
 
+  @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    defaultValue: [],
+  })
+  declare images: string[];
+
   @HasMany(() => TaskAssignee, {
     foreignKey: 'task_guid',
     sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
   })
   declare empltaskAssignee: TaskAssignee[];
 

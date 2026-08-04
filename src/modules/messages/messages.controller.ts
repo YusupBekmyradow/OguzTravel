@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateTaskDto } from './dto/create-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -10,6 +10,8 @@ import { UpdateReadStatusDto } from './dto/update-read-status.dto';
 
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../guards/permissions.guard';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ImagesService } from '../../common/image-upload/image-upload.module';
 
 @ApiTags('Notification & Tasks')
 @ApiBearerAuth('bearerAuth')
@@ -17,11 +19,12 @@ import { PermissionsGuard } from '../../guards/permissions.guard';
 @RequirePermissions('/notifications', '/tasks')
 @Controller('messages')
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) { }
+  constructor(private readonly messagesService: MessagesService,
+    private readonly imagesService: ImagesService
+  ) { }
 
 
   @Get('/get-all-notification')
-  @ApiBearerAuth('bearerAuth')
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiQuery({ name: 'assignee_guid', required: false })
@@ -48,7 +51,6 @@ export class MessagesController {
 
 
   @Get('/get-all-tasks')
-  @ApiBearerAuth('bearerAuth')
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiQuery({ name: 'status', required: false, example: 1 })
@@ -56,7 +58,7 @@ export class MessagesController {
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'priority', required: false, example: 'urgent' })
   @ApiQuery({ name: 'due_date', required: false })
-  @ApiQuery({ name: 'assignee_guid', required: false }) 
+  @ApiQuery({ name: 'assignee_guid', required: false })
   async getAllTasks(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
@@ -65,7 +67,7 @@ export class MessagesController {
     @Query('priority') priority?: string,
     @Query('due_date') due_date?: string,
     @Query('search') search?: string,
-    @Query('assignee_guid') assignee_guid?: string, 
+    @Query('assignee_guid') assignee_guid?: string,
   ) {
     return this.messagesService.getAllTasks(
       page ? Number(page) : 1,
@@ -82,7 +84,6 @@ export class MessagesController {
 
 
   @Get('/get-tasks-by-status')
-  @ApiBearerAuth('bearerAuth')
   @ApiQuery({ name: 'status', required: true, example: 1 })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -98,10 +99,9 @@ export class MessagesController {
     );
   }
 
-  
+
 
   @Post('/add-notification')
-  @ApiBearerAuth('bearerAuth')
   async addMessage(@Req() req, @Body() createDto: CreateMessageDto) {
     const senderGuid = req.user.guid;
     return this.messagesService.addMessage(senderGuid, createDto);
@@ -109,34 +109,50 @@ export class MessagesController {
 
 
   @Patch('/update-notification')
-  @ApiBearerAuth('bearerAuth')
   async updateMessage(@Body() updateDto: UpdateMessageDto) {
     return this.messagesService.updateMessage(updateDto);
   }
 
 
   @Post('/add-task')
-  @ApiBearerAuth('bearerAuth')
-  async addTask(@Req() req, @Body() createDto: CreateTaskDto) {
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('images', 10))
+  async addTask(@Req() req, @Body() createDto: CreateTaskDto, @UploadedFiles() files: Express.Multer.File[],) {
     const senderGuid = req.user.guid;
+    if (files && files.length > 0) {
+      const savedImages = await this.imagesService.saveImages(files);
+      createDto.images = savedImages;
+    }
     return this.messagesService.addTask(senderGuid, createDto);
   }
 
 
   @Patch('/update-task')
-  @ApiBearerAuth('bearerAuth')
-  async updateTask(@Body() updateDto: UpdateTaskDto) {
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('images', 10))
+  async updateTask(@Body() updateDto: UpdateTaskDto,
+    @UploadedFiles() files: Express.Multer.File[]) {
+    if (files && files.length > 0) {
+      const savedImages = await this.imagesService.saveImages(files);
+      updateDto.images = savedImages;
+    }
     return this.messagesService.updateTask(updateDto);
   }
 
+
   @Delete('/delete-notificOrmessage')
-  @ApiBearerAuth('bearerAuth')
+  @ApiBody({
+    schema: {
+      type: 'object', properties: {
+        guid: { type: 'string' }
+      }
+    }
+  })
   async delete(@Body('guid') guid: string) {
     return this.messagesService.deleteMessageOrTask(guid);
   }
 
   @Patch('/notification-read')
-  @ApiBearerAuth('bearerAuth')
   async markAsRead(@Body() updateReadStatusDto: UpdateReadStatusDto) {
     return this.messagesService.markAsRead(updateReadStatusDto);
   }

@@ -44,8 +44,8 @@ export class TaskAssignee extends Model<TaskAssignee> {
   @BelongsTo(() => User, {
     foreignKey: 'assignee_guid',
     targetKey: 'guid',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL',
   })
   declare user: User;
 }
