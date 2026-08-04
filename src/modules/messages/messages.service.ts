@@ -11,7 +11,7 @@ import { CreateTaskDto } from './dto/create-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateReadStatusDto } from './dto/update-read-status.dto';
 import { Sequelize } from 'sequelize-typescript';
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 
 @Injectable()
 export class MessagesService {
@@ -105,7 +105,7 @@ export class MessagesService {
                 include: [
                   {
                     model: Employee,
-                    as: 'employee', 
+                    as: 'employee',
                     where: Object.keys(employeeIncludeWhere).length > 0 ? employeeIncludeWhere : undefined,
                     required: !!search,
                     attributes: ['guid', 'fullName'],
@@ -144,21 +144,18 @@ export class MessagesService {
   async getAllTasks(
     page: number = 1,
     limit: number = 10,
-    assignee_guid?: string,
-    isRead?: string,
-    priority?: string,
     status?: number,
+    type?: string | boolean,
+    priority?: string,
     due_date?: string,
     search?: string,
-    type?: string | boolean,
+    assignee_guid?: string,
   ) {
     try {
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
       const offset = (pageNum - 1) * limitNum;
-
       const whereClause: any = { isMessage: false };
-
       if (priority) whereClause.priority = priority;
       if (status !== undefined) whereClause.status = Number(status);
       if (due_date) {
@@ -166,9 +163,9 @@ export class MessagesService {
           [Op.between]: [`${due_date} 00:00:00`, `${due_date} 23:59:59`],
         };
       }
+
       const taskAssigneeWhere: any = {};
       if (assignee_guid) taskAssigneeWhere.assignee_guid = assignee_guid;
-      if (isRead !== undefined) taskAssigneeWhere.isRead = isRead === 'true';
 
       const employeeIncludeWhere: any = {};
       if (search) employeeIncludeWhere.fullName = { [Op.iLike]: `%${search}%` };
@@ -184,7 +181,7 @@ export class MessagesService {
           model: TaskAssignee,
           as: 'empltaskAssignee',
           where: Object.keys(taskAssigneeWhere).length > 0 ? taskAssigneeWhere : undefined,
-          required: !!assignee_guid || isRead !== undefined || !!search,
+          required: !!assignee_guid || !!search,
           include: [
             {
               model: User,
@@ -233,7 +230,7 @@ export class MessagesService {
         offset,
         order: [['createdAt', 'DESC']],
         distinct: true,
-        subQuery: false
+        subQuery: false,
       });
 
       return {
@@ -247,6 +244,112 @@ export class MessagesService {
           currentPage: pageNum,
         },
         message: 'Tasks fetched successfully',
+      };
+    } catch (error: any) {
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Tasks fetch failed', error);
+    }
+  }
+
+
+
+
+  async getTasksByStatus(
+    status?: number,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    try {
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
+
+      const statusVal = status !== undefined ? Number(status) : null;
+      const countQuery = `
+        SELECT COUNT(*) as total 
+        FROM "tbl_messages" 
+        WHERE (:statusVal::int IS NULL OR "status" = :statusVal)
+      `;
+      const countResult: any = await this.sequelize.query(
+        countQuery,
+        {
+          replacements: { statusVal },
+          type: QueryTypes.SELECT,
+        },
+      );
+      const totalItems = Number(countResult[0]?.total || 0);
+      const dataQuery = `
+        SELECT 
+          m.*,
+          (
+            SELECT json_build_object(
+              'guid', u.guid,
+              'phone_number', u.phone_number,
+              'role', u.role,
+              'employee', (
+                SELECT json_build_object('guid', e.guid, 'fullName', e."fullName")
+                FROM "tbl_employees" e
+                WHERE e.guid = u.employee_guid
+              )
+            )
+            FROM "tbl_users" u
+            WHERE u.guid = m.adm_user_guid
+          ) as admuser,
+          COALESCE(
+            (
+              SELECT json_agg(
+                json_build_object(
+                  'guid', ta.guid,
+                  'task_guid', ta.task_guid,
+                  'assignee_guid', ta.assignee_guid,
+                  'isRead', ta."isRead",
+                  'createdAt', ta."createdAt",
+                  'updatedAt', ta."updatedAt",
+                  'user', (
+                    SELECT json_build_object(
+                      'guid', tu.guid,
+                      'phone_number', tu.phone_number,
+                      'role', tu.role,
+                      'employee', (
+                        SELECT json_build_object('guid', te.guid, 'fullName', te."fullName")
+                        FROM "tbl_employees" te
+                        WHERE te.guid = tu.employee_guid
+                      )
+                    )
+                    FROM "tbl_users" tu
+                    WHERE tu.guid = ta.assignee_guid
+                  )
+                )
+              )
+              FROM "tbl_task_assignees" ta
+              WHERE ta.task_guid = m.guid
+            ),
+            '[]'::json
+          ) as "empltaskAssignee"
+        FROM "tbl_messages" m
+        WHERE (:statusVal::int IS NULL OR m."status" = :statusVal)
+        ORDER BY m."createdAt" DESC
+        LIMIT :limitNum OFFSET :offset
+      `;
+
+      const rows = await this.sequelize.query(
+        dataQuery,
+        {
+          replacements: { statusVal, limitNum, offset },
+          type: QueryTypes.SELECT,
+        },
+      );
+
+      return {
+        status: 200,
+        data: rows,
+        meta: {
+          totalItems: totalItems,
+          itemCount: rows.length,
+          itemsPerPage: limitNum,
+          totalPages: Math.ceil(totalItems / limitNum),
+          currentPage: pageNum,
+        },
+        message: 'Tasks by status fetched successfully',
       };
     } catch (error: any) {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Tasks fetch failed', error);

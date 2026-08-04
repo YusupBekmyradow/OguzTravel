@@ -11,5 +11,10 @@ export class CreateMessageDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  declare title?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
   declare description?: string;
 }

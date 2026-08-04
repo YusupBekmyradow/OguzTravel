@@ -11,7 +11,7 @@ import { UpdateReadStatusDto } from './dto/update-read-status.dto';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 
-@ApiTags('Messages & Tasks')
+@ApiTags('Notification & Tasks')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @RequirePermissions('/notifications', '/tasks')
@@ -27,7 +27,7 @@ export class MessagesController {
   @ApiQuery({ name: 'assignee_guid', required: false })
   @ApiQuery({ name: 'isRead', required: false })
   @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'createdAt', required: false})
+  @ApiQuery({ name: 'createdAt', required: false })
   async getAll(
     @Query('page') page: number,
     @Query('limit') limit: number,
@@ -51,31 +51,56 @@ export class MessagesController {
   @ApiBearerAuth('bearerAuth')
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiQuery({ name: 'status', required: false, example: 1 })
+  @ApiQuery({ name: 'type', required: false, example: false })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'priority', required: false, example: 'urgent' })
+  @ApiQuery({ name: 'due_date', required: false })
+  @ApiQuery({ name: 'assignee_guid', required: false }) 
   async getAllTasks(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
-    @Query('assignee_guid') assignee_guid?: string,
-    @Query('isRead') isRead?: string,
-    @Query('priority') priority?: string,
     @Query('status') status?: number,
+    @Query('type') type?: string,
+    @Query('priority') priority?: string,
     @Query('due_date') due_date?: string,
     @Query('search') search?: string,
-    @Query('type') type?: string,
+    @Query('assignee_guid') assignee_guid?: string, 
   ) {
-    return this.messagesService.getAllTasks(page,
-      limit,
-      assignee_guid,
-      isRead,
-      priority,
+    return this.messagesService.getAllTasks(
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 10,
       status ? Number(status) : undefined,
+      type === 'true',
+      priority,
       due_date,
       search,
-      type,
+      assignee_guid,
     );
   }
 
 
-  @Post('/add-message')
+
+  @Get('/get-tasks-by-status')
+  @ApiBearerAuth('bearerAuth')
+  @ApiQuery({ name: 'status', required: true, example: 1 })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  async getTasksByStatus(
+    @Query('status') status: number,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.messagesService.getTasksByStatus(
+      status ? Number(status) : undefined,
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 10,
+    );
+  }
+
+  
+
+  @Post('/add-notification')
   @ApiBearerAuth('bearerAuth')
   async addMessage(@Req() req, @Body() createDto: CreateMessageDto) {
     const senderGuid = req.user.guid;
@@ -83,7 +108,7 @@ export class MessagesController {
   }
 
 
-  @Patch('/update-message')
+  @Patch('/update-notification')
   @ApiBearerAuth('bearerAuth')
   async updateMessage(@Body() updateDto: UpdateMessageDto) {
     return this.messagesService.updateMessage(updateDto);
@@ -104,7 +129,7 @@ export class MessagesController {
     return this.messagesService.updateTask(updateDto);
   }
 
-  @Delete('/delete-taskormessage')
+  @Delete('/delete-notificOrmessage')
   @ApiBearerAuth('bearerAuth')
   async delete(@Body('guid') guid: string) {
     return this.messagesService.deleteMessageOrTask(guid);
