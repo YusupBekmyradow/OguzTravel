@@ -69,6 +69,18 @@ export class Message extends Model<Message> {
     type: DataType.JSONB,
     allowNull: true,
     defaultValue: [],
+    get() {
+      const rawValue = this.getDataValue('images');
+      if (!rawValue) return [];
+      if (typeof rawValue === 'string') {
+        try {
+          return JSON.parse(rawValue);
+        } catch (e) {
+          return [];
+        }
+      }
+      return Array.isArray(rawValue) ? rawValue : [];
+    }
   })
   declare images: string[];
 

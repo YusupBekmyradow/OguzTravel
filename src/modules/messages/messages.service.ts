@@ -145,7 +145,8 @@ export class MessagesService {
 
 
 
-  async getAllTasks(
+
+async getAllTasks(
     page: number = 1,
     limit: number = 10,
     status?: number,
@@ -159,58 +160,68 @@ export class MessagesService {
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
       const offset = (pageNum - 1) * limitNum;
-      const whereClause: any = { isMessage: false };
-      if (priority) whereClause.priority = priority;
-      if (status !== undefined) whereClause.status = Number(status);
+      const isGrouped = type === true || type === 'true';
+
+      let whereConditions = `WHERE t."isMessage" = false`;
+      const replacements: any = { limit: limitNum, offset };
+
+      if (priority) {
+        whereConditions += ` AND t.priority = :priority`;
+        replacements.priority = priority;
+      }
+      if (status !== undefined) {
+        whereConditions += ` AND t.status = :status`;
+        replacements.status = Number(status);
+      }
       if (due_date) {
-        whereClause.due_date = {
-          [Op.between]: [`${due_date} 00:00:00`, `${due_date} 23:59:59`],
-        };
+        whereConditions += ` AND t.due_date BETWEEN :startDate AND :endDate`;
+        replacements.startDate = `${due_date} 00:00:00`;
+        replacements.endDate = `${due_date} 23:59:59`;
+      }
+      if (search) {
+        whereConditions += ` AND emp."fullName" ILIKE :search`;
+        replacements.search = `%${search}%`;
+      }
+      if (assignee_guid) {
+        whereConditions += ` AND ta.assignee_guid = :assignee_guid`;
+        replacements.assignee_guid = assignee_guid;
       }
 
-      const taskAssigneeWhere: any = {};
-      if (assignee_guid) taskAssigneeWhere.assignee_guid = assignee_guid;
+      const baseQuery = `
+        SELECT 
+          t.*,
+          COALESCE(
+            JSON_AGG(
+              DISTINCT JSONB_BUILD_OBJECT(
+                'guid', u.guid,
+                'phone_number', u.phone_number,
+                'fullName', emp."fullName"
+              )
+            ) FILTER (WHERE ta.task_guid IS NOT NULL), '[]'
+          ) AS assignees,
+          COALESCE(
+            JSON_BUILD_OBJECT(
+              'guid', adm.guid,
+              'phone_number', adm.phone_number,
+              'role', adm.role,
+              'fullName', adm_emp."fullName"
+            ), NULL
+          ) AS admuser
+        FROM tbl_messages t
+        LEFT JOIN tbl_task_assignees ta ON t.guid = ta.task_guid
+        LEFT JOIN tbl_users u ON ta.assignee_guid = u.guid
+        LEFT JOIN tbl_employees emp ON u.employee_guid = emp.guid
+        LEFT JOIN tbl_users adm ON t.adm_user_guid = adm.guid
+        LEFT JOIN tbl_employees adm_emp ON adm.employee_guid = adm_emp.guid
+        ${whereConditions}
+        GROUP BY t.guid, adm.guid, adm_emp.guid
+        ORDER BY t."createdAt" DESC
+      `;
 
-      const employeeIncludeWhere: any = {};
-      if (search) employeeIncludeWhere.fullName = { [Op.iLike]: `%${search}%` };
-
-      const includeOptions = [
-        {
-          model: User,
-          as: 'admuser',
-          attributes: ['guid', 'phone_number', 'role'],
-          include: [{ model: Employee, attributes: ['guid', 'fullName'] }],
-        },
-        {
-          model: TaskAssignee,
-          as: 'empltaskAssignee',
-          where: Object.keys(taskAssigneeWhere).length > 0 ? taskAssigneeWhere : undefined,
-          required: !!assignee_guid || !!search,
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['guid', 'phone_number', 'role'],
-              include: [
-                {
-                  model: Employee,
-                  as: 'employee',
-                  where: Object.keys(employeeIncludeWhere).length > 0 ? employeeIncludeWhere : undefined,
-                  required: !!search,
-                  attributes: ['guid', 'fullName'],
-                },
-              ],
-            },
-          ],
-        },
-      ];
-
-      const isGrouped = type === true || type === 'true';
       if (isGrouped) {
-        const allTasks = await this.messageRepository.findAll({
-          where: whereClause,
-          include: includeOptions,
-          order: [['createdAt', 'DESC']],
+        const allTasks = await this.sequelize.query(baseQuery, {
+          replacements,
+          type: QueryTypes.SELECT,
         });
 
         const statusGroups: { [key: number]: any[] } = {};
@@ -227,14 +238,24 @@ export class MessagesService {
         };
       }
 
-      const { rows, count } = await this.messageRepository.findAndCountAll({
-        where: whereClause,
-        include: includeOptions,
-        limit: limitNum,
-        offset,
-        order: [['createdAt', 'DESC']],
-        distinct: true,
-        subQuery: false,
+      const countQuery = `
+        SELECT COUNT(DISTINCT t.guid) as total
+        FROM tbl_messages t
+        LEFT JOIN tbl_task_assignees ta ON t.guid = ta.task_guid
+        LEFT JOIN tbl_users u ON ta.assignee_guid = u.guid
+        LEFT JOIN tbl_employees emp ON u.employee_guid = emp.guid
+        ${whereConditions}
+      `;
+      const countResult: any = await this.sequelize.query(countQuery, {
+        replacements,
+        type: QueryTypes.SELECT,
+      });
+      const count = Number(countResult[0]?.total || 0);
+
+      const paginatedQuery = `${baseQuery} LIMIT :limit OFFSET :offset`;
+      const rows = await this.sequelize.query(paginatedQuery, {
+        replacements,
+        type: QueryTypes.SELECT,
       });
 
       return {
@@ -253,6 +274,126 @@ export class MessagesService {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Tasks fetch failed', error);
     }
   }
+  // async getAllTasks(
+  //   page: number = 1,
+  //   limit: number = 10,
+  //   status?: number,
+  //   type?: string | boolean,
+  //   priority?: string,
+  //   due_date?: string,
+  //   search?: string,
+  //   assignee_guid?: string,
+  // ) {
+  //   try {
+  //     const pageNum = Number(page) || 1;
+  //     const limitNum = Number(limit) || 10;
+  //     const offset = (pageNum - 1) * limitNum;
+  //     const whereClause: any = { isMessage: false };
+  //     if (priority) whereClause.priority = priority;
+  //     if (status !== undefined) whereClause.status = Number(status);
+  //     if (due_date) {
+  //       whereClause.due_date = {
+  //         [Op.between]: [`${due_date} 00:00:00`, `${due_date} 23:59:59`],
+  //       };
+  //     }
+  //     const taskAssigneeWhere: any = {};
+  //     if (assignee_guid) taskAssigneeWhere.assignee_guid = assignee_guid;
+
+  //     const employeeIncludeWhere: any = {};
+  //     if (search) employeeIncludeWhere.fullName = { [Op.iLike]: `%${search}%` };
+  //     const includeOptions = [
+  //       {
+  //         model: User,
+  //         as: 'admuser',
+  //         attributes: ['guid', 'phone_number', 'role'],
+  //         include: [{ model: Employee, attributes: ['guid', 'fullName'] }],
+  //       },
+  //       {
+  //         model: TaskAssignee,
+  //         as: 'empltaskAssignee',
+  //         where: Object.keys(taskAssigneeWhere).length > 0 ? taskAssigneeWhere : undefined,
+  //         required: !!assignee_guid || !!search,
+  //         include: [
+  //           {
+  //             model: User,
+  //             as: 'user',
+  //             attributes: ['guid', 'phone_number', 'role'],
+  //             include: [
+  //               {
+  //                 model: Employee,
+  //                 as: 'employee',
+  //                 where: Object.keys(employeeIncludeWhere).length > 0 ? employeeIncludeWhere : undefined,
+  //                 required: !!search,
+  //                 attributes: ['guid', 'fullName'],
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     ];
+  //     const formatTaskData = (tasks: any[]) => {
+  //       return tasks.map((task: any) => {
+  //         const plainTask = task.toJSON ? task.toJSON() : task;
+  //         const assignees = plainTask.empltaskAssignee
+  //           ? plainTask.empltaskAssignee.map((item: any) => item.user || item)
+  //           : [];
+  //         delete plainTask.empltaskAssignee;
+  //         return {
+  //           ...plainTask,
+  //           assignees: Array.isArray(assignees) ? assignees : [],
+  //         };
+  //       });
+  //     };
+
+  //     const isGrouped = type === true || type === 'true';
+  //     if (isGrouped) {
+  //       const allTasks = await this.messageRepository.findAll({
+  //         where: whereClause,
+  //         include: includeOptions,
+  //         order: [['createdAt', 'DESC']],
+  //       });
+  //       const formattedTasks = formatTaskData(allTasks);
+
+  //       const statusGroups: { [key: number]: any[] } = {};
+  //       formattedTasks.forEach((task: any) => {
+  //         const st = task.status !== undefined && task.status !== null ? Number(task.status) : 0;
+  //         if (!statusGroups[st]) statusGroups[st] = [];
+  //         statusGroups[st].push(task);
+  //       });
+
+  //       return {
+  //         status: 200,
+  //         data: Object.values(statusGroups),
+  //         message: 'Tasks grouped by status successfully',
+  //       };
+  //     }
+
+  //     const { rows, count } = await this.messageRepository.findAndCountAll({
+  //       where: whereClause,
+  //       include: includeOptions,
+  //       limit: limitNum,
+  //       offset,
+  //       order: [['createdAt', 'DESC']],
+  //       distinct: true,
+  //       subQuery: false,
+  //     });
+  //     const formattedRows = formatTaskData(rows);
+  //     return {
+  //       status: 200,
+  //       data: rows,
+  //       meta: {
+  //         totalItems: count,
+  //         itemCount: formattedRows.length,
+  //         itemsPerPage: limitNum,
+  //         totalPages: Math.ceil(count / limitNum),
+  //         currentPage: pageNum,
+  //       },
+  //       message: 'Tasks fetched successfully',
+  //     };
+  //   } catch (error: any) {
+  //     return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Tasks fetch failed', error);
+  //   }
+  // }
 
 
 
