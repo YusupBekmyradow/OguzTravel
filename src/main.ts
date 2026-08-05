@@ -26,6 +26,7 @@ async function zero() {
   app.useGlobalInterceptors(new LoggerInterceptor());
   app.useGlobalInterceptors(new ResponseInterceptor());
 
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
   app.use('/uploads', express.static(join(process.cwd(), '..', 'uploads')));
 
   app.setGlobalPrefix('api/v1');

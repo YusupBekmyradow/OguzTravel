@@ -12,6 +12,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateReadStatusDto } from './dto/update-read-status.dto';
 import { Sequelize } from 'sequelize-typescript';
 import { Op, QueryTypes } from 'sequelize';
+import { ImagesService } from '../../common/image-upload/image-upload.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -22,6 +23,7 @@ export class MessagesService {
     @InjectModel(User) private readonly userRepository: typeof User,
     @InjectModel(TaskAssignee) private readonly taskAssigneeRepository: typeof TaskAssignee,
     private readonly sequelize: Sequelize,
+    private readonly imagesService: ImagesService,
   ) { }
 
   private getIncludes() {
@@ -486,12 +488,7 @@ export class MessagesService {
       }
 
       if (images && images.length > 0 && task.images && Array.isArray(task.images)) {
-        for (const oldImage of task.images) {
-          const filePath = path.join(process.cwd(), oldImage);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
-        }
+        this.imagesService.deleteFiles(task.images);
         updateData.images = images.map((file: any) => file.path || file);
       }
 
@@ -531,18 +528,15 @@ export class MessagesService {
     const transaction = await this.sequelize.transaction();
     try {
       const record = await this.messageRepository.findOne({ where: { guid }, transaction });
-      if (!record) return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
-
+      if (!record) {
+        await transaction.rollback();
+        return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
+      }
       await this.messageRepository.destroy({ where: { guid }, transaction });
       await transaction.commit();
 
       if (record.images && Array.isArray(record.images) && record.images.length > 0) {
-        for (const imagePath of record.images) {
-          const fullPath = path.join(process.cwd(), imagePath);
-          if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
-          }
-        }
+        this.imagesService.deleteFiles(record.images);
       }
       return { status: 200, message: 'Record deleted successfully' };
     } catch (error: any) {
