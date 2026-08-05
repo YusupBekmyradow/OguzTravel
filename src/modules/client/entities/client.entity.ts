@@ -105,6 +105,13 @@ export class Client extends Model<Client> {
   })
   declare vip?: boolean;
 
+  @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    defaultValue: [],
+  })
+  declare images: string[];
+
   @HasMany(() => B2b, {
     foreignKey: 'client_guid',
     sourceKey: 'guid',

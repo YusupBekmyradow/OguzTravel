@@ -17,9 +17,9 @@ import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Report Share')
-// @ApiBearerAuth('bearerAuth')
-// @UseGuards(JwtAuthGuard, PermissionsGuard)
-// @RequirePermissions('/report-share')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/reports')
 @Controller('report-share')
 export class ReportShareController {
   constructor(private readonly reportShareService: ReportShareService) { }

@@ -47,6 +47,15 @@ export class CreateClientDto {
 
     @ApiPropertyOptional()
     @IsBoolean()
+    @Transform(({ value }) => value === 'true' || value === true)
     @IsOptional()
     declare vip?: boolean;
+
+    @ApiPropertyOptional({
+        type: 'array',
+        items: { type: 'string', format: 'binary' },
+        required: false,
+    })
+    @IsOptional()
+    declare images?: any;
 }

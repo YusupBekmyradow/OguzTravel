@@ -1,12 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
-import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { UpdatePassportDto } from './dto/updata-passport.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ImagesService } from '../../common/image-upload/image-upload.module';
 
 @ApiTags('Clients')
 @ApiBearerAuth('bearerAuth')
@@ -14,12 +16,22 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 @RequirePermissions('/clients')
 @Controller('client')
 export class ClientController {
-  constructor(private readonly clientService: ClientService) { }
+  constructor(private readonly clientService: ClientService,
+    private readonly imagesService: ImagesService
+  ) { }
+
 
   @Post('/add-client')
-  async create(@Body() createClientDto: CreateClientDto) {
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('images', 10))
+  async create(@Body() createClientDto: CreateClientDto, @UploadedFiles() files: Express.Multer.File[]) {
+    if (files && files.length > 0) {
+      const savedImages = await this.imagesService.saveImages(files);
+      createClientDto.images = savedImages;
+    }
     return this.clientService.addClient(createClientDto);
   }
+
 
   @Get('/get-all-client')
   async findAll(
@@ -40,8 +52,15 @@ export class ClientController {
 
 
   @Patch('/update-client')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('images', 10))
   async update(
-    @Body() updateClientDto: UpdateClientDto) {
+    @Body() updateClientDto: UpdateClientDto,
+    @UploadedFiles() files: Express.Multer.File[]) {
+    if (files && files.length > 0) {
+      const savedImages = await this.imagesService.saveImages(files);
+      updateClientDto.images = savedImages;
+    }
     return this.clientService.updateClient(updateClientDto);
   }
 
@@ -59,7 +78,14 @@ export class ClientController {
 
 
   @Patch('update-passport')
-  updatePassport(@Body() updatePassportDto: UpdatePassportDto) {
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('images', 10))
+  async updatePassport(@Body() updatePassportDto: UpdatePassportDto,
+    @UploadedFiles() files: Express.Multer.File[]) {
+    if (files && files.length > 0) {
+      const savedImages = await this.imagesService.saveImages(files);
+      updatePassportDto.images = savedImages;
+    }
     return this.clientService.updatePassportToHistory(updatePassportDto);
   }
 }

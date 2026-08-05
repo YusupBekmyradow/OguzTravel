@@ -5,15 +5,17 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Client } from './entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
-import { off } from 'process';
 import { Op } from 'sequelize';
-import { filter } from 'rxjs';
+import { Sequelize } from 'sequelize-typescript';
 import { UpdatePassportDto } from './dto/updata-passport.dto';
+import { ImagesService } from '../../common/image-upload/image-upload.module';
 
 @Injectable()
 export class ClientService {
   constructor(
-    @InjectModel(Client) private clientRepository: typeof Client
+    @InjectModel(Client) private clientRepository: typeof Client,
+    private readonly sequelize: Sequelize,
+    private readonly imagesService: ImagesService,
   ) { }
 
   async addClient(createClientDto: CreateClientDto) {
@@ -86,32 +88,55 @@ export class ClientService {
 
 
   async updateClient(updateClientDto: UpdateClientDto) {
+    const transaction = await this.sequelize.transaction();
     try {
-      const client = await this.clientRepository.findByPk(updateClientDto.guid);
+      const { guid, images, ...updateData } = updateClientDto as any;
+
+      const client = await this.clientRepository.findByPk(updateClientDto.guid, { transaction });
       if (!client) {
+        await transaction.rollback();
         return errorResponse(HttpStatuses.NOT_FOUND, 'Client not founds')
       }
-      await client.update({
-        ...updateClientDto
-      } as any);
+      if (images && images.length > 0 && client.images && Array.isArray(client.images)) {
+        this.imagesService.deleteFiles(client.images);
+        updateData.images = images.map((file: any) => file.path || file);
+      }
+
+      await client.update(updateData, { transaction });
+      await transaction.commit();
       await client.reload();
-      return successResponse(HttpStatuses.OK, client, 'Client updated successfully')
+      return successResponse(HttpStatuses.OK, client, 'Client updated successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error)
     }
   }
 
-  
+
 
   async deleteClient(guid: string) {
+    const transaction = await this.clientRepository.sequelize?.transaction();
     try {
       const client = await this.clientRepository.findByPk(guid);
       if (!client) {
+        await transaction?.rollback();
         return errorResponse(HttpStatuses.NOT_FOUND, 'Client not found');
       }
-      await client.destroy();
+      if (client.images && Array.isArray(client.images) && client.images.length > 0) {
+        this.imagesService.deleteFiles(client.images);
+      }
+      if (client.passportHistory && Array.isArray(client.passportHistory)) {
+        for (const historyItem of client.passportHistory) {
+          if (historyItem.images && Array.isArray(historyItem.images) && historyItem.images.length > 0) {
+            this.imagesService.deleteFiles(historyItem.images);
+          }
+        }
+      }
+      await client.destroy({ transaction });
+      await transaction?.commit();
+
       return successResponse(HttpStatuses.OK, null, 'Client deleted successfully');
     } catch (error) {
+      await transaction?.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
     }
   }
@@ -127,22 +152,25 @@ export class ClientService {
         passport_number,
         passportExpiryDate,
         passportCountryOfIssue,
-        passportIssueDate
+        passportIssueDate,
+        images
       } = updatePassportDto;
-
       const client = await this.clientRepository.findByPk(guid, { transaction });
       if (!client) {
         await transaction?.rollback();
         return errorResponse(HttpStatuses.NOT_FOUND, 'Client not found');
       }
 
-      if (client.passport_number && client.passport_number !== passport_number) {
+      const formattedNewImages = images ? images.map((file: any) => file.path || file) : [];
+
+      if (client.images && JSON.stringify(client.images) !== JSON.stringify(formattedNewImages)) {
         const oldPassportData = {
           passport_number: client.passport_number,
           passportExpiryDate: client.passportExpiryDate,
           passportCountryOfIssue: client.passportCountryOfIssue,
           passportIssueDate: client.passportIssueDate,
           passport_count: client.passport_count || 1,
+          images: client.images,
           archivedAt: new Date()
         };
 
@@ -159,7 +187,7 @@ export class ClientService {
       client.passportExpiryDate = passportExpiryDate;
       client.passportCountryOfIssue = passportCountryOfIssue;
       client.passportIssueDate = passportIssueDate;
-
+      client.images = formattedNewImages;
       await client.save({ transaction });
       await transaction?.commit();
 
@@ -169,4 +197,7 @@ export class ClientService {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Passport update failed', error);
     }
   }
+
+
+
 }

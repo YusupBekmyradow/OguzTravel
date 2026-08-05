@@ -7,7 +7,6 @@ export class UpdatePassportDto {
   @IsNotEmpty()
   declare guid: string;
 
-
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
@@ -27,4 +26,12 @@ export class UpdatePassportDto {
   @IsDateString()
   @IsOptional()
   declare passportIssueDate?: Date;
+
+  @ApiPropertyOptional({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    required: false,
+  })
+  @IsOptional()
+  declare images?: any;
 }
