@@ -1,0 +1,11 @@
+{
+    "updated":  "Position updated successfully",
+    "notFound":  "No position found with the provided ID",
+    "listFetched":  "Positions retrieved successfully",
+    "deleteFailed":  "Position deletion failed",
+    "updateFailed":  "Position update failed",
+    "createFailed":  "Position creation failed",
+    "deleted":  "Position deleted successfully",
+    "created":  "Position created successfully",
+    "fetchFailed":  "Failed to retrieve positions"
+}

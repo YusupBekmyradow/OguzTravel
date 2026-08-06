@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateTicketPaymentDto } from './dto/create-ticket_payment.dto';
 import { UpdateTicketPaymentDto } from './dto/update-ticket_payment.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -16,6 +17,7 @@ export class TicketPaymentService {
     @InjectModel(TicketPayment) private ticketPaymentRepo: typeof TicketPayment,
     @InjectModel(B2b) private b2bRepository: typeof B2b,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
 
@@ -28,7 +30,7 @@ export class TicketPaymentService {
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
       if (!createdPayment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Ticket payment not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Payment record could not be retrieved after creation');
       }
       const statsResult = await this.getPaymentStats(createTicketPaymentDto.b2b_guid);
       const stats = statsResult as any;
@@ -42,9 +44,9 @@ export class TicketPaymentService {
         ...createdPayment.toJSON(),
         ...statsResult
       };
-      return successResponse(HttpStatuses.CREATED, combinedData, 'TicketPayment created successfully')
+      return successResponse(HttpStatuses.CREATED, combinedData, 'Ticket payment has been created successfully')
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TicketPayment creation failed', error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to create the ticket payment. Please try again later.', error)
     }
   }
 
@@ -74,10 +76,10 @@ export class TicketPaymentService {
           totalPages: Math.ceil(count / currentLimit),
           currentPage: currentPage
         },
-        message: 'TicketPayment fetched successfully'
+        message: 'Ticket payment records retrieved successfully'
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TicketPayment fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve ticket payment records. Please try again later.', error);
     }
   }
 
@@ -85,7 +87,7 @@ export class TicketPaymentService {
   async updateTicketPayment(updateTicketPaymentDto: UpdateTicketPaymentDto) {
     try {
       const ticketPayment = await this.ticketPaymentRepo.findOne({ where: { guid: updateTicketPaymentDto.guid } });
-      if (!ticketPayment) return errorResponse(HttpStatuses.NOT_FOUND, 'TicketPayment not found');
+      if (!ticketPayment) return errorResponse(HttpStatuses.NOT_FOUND, 'No ticket payment record found with the provided ID');
 
       await this.ticketPaymentRepo.update(updateTicketPaymentDto as any, { where: { guid: updateTicketPaymentDto.guid } });
 
@@ -104,10 +106,10 @@ export class TicketPaymentService {
           ...updatedTicketPayment.toJSON(),
           ...stats
         };
-        return successResponse(HttpStatuses.OK, combinedData, 'TicketPayment updated successfully');
+        return successResponse(HttpStatuses.OK, combinedData, 'Ticket payment has been updated successfully');
       }
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update the ticket payment. Please try again later.', error);
     }
   }
 
@@ -118,7 +120,7 @@ export class TicketPaymentService {
         where: { guid }
       });
       if (!payment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'TicketPayment not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'No ticket payment record found with the provided ID');
       }
       const b2b_guid = payment.b2b_guid;
       await this.ticketPaymentRepo.destroy({
@@ -132,10 +134,10 @@ export class TicketPaymentService {
         { is_paid: statsResult.remaining <= 0 },
         { where: { guid: b2b_guid } }
       );
-      return successResponse(HttpStatuses.OK, stats, 'TicketPayment deleted successfully');
+      return successResponse(HttpStatuses.OK, stats, 'Ticket payment has been deleted successfully');
 
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to delete the ticket payment. Please try again later.', error);
     }
   }
 
@@ -164,3 +166,6 @@ export class TicketPaymentService {
     };
   }
 }
+
+
+

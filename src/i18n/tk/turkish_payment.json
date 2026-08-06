@@ -1,0 +1,11 @@
+{
+    "updated":  "Töleg täzelendi",
+    "notFound":  "Görkezilen ID bilen töleg tapylmady",
+    "listFetched":  "Tölegleriň sanawy alyndy",
+    "deleteFailed":  "Tölegi pozmak başartmady",
+    "updateFailed":  "Tölegi täzelemek başartmady",
+    "createFailed":  "Töleg döretmek başartmady",
+    "deleted":  "Töleg pozuldy",
+    "created":  "Turkish Airlines tölegi üstünlikli döredildi",
+    "fetchFailed":  "Tölegleriň sanawyny almak başartmady"
+}

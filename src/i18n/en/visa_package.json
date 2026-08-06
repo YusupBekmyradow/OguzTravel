@@ -1,0 +1,12 @@
+{
+    "updated":  "Visa package updated successfully",
+    "notFound":  "No visa package found with the provided ID",
+    "listFetched":  "Visa packages retrieved successfully",
+    "deleteFailed":  "Visa package deletion failed",
+    "updateFailed":  "Visa package update failed",
+    "createFailed":  "Visa package creation failed",
+    "deleted":  "Visa package deleted successfully",
+    "created":  "Visa package created successfully",
+    "fetchFailed":  "Failed to retrieve visa packages",
+    "categoryNotFound":  "No visa category found with the provided index"
+}

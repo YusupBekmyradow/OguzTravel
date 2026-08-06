@@ -1,0 +1,12 @@
+{
+    "updated":  "User updated successfully",
+    "notFound":  "No user found with the provided ID",
+    "listFetched":  "Users retrieved successfully",
+    "deleteFailed":  "User deletion failed",
+    "updateFailed":  "User update failed",
+    "createFailed":  "User creation failed",
+    "deleted":  "User deleted successfully",
+    "created":  "User account created successfully",
+    "fetchFailed":  "Failed to retrieve users",
+    "employeeNotFound":  "No employee found with the provided ID"
+}

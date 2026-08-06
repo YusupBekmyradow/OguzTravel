@@ -1,0 +1,11 @@
+{
+    "updated":  "B2B petegi täzelendi",
+    "notFound":  "Görkezilen ID bilen B2B petegi tapylmady",
+    "listFetched":  "B2B petegleriň sanawy alyndy",
+    "deleteFailed":  "B2B pedegin pozmak başartmady",
+    "updateFailed":  "B2B pedegin täzelemek başartmady",
+    "createFailed":  "B2B pedegin döretmek başartmady",
+    "deleted":  "B2B petegi pozuldy",
+    "created":  "B2B petegi üstünlikli döredildi",
+    "fetchFailed":  "B2B petegleriň sanawyny almak başartmady"
+}

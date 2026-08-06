@@ -1,0 +1,11 @@
+{
+    "updated":  "Referral letter updated successfully",
+    "notFound":  "No referral letter found with the provided ID",
+    "listFetched":  "Referral letters retrieved successfully",
+    "deleteFailed":  "Referral letter deletion failed",
+    "updateFailed":  "Referral letter update failed",
+    "createFailed":  "Referral letter creation failed",
+    "deleted":  "Referral letter deleted successfully",
+    "created":  "Referral letter created successfully",
+    "fetchFailed":  "Failed to retrieve referral letters"
+}

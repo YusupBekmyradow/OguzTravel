@@ -1,0 +1,11 @@
+{
+    "updated":  "Ugratma haty täzelendi",
+    "notFound":  "Görkezilen ID bilen ugratma haty tapylmady",
+    "listFetched":  "Ugratma hatlarynyň sanawy alyndy",
+    "deleteFailed":  "Haty pozmak başartmady",
+    "updateFailed":  "Haty täzelemek başartmady",
+    "createFailed":  "Ugratma hatyny döretmek başartmady",
+    "deleted":  "Ugratma haty pozuldy",
+    "created":  "Ugratma haty üstünlikli döredildi",
+    "fetchFailed":  "Hatlaryň sanawyny almak başartmady"
+}

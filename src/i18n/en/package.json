@@ -1,0 +1,11 @@
+{
+    "updated":  "Package updated successfully",
+    "notFound":  "No package found with the provided ID",
+    "listFetched":  "Packages retrieved successfully",
+    "deleteFailed":  "Package deletion failed",
+    "updateFailed":  "Package update failed",
+    "createFailed":  "Package creation failed",
+    "deleted":  "Package deleted successfully",
+    "created":  "Package created successfully",
+    "fetchFailed":  "Failed to retrieve packages"
+}

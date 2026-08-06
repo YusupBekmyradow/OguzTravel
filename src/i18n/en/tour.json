@@ -1,0 +1,11 @@
+{
+    "updated":  "Tour updated successfully",
+    "notFound":  "No tour found with the provided ID",
+    "listFetched":  "Tours retrieved successfully",
+    "deleteFailed":  "Tour deletion failed",
+    "updateFailed":  "Tour update failed",
+    "createFailed":  "Tour creation failed",
+    "deleted":  "Tour deleted successfully",
+    "created":  "Tour created successfully",
+    "fetchFailed":  "Failed to retrieve tours"
+}

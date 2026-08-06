@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateReportShareDto } from './dto/create-report_share.dto';
 import { UpdateReportShareDto } from './dto/update-report_share.dto';
@@ -16,6 +17,7 @@ export class ReportShareService {
     private readonly reportShareRepository: typeof ReportShare,
     @InjectModel(Report)
     private readonly reportRepository: typeof Report,
+    private readonly i18n: I18nService,
   ) { }
 
   async getTotalReportCount() {
@@ -24,7 +26,7 @@ export class ReportShareService {
     return totalLetterSum - totalCountSum;
   }
 
-  async addReportShare(createReportShareDto: CreateReportShareDto) {
+  async addReportShare(createReportShareDto: CreateReportShareDto, lang: string) {
     try {
       const reportShare = await this.reportShareRepository.create({
         ...createReportShareDto,
@@ -44,20 +46,20 @@ export class ReportShareService {
         ...successResponse(
           HttpStatuses.CREATED,
           newReportShare,
-          'Report share created successfully',
+          this.i18n.t('report_share.created', { lang }),
         ),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Report share creation failed',
+        this.i18n.t('report_share.createFailed', { lang }),
         error,
       );
     }
   }
 
-  async getAllReportShares(
+  async getAllReportShares(lang: string = 'tk',
     page: number = 1,
     limit: number = 10,
     assignment_opr_guid?: string,
@@ -99,25 +101,25 @@ export class ReportShareService {
           totalPages: Math.ceil(count / currentLimit),
           currentPage: currentPage,
         },
-        message: 'Report shares fetched successfully',
+        message: 'Report share list retrieved successfully',
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Report shares fetch failed',
+        'Failed to retrieve report share list. Please try again later.',
         error,
       );
     }
   }
 
-  async updateReportShare(updateReportShareDto: UpdateReportShareDto) {
+  async updateReportShare(updateReportShareDto: UpdateReportShareDto, lang: string) {
     try {
       const { guid, ...updateData } = updateReportShareDto;
 
       const existingReportShare = await this.reportShareRepository.findByPk(guid);
       if (!existingReportShare) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Report share not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('report_share.notFound', { lang }));
       }
 
       await existingReportShare.update(updateData as any);
@@ -136,24 +138,24 @@ export class ReportShareService {
         ...successResponse(
           HttpStatuses.OK,
           updatedReportShare,
-          'Report share updated successfully',
+          this.i18n.t('report_share.updated', { lang }),
         ),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Report share update failed',
+        this.i18n.t('report_share.updateFailed', { lang }),
         error,
       );
     }
   }
 
-  async deleteReportShare(guid: string) {
+  async deleteReportShare(guid: string, lang: string) {
     try {
       const reportShare = await this.reportShareRepository.findByPk(guid);
       if (!reportShare) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Report share not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('report_share.notFound', { lang }));
       }
 
       await reportShare.destroy();
@@ -164,16 +166,22 @@ export class ReportShareService {
         ...successResponse(
           HttpStatuses.OK,
           null,
-          'Report share deleted successfully',
+          this.i18n.t('report_share.deleted', { lang }),
         ),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Report share delete failed',
+        this.i18n.t('report_share.deleteFailed', { lang }),
         error,
       );
     }
   }
 }
+
+
+
+
+
+

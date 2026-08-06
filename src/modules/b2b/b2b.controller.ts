@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+﻿import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { B2bService } from './b2b.service';
 import { CreateB2bDto } from './dto/create-b2b.dto';
 import { UpdateB2bDto } from './dto/update-b2b.dto';
@@ -6,7 +6,7 @@ import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
-
+import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('B2B')
 @ApiBearerAuth('bearerAuth')
@@ -17,10 +17,9 @@ export class B2bController {
   constructor(private readonly b2bService: B2bService) { }
 
   @Post('/add-b2b')
-  async create(@Body() createB2bDto: CreateB2bDto) {
-    return this.b2bService.addB2b(createB2bDto);
+  async create(@Body() createB2bDto: CreateB2bDto, @I18nLang() lang: string) {
+    return this.b2bService.addB2b(createB2bDto, lang);
   }
-
 
   @Get('/get-all-b2b')
   async getAllB2b(
@@ -33,36 +32,20 @@ export class B2bController {
     @Query('travel_type') travel_type?: number,
     @Query('flight_date') flight_date?: string,
     @Query('is_paid') is_paid?: boolean,
+    @I18nLang() lang: string = 'tk',
   ) {
-    const filters = {
-      datetime,
-      assignment_opr_guid,
-      receiver_opr_guid,
-      status_guid,
-      travel_type: travel_type !== undefined ? Number(travel_type) : undefined,
-      flight_date,
-      is_paid: is_paid !== undefined ? String(is_paid) === 'true' : undefined,
-    };
-    return await this.b2bService.getAllB2b(Number(page), Number(limit), filters);
+    const filters = { datetime, assignment_opr_guid, receiver_opr_guid, status_guid, travel_type: travel_type !== undefined ? Number(travel_type) : undefined, flight_date, is_paid: is_paid !== undefined ? String(is_paid) === 'true' : undefined };
+    return await this.b2bService.getAllB2b(Number(page), Number(limit), filters, lang);
   }
-
 
   @Patch('/update-b2b')
-  async update(@Body() updateB2bDto: UpdateB2bDto) {
-    return this.b2bService.updateB2b(updateB2bDto);
+  async update(@Body() updateB2bDto: UpdateB2bDto, @I18nLang() lang: string) {
+    return this.b2bService.updateB2b(updateB2bDto, lang);
   }
 
-
   @Delete('/delete-b2b')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        guid: { type: 'string' }
-      }
-    }
-  })
-  async remove(@Body('guid') guid: string) {
-    return this.b2bService.deleteB2b(guid);
+  @ApiBody({ schema: { type: 'object', properties: { guid: { type: 'string' } } } })
+  async remove(@Body('guid') guid: string, @I18nLang() lang: string) {
+    return this.b2bService.deleteB2b(guid, lang);
   }
 }

@@ -1,0 +1,11 @@
+{
+    "updated":  "Habar täzelendi",
+    "notFound":  "Görkezilen ID bilen habar tapylmady",
+    "listFetched":  "Habarlaryň sanawy alyndy",
+    "deleteFailed":  "Habary pozmak başartmady",
+    "updateFailed":  "Habary täzelemek başartmady",
+    "createFailed":  "Habar ibermek başartmady",
+    "deleted":  "Habar pozuldy",
+    "created":  "Habar üstünlikli iberildi",
+    "fetchFailed":  "Habarlaryň sanawyny almak başartmady"
+}

@@ -1,0 +1,11 @@
+{
+    "updated":  "Inbound record updated successfully",
+    "notFound":  "No inbound record found with the provided ID",
+    "listFetched":  "Inbound records retrieved successfully",
+    "deleteFailed":  "Inbound deletion failed",
+    "updateFailed":  "Inbound update failed",
+    "createFailed":  "Inbound creation failed",
+    "deleted":  "Inbound record deleted successfully",
+    "created":  "Inbound record created successfully",
+    "fetchFailed":  "Failed to retrieve inbound records"
+}

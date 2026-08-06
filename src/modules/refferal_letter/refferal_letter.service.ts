@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateRefferalLetterDto } from './dto/create-refferal_letter.dto';
 import { UpdateRefferalLetterDto } from './dto/update-refferal_letter.dto';
 import { Employee } from '../employee/entities/employee.entity';
@@ -16,7 +17,8 @@ export class RefferalLetterService {
   constructor(
     @InjectModel(RefferalLetter) private refferalLetterRepo: typeof RefferalLetter,
     @InjectModel(Client) private clientRepository: typeof Client,
-    private sequelize: Sequelize
+    private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   private getRefferalLetterIncludes() {
@@ -59,7 +61,7 @@ export class RefferalLetterService {
 
 
 
-  async addRefferalLetter(createDto: CreateRefferalLetterDto) {
+  async addRefferalLetter(createDto: CreateRefferalLetterDto, lang: string) {
     const transaction = await this.sequelize.transaction();
     try {
       const client = await this.clientRepository.findByPk(createDto.client_guid, { transaction });
@@ -104,7 +106,8 @@ export class RefferalLetterService {
       departure_date?: string | Date;
       return_date?: string | Date;
       contract_date?: string | Date;
-    }
+    },
+    lang: string = 'tk',
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
@@ -158,22 +161,22 @@ export class RefferalLetterService {
           totalPages: Math.ceil(count / limit),
           currentPage: currentPage,
         },
-        message: 'RefferalLetter fetched successfully',
+        message: 'Referral letter list retrieved successfully',
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'RefferalLetter fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve referral letter list. Please try again later.', error);
     }
   }
 
 
   
-  async updateRefferalLetter(updateDto: UpdateRefferalLetterDto) {
+  async updateRefferalLetter(updateDto: UpdateRefferalLetterDto, lang: string) {
     const transaction = await this.sequelize.transaction();
     try {
       const existingLetter = await this.refferalLetterRepo.findByPk(updateDto.guid, { transaction });
       if (!existingLetter) {
         await transaction.rollback();
-        return errorResponse(HttpStatuses.NOT_FOUND, 'RefferalLetter not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Referral letter not found');
       }
       let updateData: any = { ...updateDto };
       const targetClientGuid = updateDto.client_guid || existingLetter.client_guid;
@@ -196,27 +199,33 @@ export class RefferalLetterService {
       return {
         status: 200,
         data: formattedData,
-        message: 'RefferalLetter updated successfully'
+        message: 'Referral letter updated successfully'
       };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update referral letter. Please try again later.', error);
     }
   }
 
 
 
-  async deleteRefferalLetter(guid: string) {
+  async deleteRefferalLetter(guid: string, lang: string) {
     try {
       const refferalLetter = await this.refferalLetterRepo.findByPk(guid);
       if (!refferalLetter) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'RefferalLetter not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Referral letter not found');
       }
       await refferalLetter.destroy();
 
-      return successResponse(HttpStatuses.OK, null, 'RefferalLetter deleted successfully');
+      return successResponse(HttpStatuses.OK, null, 'Referral letter deleted successfully');
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.deleteFailed', { lang }), error)
     }
   }
 }
+
+
+
+
+
+

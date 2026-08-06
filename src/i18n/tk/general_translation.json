@@ -1,0 +1,11 @@
+{
+    "updated":  "Terjime täzelendi",
+    "notFound":  "Görkezilen ID bilen terjime tapylmady",
+    "listFetched":  "Terjimeleriň sanawy alyndy",
+    "deleteFailed":  "Terjimäni pozmak başartmady",
+    "updateFailed":  "Terjimäni täzelemek başartmady",
+    "createFailed":  "Terjimäni döretmek başartmady",
+    "deleted":  "Terjime pozuldy",
+    "created":  "Terjime üstünlikli döredildi",
+    "fetchFailed":  "Terjimeleriň sanawyny almak başartmady"
+}

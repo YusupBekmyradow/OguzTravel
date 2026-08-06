@@ -1,0 +1,6 @@
+{
+    "listFetched":  "Report data retrieved successfully",
+    "created":  "Report created successfully",
+    "createFailed":  "Report creation failed",
+    "fetchFailed":  "Failed to retrieve report data"
+}

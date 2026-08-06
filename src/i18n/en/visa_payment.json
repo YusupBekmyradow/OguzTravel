@@ -1,0 +1,11 @@
+{
+    "updated":  "Visa payment updated successfully",
+    "notFound":  "No visa payment found with the provided ID",
+    "listFetched":  "Visa payments retrieved successfully",
+    "deleteFailed":  "Visa payment deletion failed",
+    "updateFailed":  "Visa payment update failed",
+    "createFailed":  "Visa payment creation failed",
+    "deleted":  "Visa payment deleted successfully",
+    "created":  "Visa payment created successfully",
+    "fetchFailed":  "Failed to retrieve visa payments"
+}

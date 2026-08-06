@@ -1,0 +1,12 @@
+{
+    "updated":  "Işgäriň maglumatlary täzelendi",
+    "notFound":  "Görkezilen ID bilen işgär tapylmady",
+    "listFetched":  "Işgärleriň sanawy alyndy",
+    "deleteFailed":  "Işgäri pozmak başartmady",
+    "updateFailed":  "Işgäri täzelemek başartmady",
+    "createFailed":  "Işgäri döretmek başartmady",
+    "notFoundAfterCreation":  "Işgär döredilenden soň tapylmady",
+    "deleted":  "Işgär üstünlikli pozuldy",
+    "created":  "Işgär üstünlikli döredildi",
+    "fetchFailed":  "Işgärleriň sanawyny almak başartmady"
+}

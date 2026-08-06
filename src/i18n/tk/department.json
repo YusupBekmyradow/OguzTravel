@@ -1,0 +1,11 @@
+{
+    "updated":  "Bölüm täzelendi",
+    "notFound":  "Görkezilen ID bilen bölüm tapylmady",
+    "listFetched":  "Bölümleriň sanawy alyndy",
+    "deleteFailed":  "Bölümi pozmak başartmady",
+    "updateFailed":  "Bölümi täzelemek başartmady",
+    "createFailed":  "Bölümi döretmek başartmady",
+    "deleted":  "Bölüm pozuldy",
+    "created":  "Bölüm üstünlikli döredildi",
+    "fetchFailed":  "Bölümleriň sanawyny almak başartmady"
+}

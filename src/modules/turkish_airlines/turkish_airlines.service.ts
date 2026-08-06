@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateTurkishAirlineDto } from './dto/create-turkish_airline.dto';
 import { UpdateTurkishAirlineDto } from './dto/update-turkish_airline.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -26,10 +27,11 @@ export class TurkishAirlinesService {
   constructor(
     @InjectModel(TurkishAirline) private turkishAirlineRepo: typeof TurkishAirline,
     @InjectModel(Client) private clientRepository: typeof Client,
-    private sequelize: Sequelize
+    private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
-  async getTurkishReport(yearMonth: string) {
+  async getTurkishReport(yearMonth: string, lang: string = 'tk') {
     try {
       const [year, month] = yearMonth.split('-').map(Number);
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -93,10 +95,10 @@ export class TurkishAirlinesService {
         dailyTotals: (result as any).dailyTotals || [],
         footer: footerWithPercent,
         grandTotal: (result as any).grandTotal,
-        message: 'Report generated successfully'
+        message: this.i18n.t('turkish_airlines.monthlyReport', { lang })
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Report generation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.monthlyReportFailed', { lang }), error);
     }
   }
 
@@ -147,7 +149,7 @@ export class TurkishAirlinesService {
   }
 
 
-  async addTurkishAirline(createTurkishAirlineDto: CreateTurkishAirlineDto) {
+  async addTurkishAirline(createTurkishAirlineDto: CreateTurkishAirlineDto, lang: string) {
     try {
       const client = await this.clientRepository.findByPk(createTurkishAirlineDto.client_guid);
 
@@ -165,15 +167,15 @@ export class TurkishAirlinesService {
       });
 
       if (!newTurkishAirline) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('turkish_airlines.notFound', { lang }));
       }
       return {
         status: 201,
         data: newTurkishAirline,
-        message: 'TurkishAirline created successfully'
+        message: this.i18n.t('turkish_airlines.created', { lang })
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.createFailed', { lang }), error);
     }
   }
 
@@ -200,15 +202,8 @@ export class TurkishAirlinesService {
 
 
   async getAllTurkishAirline(page: number = 1, limit: number = 10,
-    filters: {
-      datetime?: string;
-      assignment_opr_guid?: string;
-      receiver_opr_guid?: string;
-      status_guid?: string;
-      flight_date?: string;
-      is_paid?: boolean | string;
-      office_guid?: string;
-    } = {}
+    filters: { datetime?: string; assignment_opr_guid?: string; receiver_opr_guid?: string; status_guid?: string; flight_date?: string; is_paid?: boolean | string; office_guid?: string; } = {},
+    lang: string = 'tk',
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
@@ -265,16 +260,16 @@ export class TurkishAirlinesService {
           totalPages: Math.ceil(count / limit),
           currentPage: currentPage
         },
-        message: 'TurkishAirline fetched successfully'
+        message: this.i18n.t('turkish_airlines.listFetched', { lang })
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TurkishAirline fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.fetchFailed', { lang }), error);
     }
   }
 
 
 
-  async getStatusReportByMonth(yearMonth: string) {
+  async getStatusReportByMonth(yearMonth: string, lang: string = 'tk') {
     try {
       const [year, month] = yearMonth.split('-').map(Number);
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -323,16 +318,16 @@ export class TurkishAirlinesService {
       return {
         status: 200,
         data: (result as any).status_distribution || [],
-        message: 'Status report generated successfully'
+        message: this.i18n.t('turkish_airlines.statusReport', { lang })
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Report generation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.statusReportFailed', { lang }), error);
     }
   }
 
 
 
-  async getQuarterTurkishAirline(quarter: number) {
+  async getQuarterTurkishAirline(quarter: number, lang: string = 'tk') {
     try {
       const currentYear = new Date().getFullYear();
       const previousYear = currentYear - 1;
@@ -363,20 +358,20 @@ export class TurkishAirlinesService {
         status: 200,
         data: rawData,
         achievement_percentage: percentage,
-        message: 'Quarter report fetched successfully'
+        message: this.i18n.t('turkish_airlines.quarterlyReport', { lang })
       };
 
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Quarter report failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.quarterlyReportFailed', { lang }), error);
     }
   }
 
 
 
-  async updateTurkishAirline(updateDto: UpdateTurkishAirlineDto) {
+  async updateTurkishAirline(updateDto: UpdateTurkishAirlineDto, lang: string) {
     try {
       const turkishAirline = await this.turkishAirlineRepo.findByPk(updateDto.guid);
-      if (!turkishAirline) return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
+      if (!turkishAirline) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('turkish_airlines.notFound', { lang }));
       let updateData: any = { ...updateDto };
       if (updateDto.client_guid && updateDto.client_guid !== turkishAirline.client_guid) {
         const client = await this.clientRepository.findByPk(updateDto.client_guid);
@@ -393,24 +388,26 @@ export class TurkishAirlinesService {
         attributes: { include: this.getTurkishAttributes() as any }
       });
       const formattedData = this.formatTurkishAirlinePassport(updatedTurkishAirline);
-      return { status: 200, data: formattedData, message: 'TurkishAirline updated successfully' };
+      return { status: 200, data: formattedData, message: this.i18n.t('turkish_airlines.updated', { lang }) };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.updateFailed', { lang }), error);
     }
   }
 
 
-  async deleteTurkishAirline(guid: string) {
+  async deleteTurkishAirline(guid: string, lang: string) {
     try {
       const turkishAirline = await this.turkishAirlineRepo.findByPk(guid);
       if (!turkishAirline) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishAirline not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('turkish_airlines.notFound', { lang }));
       }
       await turkishAirline.destroy();
 
-      return successResponse(HttpStatuses.OK, null, 'TurkishAirline deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('turkish_airlines.deleted', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.deleteFailed', { lang }), error)
     }
   }
 }
+
+

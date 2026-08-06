@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateTtpPaymentDto } from './dto/create-ttp_payment.dto';
 import { UpdateTtpPaymentDto } from './dto/update-ttp_payment.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -14,6 +15,7 @@ export class TtpPaymentService {
   constructor(
     @InjectModel(TtpPayment) private ttpPaymentRepo: typeof TtpPayment,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
   private getTargetInfo(data: any) {
     if (data.tour_guid) return { guid: data.tour_guid, table: 'tbl_tour', col: 'tour_guid' };
@@ -55,15 +57,15 @@ export class TtpPaymentService {
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
 
-      if (!createdPayment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
+      if (!createdPayment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment record could not be retrieved after creation');
 
       const target = this.getTargetInfo(createDto);
-      if (!target) return errorResponse(HttpStatuses.BAD_REQUEST, 'A valid reference guid must be provided');
+      if (!target) return errorResponse(HttpStatuses.BAD_REQUEST, 'A valid reference GUID (tour, transfer, or package) must be provided');
 
       const stats = await this.getTtpPaymentStats(target);
-      return successResponse(HttpStatuses.CREATED, { ...createdPayment.toJSON(), stats }, 'Payment created successfully');
+      return successResponse(HttpStatuses.CREATED, { ...createdPayment.toJSON(), stats }, 'Payment has been created successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Payment creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to create the payment. Please try again later.', error);
     }
   }
 
@@ -86,7 +88,7 @@ export class TtpPaymentService {
         where.package_guid = filters.package_guid;
         target = { guid: filters.package_guid, table: 'tbl_package', col: 'package_guid' };
       } else {
-        return errorResponse(HttpStatuses.BAD_REQUEST, 'At least one guid is required');
+        return errorResponse(HttpStatuses.BAD_REQUEST, 'At least one valid GUID (tour, transfer, or package) must be provided');
       }
 
       const { rows, count } = await this.ttpPaymentRepo.findAndCountAll({
@@ -103,16 +105,16 @@ export class TtpPaymentService {
         data: rows,
         stats,
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage }
-      }, 'Payments fetched successfully');
+      }, 'Payment records retrieved successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve payment records. Please try again later.', error);
     }
   }
 
   async updateTtpPayment(updateDto: UpdateTtpPaymentDto) {
     try {
       const payment = await this.ttpPaymentRepo.findOne({ where: { guid: updateDto.guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'No payment record found with the provided ID');
 
       await this.ttpPaymentRepo.update(updateDto as any, { where: { guid: updateDto.guid } });
       const updated = await this.ttpPaymentRepo.findOne({
@@ -120,32 +122,34 @@ export class TtpPaymentService {
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
 
-      if (!updated) return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
+      if (!updated) return errorResponse(HttpStatuses.NOT_FOUND, 'Updated payment record could not be retrieved');
 
       const target = this.getTargetInfo(updated);
-      if (!target) return errorResponse(HttpStatuses.BAD_REQUEST, 'Target reference missing');
+      if (!target) return errorResponse(HttpStatuses.BAD_REQUEST, 'The payment record has no valid reference (tour, transfer, or package)');
 
       const stats = await this.getTtpPaymentStats(target);
-      return successResponse(HttpStatuses.OK, { ...updated.toJSON(), stats }, 'Payment updated successfully');
+      return successResponse(HttpStatuses.OK, { ...updated.toJSON(), stats }, 'Payment has been updated successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update the payment. Please try again later.', error);
     }
   }
 
   async deleteTtpPayment(guid: string) {
     try {
       const payment = await this.ttpPaymentRepo.findOne({ where: { guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'No payment record found with the provided ID');
 
       const target = this.getTargetInfo(payment);
       await this.ttpPaymentRepo.destroy({ where: { guid } });
 
-      if (!target) return successResponse(HttpStatuses.OK, null, 'Payment deleted successfully');
+      if (!target) return successResponse(HttpStatuses.OK, null, 'Payment has been deleted successfully');
 
       const stats = await this.getTtpPaymentStats(target);
-      return successResponse(HttpStatuses.OK, stats, 'Payment deleted successfully');
+      return successResponse(HttpStatuses.OK, stats, 'Payment has been deleted successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to delete the payment. Please try again later.', error);
     }
   }
 }
+
+

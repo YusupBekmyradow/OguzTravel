@@ -1,0 +1,11 @@
+{
+    "updated":  "TTP tölegi täzelendi",
+    "notFound":  "Görkezilen ID bilen TTP tölegi tapylmady",
+    "listFetched":  "TTP tölegleriniň sanawy alyndy",
+    "deleteFailed":  "Tölegi pozmak başartmady",
+    "updateFailed":  "Tölegi täzelemek başartmady",
+    "createFailed":  "TTP tölegini döretmek başartmady",
+    "deleted":  "TTP tölegi pozuldy",
+    "created":  "TTP tölegi üstünlikli döredildi",
+    "fetchFailed":  "TTP tölegleriniň sanawyny almak başartmady"
+}

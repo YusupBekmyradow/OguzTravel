@@ -1,0 +1,11 @@
+{
+    "updated":  "Wezipe täzelendi",
+    "notFound":  "Görkezilen ID bilen wezipe tapylmady",
+    "listFetched":  "Wezipeleriň sanawy alyndy",
+    "deleteFailed":  "Wezipäni pozmak başartmady",
+    "updateFailed":  "Wezipäni täzelemek başartmady",
+    "createFailed":  "Wezipäni döretmek başartmady",
+    "deleted":  "Wezipe pozuldy",
+    "created":  "Wezipe üstünlikli döredildi",
+    "fetchFailed":  "Wezipeleriň sanawyny almak başartmady"
+}

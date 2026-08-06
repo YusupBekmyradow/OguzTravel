@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -18,6 +19,7 @@ export class PackageService {
     @InjectModel(TtpPayment) private ttpPaymentRepo: typeof TtpPayment,
     private sequelize: Sequelize
     ,
+    private readonly i18n: I18nService,
   ) { }
 
   private getIncludes() {
@@ -63,7 +65,7 @@ export class PackageService {
     };
   }
 
-  async addPackage(createDto: CreatePackageDto) {
+  async addPackage(createDto: CreatePackageDto, lang: string) {
     const t = await this.sequelize.transaction();
     try {
       const packageItem = await this.packageRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
@@ -84,14 +86,14 @@ export class PackageService {
         },
         include: this.getIncludes()
       });
-      return { status: 201, data: newPackage, message: 'Package created successfully' };
+      return { status: 201, data: newPackage, message: 'Package record has been created successfully' };
     } catch (error: any) {
       await t.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Package creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to create the package record. Please try again later.', error);
     }
   }
 
-  async getAllPackage(page: number = 1, limit: number = 10) {
+  async getAllPackage(page: number = 1, limit: number = 10, lang: string = 'tk') {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
@@ -111,21 +113,21 @@ export class PackageService {
         status: 200,
         data: rows,
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
-        message: 'Package records fetched successfully'
+        message: 'Package records retrieved successfully'
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Package fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve package records. Please try again later.', error);
     }
   }
 
-  async updatePackage(updateDto: UpdatePackageDto) {
+  async updatePackage(updateDto: UpdatePackageDto, lang: string) {
     try {
       const packageItem = await this.packageRepository.findOne({
         where: { guid: updateDto.guid }
       });
 
       if (!packageItem) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Package not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('package.notFound', { lang }));
       }
       await packageItem.update(updateDto, { hooks: true });
       const updatedPackage = await this.packageRepository.findOne({
@@ -137,20 +139,24 @@ export class PackageService {
         include: this.getIncludes()
       });
 
-      return { status: 200, data: updatedPackage, message: 'Package updated successfully' };
+      return { status: 200, data: updatedPackage, message: 'Package record has been updated successfully' };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update the package record. Please try again later.', error);
     }
   }
 
-  async deletePackage(guid: string) {
+  async deletePackage(guid: string, lang: string) {
     try {
       const packageItem = await this.packageRepository.findByPk(guid);
-      if (!packageItem) return errorResponse(HttpStatuses.NOT_FOUND, 'Package not found');
+      if (!packageItem) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('package.notFound', { lang }));
       await packageItem.destroy();
-      return successResponse(HttpStatuses.OK, null, 'Package deleted successfully');
+      return successResponse(HttpStatuses.OK, null, 'Package record has been deleted successfully');
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to delete the package record. Please try again later.', error);
     }
   }
 }
+
+
+
+

@@ -1,0 +1,11 @@
+{
+    "updated":  "Airway record updated successfully",
+    "notFound":  "No airway record found with the provided ID",
+    "listFetched":  "Airway records retrieved successfully",
+    "deleteFailed":  "Airway deletion failed",
+    "updateFailed":  "Airway update failed",
+    "createFailed":  "Airway creation failed",
+    "deleted":  "Airway record deleted successfully",
+    "created":  "Airway record created successfully",
+    "fetchFailed":  "Failed to retrieve airway records"
+}

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
+﻿import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -9,6 +9,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateReadStatusDto } from './dto/update-read-status.dto';
 
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { I18nLang } from 'nestjs-i18n';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ImagesService } from '../../common/image-upload/image-upload.module';
@@ -157,3 +158,4 @@ export class MessagesController {
     return this.messagesService.markAsRead(updateReadStatusDto);
   }
 }
+

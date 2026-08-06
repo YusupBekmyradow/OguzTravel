@@ -1,0 +1,11 @@
+{
+    "updated":  "Terjimeçi maglumatlary täzelendi",
+    "notFound":  "Görkezilen ID bilen terjimeçi tapylmady",
+    "listFetched":  "Terjimeçileriň sanawy alyndy",
+    "deleteFailed":  "Pozmak başartmady",
+    "updateFailed":  "Täzelemek başartmady",
+    "createFailed":  "Terjimeçi goşmak başartmady",
+    "deleted":  "Terjimeçi pozuldy",
+    "created":  "Terjimeçi üstünlikli goşuldy",
+    "fetchFailed":  "Terjimeçileriň sanawyny almak başartmady"
+}

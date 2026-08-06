@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import * as dotenv from 'dotenv';
+import * as path from 'path';
+import { I18nModule, QueryResolver, AcceptLanguageResolver, HeaderResolver } from 'nestjs-i18n';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { databaseConfig } from './config/database.config';
@@ -40,6 +42,7 @@ import { MessagesModule } from './modules/messages/messages.module';
 import { ReportModule } from './modules/report/report.module';
 import { ReportShareModule } from './modules/report_share/report_share.module';
 import { ImageUploadModule } from './common/image-upload/image-upload.module';
+import { JwtModule } from '@nestjs/jwt';
 dotenv.config();
 
 @Module({
@@ -47,6 +50,21 @@ dotenv.config();
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    JwtModule.register({
+      global: true,
+      secret: process.env.ACCESS_TOKEN_SECRET || 'hsdfkjhsdjkfhskdjsdkfsdfsfd',
+    }),
+    I18nModule.forRoot({
+      fallbackLanguage: 'tk',
+      loaderOptions: {
+        path: path.join(__dirname, '/i18n/'),
+        watch: true,
+      },
+      resolvers: [
+        { use: HeaderResolver, options: ['x-custom-lang', 'x-lang', 'lang'] },
+      ],
+    }),
+
     SequelizeModule.forRootAsync({
       useFactory: databaseConfig,
     }),

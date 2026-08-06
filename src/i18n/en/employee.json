@@ -1,0 +1,12 @@
+{
+    "updated":  "Employee updated successfully",
+    "notFound":  "No employee found with the provided ID",
+    "listFetched":  "Employees retrieved successfully",
+    "deleteFailed":  "Employee deletion failed",
+    "updateFailed":  "Employee update failed",
+    "createFailed":  "Employee creation failed",
+    "notFoundAfterCreation":  "Employee not found after creation",
+    "deleted":  "Employee deleted successfully",
+    "created":  "Employee created successfully",
+    "fetchFailed":  "Failed to retrieve employees"
+}

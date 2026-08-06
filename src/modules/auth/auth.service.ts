@@ -6,10 +6,10 @@ import { errorResponse, successResponse } from '../../helpers/responseFunctions'
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { signInAuthDto } from './dto/signin-auth.dto';
 import { JwtService } from '@nestjs/jwt';
-
 import * as bcrypt from 'bcrypt';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { Employee } from '../employee/entities/employee.entity';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class AuthService {
@@ -17,30 +17,10 @@ export class AuthService {
   constructor(
     @InjectModel(User) private userModel: typeof User,
     private jwtService: JwtService,
+    private readonly i18n: I18nService,
   ) { }
 
-  // async signUp(signUpAuthDto: SignUpAuthDto) {
-  //   try {
-
-  //     const existUser = await this.userModel.findOne({ where: { phone_number: signUpAuthDto.phone_number } });
-
-  //     if (existUser) return errorResponse(HttpStatuses.FORBIDDEN, 'user already exist');
-
-  //     const salt = await bcrypt.genSalt(10);
-  //     const hashedPassword = await bcrypt.hash(signUpAuthDto.password, salt);
-
-  //     const preparedUserInfo = { ...signUpAuthDto, password: hashedPassword };
-
-  //     const newUser = await this.userModel.create(preparedUserInfo as User);
-
-  //     return successResponse(HttpStatuses.CREATED, newUser, 'user creation success');
-
-  //   } catch (error: any) {
-  //     errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'user creation failed');
-  //   }
-  // }
-
-  async signIn(signInAuthDto: signInAuthDto) {
+  async signIn(signInAuthDto: signInAuthDto, lang: string) {
     try {
 
       const existUser = await this.userModel.findOne({
@@ -53,12 +33,17 @@ export class AuthService {
         ]
       });
 
-      if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, 'user not found');
+      if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('auth.userNotFound', { lang }));
 
       const comparePassword = await bcrypt.compare(signInAuthDto.password, existUser.password ?? '');
-      if (!comparePassword) return errorResponse(HttpStatuses.FORBIDDEN, 'password invalid');
+      if (!comparePassword) return errorResponse(HttpStatuses.FORBIDDEN, this.i18n.t('auth.loginFailed', { lang }));
 
-      const payload = { phone_number: existUser.phone_number, guid: existUser.guid, role: existUser.role, permissions: existUser.permissions || [] };
+      const payload = {
+        phone_number: existUser.phone_number,
+        guid: existUser.guid,
+        role: existUser.role,
+        permissions: existUser.permissions || []
+      };
 
       const access_token = await this.jwtService.signAsync(payload, { expiresIn: '7d' });
       const refresh_token = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
@@ -74,31 +59,32 @@ export class AuthService {
         position_guid: existUser.employee ? existUser.employee.position_guid : null,
         access_token,
         refresh_token,
-      }, 'sign in success');
+      }, this.i18n.t('auth.loginSuccess', { lang }));
 
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'signin failed')
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('auth.loginFailed', { lang }));
     }
   }
 
 
-  async logOut(user_guid: string) {
+
+  async logOut(user_guid: string, lang: string) {
     try {
 
       const existUser = await this.userModel.findOne({ where: { guid: user_guid } });
-      if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, 'user not found');
+      if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('auth.userNotFound', { lang }));
 
       await existUser.update({ refresh_token: '' });
 
-      return successResponse(HttpStatuses.OK, '', 'user logout success')
+      return successResponse(HttpStatuses.OK, '', this.i18n.t('auth.logoutSuccess', { lang }));
 
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'user logout failed');
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('auth.logoutFailed', { lang }));
     }
   }
 
 
-  async refreshToken(refreshTokenDto: RefreshTokenDto) {
+  async refreshToken(refreshTokenDto: RefreshTokenDto, lang: string) {
     try {
 
       const { refreshToken } = refreshTokenDto;
@@ -106,17 +92,17 @@ export class AuthService {
       const payload = await this.jwtService.verifyAsync(refreshToken);
 
       const existUser = await this.userModel.findOne({ where: { guid: payload.guid } });
-      if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, 'user not found');
+      if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('auth.userNotFound', { lang }));
 
       if (existUser.refresh_token !== refreshToken) {
-        return errorResponse(HttpStatuses.FORBIDDEN, 'invalid refresh token');
+        return errorResponse(HttpStatuses.FORBIDDEN, this.i18n.t('auth.tokenRefreshFailed', { lang }));
       }
 
       const newPayload = {
         phone_number: existUser.phone_number,
         guid: existUser.guid,
         role: existUser.role,
-        permissions: existUser.permissions || [],
+        permissions: existUser.permissions || []
       };
 
       const access_token = await this.jwtService.signAsync(newPayload, { expiresIn: '7d' });
@@ -128,13 +114,15 @@ export class AuthService {
         access_token,
         refresh_token: new_refresh_token,
         permissions: existUser.permissions || [],
-      }, 'token refresh success');
+      }, this.i18n.t('auth.tokenRefreshed', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.UNAUTHORIZED, 'refresh token expired or invalid');
+      return errorResponse(HttpStatuses.UNAUTHORIZED, this.i18n.t('auth.tokenRefreshFailed', { lang }));
     }
   }
 
-  async getMe(user_guid: string) {
+
+
+  async getMe(user_guid: string, lang: string) {
     try {
       const existUser = await this.userModel.findOne({
         where: { guid: user_guid },
@@ -146,7 +134,7 @@ export class AuthService {
         ]
       });
 
-      if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, 'user not found');
+      if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('auth.userNotFound', { lang }));
 
       return successResponse(HttpStatuses.OK, {
         guid: existUser.guid,
@@ -155,9 +143,9 @@ export class AuthService {
         permissions: existUser.permissions || [],
         employee_name: existUser.employee ? existUser.employee.fullName : null,
         position_guid: existUser.employee ? existUser.employee.position_guid : null,
-      }, 'get profile success');
+      }, this.i18n.t('auth.loginSuccess', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'get profile failed');
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('auth.loginFailed', { lang }));
     }
   }
 

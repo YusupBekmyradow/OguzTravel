@@ -1,0 +1,11 @@
+{
+    "updated":  "Kategoriýa täzelendi",
+    "notFound":  "Görkezilen ID bilen kategoriýa tapylmady",
+    "listFetched":  "Wiza kategoriýalarynyň sanawy alyndy",
+    "deleteFailed":  "Kategoriýany pozmak başartmady",
+    "updateFailed":  "Kategoriýany täzelemek başartmady",
+    "createFailed":  "Kategoriýany döretmek başartmady",
+    "deleted":  "Kategoriýa pozuldy",
+    "created":  "Wiza kategoriýasy üstünlikli döredildi",
+    "fetchFailed":  "Kategoriýalaryň sanawyny almak başartmady"
+}

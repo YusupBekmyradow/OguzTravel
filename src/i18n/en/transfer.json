@@ -1,0 +1,11 @@
+{
+    "updated":  "Transfer updated successfully",
+    "notFound":  "No transfer found with the provided ID",
+    "listFetched":  "Transfers retrieved successfully",
+    "deleteFailed":  "Transfer deletion failed",
+    "updateFailed":  "Transfer update failed",
+    "createFailed":  "Transfer creation failed",
+    "deleted":  "Transfer deleted successfully",
+    "created":  "Transfer created successfully",
+    "fetchFailed":  "Failed to retrieve transfers"
+}

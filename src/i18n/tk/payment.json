@@ -1,0 +1,16 @@
+{
+  "created": "Töleg üstünlikli döredildi",
+  "createFailed": "Töleg döretmek başartmady. Soňrak täzeden synanyşyň.",
+  "notFound": "Berilen ID bilen töleg tapylmady",
+  "notFoundAfterCreate": "Döredilenden soň töleg tapylmady",
+  "updatedNotFound": "Täzelenen töleg tapylmady",
+  "listFetched": "Töleg ýazgylary üstünlikli alyndy",
+  "fetchFailed": "Töleg ýazgylary almak başartmady. Soňrak täzeden synanyşyň.",
+  "invalidRef": "Dogry salgylanma GUID (tur, transfer ýa-da paket) bermeli",
+  "invalidRefMissing": "Töleg ýazgysynyň dogry salgylanmasy ýok (tur, transfer ýa-da paket)",
+  "atLeastOne": "Azyndan bir dogry GUID (tur, transfer ýa-da paket) bermeli",
+  "updated": "Töleg üstünlikli täzelendi",
+  "updateFailed": "Tölegi täzelemek başartmady. Soňrak täzeden synanyşyň.",
+  "deleted": "Töleg üstünlikli öçürildi",
+  "deleteFailed": "Tölegi öçürmek başartmady. Soňrak täzeden synanyşyň."
+}

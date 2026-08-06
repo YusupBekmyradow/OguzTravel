@@ -1,0 +1,16 @@
+{
+  "created": "Payment has been created successfully",
+  "createFailed": "Failed to create the payment. Please try again later.",
+  "notFound": "No payment record found with the provided ID",
+  "notFoundAfterCreate": "Payment record could not be retrieved after creation",
+  "updatedNotFound": "Updated payment record could not be retrieved",
+  "listFetched": "Payment records retrieved successfully",
+  "fetchFailed": "Failed to retrieve payment records. Please try again later.",
+  "invalidRef": "A valid reference GUID (tour, transfer, or package) must be provided",
+  "invalidRefMissing": "The payment record has no valid reference (tour, transfer, or package)",
+  "atLeastOne": "At least one valid GUID (tour, transfer, or package) must be provided",
+  "updated": "Payment has been updated successfully",
+  "updateFailed": "Failed to update the payment. Please try again later.",
+  "deleted": "Payment has been deleted successfully",
+  "deleteFailed": "Failed to delete the payment. Please try again later."
+}

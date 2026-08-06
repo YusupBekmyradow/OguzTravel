@@ -1,0 +1,5 @@
+{
+  "notFound": "Berilen ID bilen ýazgy tapylmady",
+  "serverError": "Garaşylmadyk ýalňyşlyk ýüze çykdy. Soňrak täzeden synanyşyň.",
+  "fetchError": "Ýazgylary almak başartmady. Soňrak täzeden synanyşyň."
+}

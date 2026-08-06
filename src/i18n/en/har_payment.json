@@ -1,0 +1,11 @@
+{
+    "updated":  "HAR payment updated successfully",
+    "notFound":  "No HAR payment found with the provided ID",
+    "listFetched":  "HAR payments retrieved successfully",
+    "deleteFailed":  "HAR payment deletion failed",
+    "updateFailed":  "HAR payment update failed",
+    "createFailed":  "HAR payment creation failed",
+    "deleted":  "HAR payment deleted successfully",
+    "created":  "HAR payment created successfully",
+    "fetchFailed":  "Failed to retrieve HAR payments"
+}

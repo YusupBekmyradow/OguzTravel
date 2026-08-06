@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+﻿import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { TicketPaymentService } from './ticket_payment.service';
 import { CreateTicketPaymentDto } from './dto/create-ticket_payment.dto';
 import { UpdateTicketPaymentDto } from './dto/update-ticket_payment.dto';
@@ -6,6 +6,7 @@ import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Ticket_Payment')
 @ApiBearerAuth('bearerAuth')
@@ -48,3 +49,4 @@ export class TicketPaymentController {
     return this.ticketPaymentService.deleteTicketPayment(guid);
   }
 }
+

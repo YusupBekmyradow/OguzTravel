@@ -1,0 +1,12 @@
+{
+    "updated":  "Wiza paketi täzelendi",
+    "notFound":  "Görkezilen ID bilen wiza paketi tapylmady",
+    "listFetched":  "Wiza paketleriniň sanawy alyndy",
+    "deleteFailed":  "Wiza paketini pozmak başartmady",
+    "updateFailed":  "Wiza paketini täzelemek başartmady",
+    "createFailed":  "Wiza paketini döretmek başartmady",
+    "deleted":  "Wiza paketi pozuldy",
+    "created":  "Wiza paketi üstünlikli döredildi",
+    "fetchFailed":  "Wiza paketleriniň sanawyny almak başartmady",
+    "categoryNotFound":  "Görkezilen indeks bilen wiza kategoriýasy tapylmady"
+}

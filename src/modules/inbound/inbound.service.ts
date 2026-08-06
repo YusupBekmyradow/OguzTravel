@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { InjectModel } from '@nestjs/sequelize';
 import { Inbound } from './entities/inbound.entity';
 import { Employee } from '../employee/entities/employee.entity';
@@ -16,6 +17,7 @@ export class InboundService {
   constructor(
     @InjectModel(Inbound) private inboundRepository: typeof Inbound,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   private getIncludes() {
@@ -52,7 +54,7 @@ export class InboundService {
   }
 
 
-  async addInbound(createDto: CreateInboundDto) {
+  async addInbound(createDto: CreateInboundDto, lang: string) {
     try {
       const inbound = await this.inboundRepository.create({
         ...createDto,
@@ -63,21 +65,21 @@ export class InboundService {
         include: this.getIncludes(),
       });
       if (!newInbound) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Inbound not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Inbound record could not be retrieved after creation');
       }
       const stats = await this.getInboundPaymentStats(newInbound.guid);
       const combinedData = {
         ...newInbound.toJSON(),
         credit_payments: stats,
       };
-      return { status: 201, data: combinedData, message: 'Inbound created successfully' };
+      return { status: 201, data: combinedData, message: this.i18n.t('inbound.created', { lang }) };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Inbound creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('inbound.createFailed', { lang }), error);
     }
   }
 
 
-  async getAllInbound(page: number = 1, limit: number = 10) {
+  async getAllInbound(page: number = 1, limit: number = 10, lang: string = 'tk') {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
@@ -107,21 +109,21 @@ export class InboundService {
           currentPage,
           itemsPerPage: currentLimit,
         },
-        message: 'Inbounds fetched successfully',
+        message: this.i18n.t('inbound.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Inbound fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('inbound.fetchFailed', { lang }), error);
     }
   }
 
 
-  async updateInbound(updateDto: UpdateInboundDto) {
+  async updateInbound(updateDto: UpdateInboundDto, lang: string) {
     try {
       const inbound = await this.inboundRepository.findOne({
         where: { guid: updateDto.guid },
       });
       if (!inbound) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Inbound not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('inbound.notFound', { lang }));
       }
       await inbound.update(updateDto as any);
       const updatedInbound = await this.inboundRepository.findOne({
@@ -129,30 +131,34 @@ export class InboundService {
         include: this.getIncludes(),
       });
       if (!updatedInbound) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('inbound.notFound', { lang }));
       }
       const stats = await this.getInboundPaymentStats(updatedInbound.guid);
       const combinedData = {
         ...updatedInbound.toJSON(),
         credit_payments: stats,
       };
-      return { status: 200, data: combinedData, message: 'Inbound updated successfully' };
+      return { status: 200, data: combinedData, message: this.i18n.t('inbound.updated', { lang }) };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('inbound.updateFailed', { lang }), error);
     }
   }
 
 
-  async deleteInbound(guid: string) {
+  async deleteInbound(guid: string, lang: string) {
     try {
       const inbound = await this.inboundRepository.findByPk(guid);
       if (!inbound) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Inbound not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('inbound.notFound', { lang }));
       }
       await inbound.destroy();
-      return successResponse(HttpStatuses.OK, null, 'Inbound deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('inbound.deleted', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('inbound.deleteFailed', { lang }), error);
     }
   }
 }
+
+
+
+

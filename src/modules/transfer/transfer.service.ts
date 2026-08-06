@@ -10,6 +10,7 @@ import { errorResponse, successResponse } from '../../helpers/responseFunctions'
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { TtpPayment } from '../ttp_payment/entities/ttp_payment.entity';
 import { Sequelize } from 'sequelize-typescript';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class TransferService {
@@ -17,6 +18,7 @@ export class TransferService {
     @InjectModel(Transfer) private transferRepository: typeof Transfer,
     @InjectModel(TtpPayment) private ttpPaymentRepo: typeof TtpPayment,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   private getIncludes() {
@@ -62,7 +64,7 @@ export class TransferService {
     };
   }
 
-  async addTransfer(createDto: CreateTransferDto) {
+  async addTransfer(createDto: CreateTransferDto, lang: string) {
     const t = await this.sequelize.transaction();
     try {
       const transfer = await this.transferRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
@@ -84,14 +86,14 @@ export class TransferService {
         },
         include: this.getIncludes()
       });
-      return { status: 201, data: newTransfer, message: 'Transfer created successfully' };
+      return { status: 201, data: newTransfer, message: this.i18n.t('transfer.created', { lang }) };
     } catch (error: any) {
       await t.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Transfer creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('transfer.createFailed', { lang }), error);
     }
   }
 
-  async getAllTransfer(page: number = 1, limit: number = 10) {
+  async getAllTransfer(page: number = 1, limit: number = 10, lang: string = 'tk') {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
@@ -111,21 +113,21 @@ export class TransferService {
         status: 200,
         data: rows,
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
-        message: 'Transfer records fetched successfully'
+        message: this.i18n.t('transfer.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Transfer fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('transfer.fetchFailed', { lang }), error);
     }
   }
 
-  async updateTransfer(updateDto: UpdateTransferDto) {
+  async updateTransfer(updateDto: UpdateTransferDto, lang: string) {
     try {
       const transfer = await this.transferRepository.findOne({
         where: { guid: updateDto.guid }
       });
 
       if (!transfer) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Transfer not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('transfer.notFound', { lang }));
       }
       await transfer.update(updateDto);
       const updatedTransfer = await this.transferRepository.findOne({
@@ -137,20 +139,20 @@ export class TransferService {
         include: this.getIncludes()
       });
 
-      return { status: 200, data: updatedTransfer, message: 'Transfer updated successfully' };
+      return { status: 200, data: updatedTransfer, message: this.i18n.t('transfer.updated', { lang }) };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('transfer.updateFailed', { lang }), error);
     }
   }
 
-  async deleteTransfer(guid: string) {
+  async deleteTransfer(guid: string, lang: string) {
     try {
       const transfer = await this.transferRepository.findByPk(guid);
-      if (!transfer) return errorResponse(HttpStatuses.NOT_FOUND, 'Transfer not found');
+      if (!transfer) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('transfer.notFound', { lang }));
       await transfer.destroy();
-      return successResponse(HttpStatuses.OK, null, 'Transfer deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('transfer.deleted', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('transfer.deleteFailed', { lang }), error);
     }
   }
 }

@@ -9,14 +9,16 @@ import { Office } from '../office/entities/office.entity';
 import { Position } from '../position/entities/position.entity';
 import { Department } from '../department/entities/department.entity';
 import { Op } from 'sequelize';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class EmployeeService {
   constructor(
-    @InjectModel(Employee) private employeeRepository: typeof Employee
+    @InjectModel(Employee) private employeeRepository: typeof Employee,
+    private readonly i18n: I18nService,
   ) { }
 
-  async addEmployee(createEmployeeDto: CreateEmployeeDto) {
+  async addEmployee(createEmployeeDto: CreateEmployeeDto, lang: string) {
     try {
       const employee = await this.employeeRepository.create({
         ...createEmployeeDto
@@ -31,15 +33,15 @@ export class EmployeeService {
         ]
       });
       if (!newEmployee) {
-        throw new Error('Employee not found after creation');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFoundAfterCreate', { lang }));
       }
       return {
         status: 201,
         data: newEmployee,
-        message: 'Employee created successfully'
+        message: this.i18n.t('employee.created', { lang }),
       };
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Employee creation failed', error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.createFailed', { lang }), error);
     }
   }
 
@@ -48,7 +50,8 @@ export class EmployeeService {
     page: number = 1,
     limit: number = 10,
     search?: string,
-    filters?: { department_guid?: string, office_guid?: string, position_guid?: string }
+    filters?: { department_guid?: string, office_guid?: string, position_guid?: string },
+    lang: string = 'tk',
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
@@ -87,17 +90,18 @@ export class EmployeeService {
           totalPages: Math.ceil(count / limit),
           currentPage: currentPage
         },
-        message: 'Employees fetched successfully'
+        message: this.i18n.t('employee.listFetched', { lang }),
       };
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Employees fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.fetchFailed', { lang }), error);
     }
   }
 
   async getEmployeeForPosition(
     page: number = 1,
     limit: number = 10,
-    position_guid: string
+    position_guid: string,
+    lang: string = 'tk',
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
@@ -122,19 +126,19 @@ export class EmployeeService {
           totalPages: Math.ceil(count / limit),
           currentPage: currentPage
         },
-        message: 'Employees fetched successfully'
+        message: this.i18n.t('employee.positionFetched', { lang }),
       };
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Employees fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.positionFetchFailed', { lang }), error);
     }
   }
 
 
-  async updateEmployee(updateEmployeeDto: UpdateEmployeeDto) {
+  async updateEmployee(updateEmployeeDto: UpdateEmployeeDto, lang: string) {
     try {
       const employee = await this.employeeRepository.findByPk(updateEmployeeDto.guid);
       if (!employee) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Employee not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFound', { lang }));
       }
       await employee.update({
         ...updateEmployeeDto
@@ -152,24 +156,24 @@ export class EmployeeService {
       return {
         status: 200,
         data: updateEmployee,
-        message: 'Employee updated successfully'
+        message: this.i18n.t('employee.updated', { lang }),
       };
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.updateFailed', { lang }), error);
     }
   }
 
 
-  async deleteEmployee(guid: string) {
+  async deleteEmployee(guid: string, lang: string) {
     try {
       const employee = await this.employeeRepository.findByPk(guid);
       if (!employee) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Employee not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFound', { lang }));
       }
       await employee.destroy();
-      return successResponse(HttpStatuses.OK, null, 'Employee deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('employee.deleted', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.deleteFailed', { lang }), error);
     }
   }
 }

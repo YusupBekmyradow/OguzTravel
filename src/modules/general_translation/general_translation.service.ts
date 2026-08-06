@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateGeneralTranslationDto } from './dto/create-general_translation.dto';
 import { UpdateGeneralTranslationDto } from './dto/update-general_translation.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -19,6 +20,7 @@ export class GeneralTranslationService {
     @InjectModel(GeneralTranslation) private translationRepository: typeof GeneralTranslation,
     @InjectModel(TransPayment) private transPaymentRepo: typeof TransPayment,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   private getIncludes() {
@@ -61,7 +63,7 @@ export class GeneralTranslationService {
     };
   }
 
-  async addGeneralTranslation(createDto: CreateGeneralTranslationDto) {
+  async addGeneralTranslation(createDto: any, lang: string) {
     const t = await this.sequelize.transaction();
     try {
       const translation = await this.translationRepository.create({
@@ -88,15 +90,15 @@ export class GeneralTranslationService {
         include: this.getIncludes()
       });
 
-      return { status: 201, data: newTranslation, message: 'Translation created successfully' };
+      return { status: 201, data: newTranslation, message: this.i18n.t('general_translation.created', { lang }) };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Translation creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('general_translation.createFailed', { lang }), error);
     }
   }
 
 
 
-  async getAllGeneralTranslation(page: number = 1, limit: number = 10) {
+  async getAllGeneralTranslation(page: number = 1, limit: number = 10, lang: string = 'tk') {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
@@ -117,10 +119,10 @@ export class GeneralTranslationService {
         status: 200,
         data: rows,
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
-        message: 'Translations fetched successfully'
+        message: this.i18n.t('general_translation.listFetched', { lang })
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Translation fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('general_translation.fetchFailed', { lang }), error);
     }
   }
 
@@ -205,15 +207,15 @@ export class GeneralTranslationService {
           currentPage: page,
           itemsPerPage: limit
         },
-        message: 'Filtered translations fetched successfully'
+        message: 'Translation records filtered and retrieved successfully'
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Filtering and search failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to filter and retrieve translation records. Please try again later.', error);
     }
   }
 
 
-  async updateGeneralTranslation(updateDto: UpdateGeneralTranslationDto) {
+  async updateGeneralTranslation(updateDto: any, lang: string) {
     const t = await this.sequelize.transaction();
     try {
       const translation = await this.translationRepository.findOne({
@@ -223,7 +225,7 @@ export class GeneralTranslationService {
 
       if (!translation) {
         await t.rollback();
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Translation not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('general_translation.notFound', { lang }));
       }
 
       await translation.update(updateDto as any, { transaction: t });
@@ -239,23 +241,30 @@ export class GeneralTranslationService {
         include: this.getIncludes()
       });
 
-      return { status: 200, data: updatedTranslation, message: 'Translation updated successfully' };
+      return { status: 200, data: updatedTranslation, message: this.i18n.t('general_translation.updated', { lang }) };
     } catch (error: any) {
       await t.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('general_translation.updateFailed', { lang }), error);
     }
   }
 
 
-  async deleteGeneralTranslation(guid: string) {
+  async deleteGeneralTranslation(guid: string, lang: string) {
     try {
       const translation = await this.translationRepository.findByPk(guid);
-      if (!translation) return errorResponse(HttpStatuses.NOT_FOUND, 'Translation not found');
+      if (!translation) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('general_translation.notFound', { lang }));
 
       await translation.destroy();
-      return successResponse(HttpStatuses.OK, null, 'Translation deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('general_translation.deleted', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('general_translation.deleteFailed', { lang }), error);
     }
   }
 }
+
+
+
+
+
+
+

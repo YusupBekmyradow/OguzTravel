@@ -1,0 +1,13 @@
+{
+    "updated":  "Visa application updated successfully",
+    "notFound":  "No visa record found with the provided ID",
+    "listFetched":  "Visa records retrieved successfully",
+    "deleteFailed":  "Visa application deletion failed",
+    "updateFailed":  "Visa application update failed",
+    "clientNotFound":  "No client found with the provided ID",
+    "createFailed":  "Visa application creation failed",
+    "deleted":  "Visa application deleted successfully",
+    "created":  "Visa application created successfully",
+    "fetchFailed":  "Failed to retrieve visa records",
+    "notFoundAfterCreate":  "Visa record not found after creation"
+}

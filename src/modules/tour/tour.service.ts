@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -17,6 +18,7 @@ export class TourService {
     @InjectModel(Tour) private tourRepository: typeof Tour,
     @InjectModel(TtpPayment) private ttpPaymentRepo: typeof TtpPayment,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   private getIncludes() {
@@ -62,7 +64,7 @@ export class TourService {
     };
   }
 
-  async addTour(createDto: CreateTourDto) {
+  async addTour(createDto: CreateTourDto, lang: string) {
     const t = await this.sequelize.transaction();
     try {
       const tour = await this.tourRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
@@ -85,14 +87,14 @@ export class TourService {
         },
         include: this.getIncludes()
       });
-      return { status: 201, data: newTour, message: 'Tour created successfully' };
+      return { status: 201, data: newTour, message: this.i18n.t('tour.created', { lang }) };
     } catch (error: any) {
       await t.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Tour creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('tour.createFailed', { lang }), error);
     }
   }
 
-  async getAllTour(page: number = 1, limit: number = 10) {
+  async getAllTour(page: number = 1, limit: number = 10, lang: string = 'tk') {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
@@ -112,21 +114,21 @@ export class TourService {
         status: 200,
         data: rows,
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
-        message: 'Tour records fetched successfully'
+        message: this.i18n.t('tour.listFetched', { lang })
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Tour fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('tour.fetchFailed', { lang }), error);
     }
   }
 
-  async updateTour(updateDto: UpdateTourDto) {
+  async updateTour(updateDto: UpdateTourDto, lang: string) {
     try {
       const tour = await this.tourRepository.findOne({
         where: { guid: updateDto.guid }
       });
 
       if (!tour) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Tour not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('tour.notFound', { lang }));
       }
       await tour.update(updateDto);
       const updatedTour = await this.tourRepository.findOne({
@@ -138,20 +140,21 @@ export class TourService {
         include: this.getIncludes()
       });
 
-      return { status: 200, data: updatedTour, message: 'Tour updated successfully' };
+      return { status: 200, data: updatedTour, message: this.i18n.t('tour.updated', { lang }) };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('tour.updateFailed', { lang }), error);
     }
   }
 
-  async deleteTour(guid: string) {
+  async deleteTour(guid: string, lang: string) {
     try {
       const tour = await this.tourRepository.findByPk(guid);
-      if (!tour) return errorResponse(HttpStatuses.NOT_FOUND, 'Tour not found');
+      if (!tour) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('tour.notFound', { lang }));
       await tour.destroy();
-      return successResponse(HttpStatuses.OK, null, 'Tour deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('tour.deleted', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('tour.deleteFailed', { lang }), error);
     }
   }
 }
+

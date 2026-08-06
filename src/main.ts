@@ -2,7 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { I18nValidationPipe } from 'nestjs-i18n';
+import { Logger } from '@nestjs/common';
 import { LoggerInterceptor } from './common/interceptors/logger.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { join } from 'path';
@@ -22,7 +23,7 @@ async function zero() {
   const isProd = process.env.NODE_ENV === 'production';
   app.set('trust proxy', isProd ? 1 : true);
 
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new I18nValidationPipe());
   app.useGlobalInterceptors(new LoggerInterceptor());
   app.useGlobalInterceptors(new ResponseInterceptor());
 
@@ -34,15 +35,6 @@ async function zero() {
     .setTitle('Monster')
     .setDescription('Api Documentation')
     .setVersion('1.0')
-    .addApiKey(
-      {
-        type: 'apiKey',
-        name: 'Accept-Language',
-        in: 'header',
-        description: 'Select language (tk, en, ru)',
-      },
-      'Accept-Language',
-    )
     .addBearerAuth(
       {
         type: 'http',
@@ -51,6 +43,17 @@ async function zero() {
       },
       'bearerAuth',
     )
+    .addGlobalParameters({
+      name: 'lang',
+      in: 'header',
+      required: false,
+      schema: {
+        type: 'string',
+        enum: ['tk', 'en', 'ru'],
+        default: 'tk',
+      },
+      description: 'Language selection: tk (Turkmen), en (English), ru (Russian)',
+    })
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

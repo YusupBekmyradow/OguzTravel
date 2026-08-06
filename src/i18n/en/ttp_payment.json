@@ -1,0 +1,11 @@
+{
+    "updated":  "TTP payment updated successfully",
+    "notFound":  "No TTP payment found with the provided ID",
+    "listFetched":  "TTP payments retrieved successfully",
+    "deleteFailed":  "TTP payment deletion failed",
+    "updateFailed":  "TTP payment update failed",
+    "createFailed":  "TTP payment creation failed",
+    "deleted":  "TTP payment deleted successfully",
+    "created":  "TTP payment created successfully",
+    "fetchFailed":  "Failed to retrieve TTP payments"
+}

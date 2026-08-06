@@ -1,0 +1,11 @@
+{
+    "updated":  "Status updated successfully",
+    "notFound":  "No status found with the provided ID",
+    "listFetched":  "Statuses retrieved successfully",
+    "deleteFailed":  "Status deletion failed",
+    "updateFailed":  "Status update failed",
+    "createFailed":  "Status creation failed",
+    "deleted":  "Status deleted successfully",
+    "created":  "Status created successfully",
+    "fetchFailed":  "Failed to retrieve statuses"
+}

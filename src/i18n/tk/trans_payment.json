@@ -1,0 +1,11 @@
+{
+    "updated":  "Töleg täzelendi",
+    "notFound":  "Görkezilen ID bilen töleg tapylmady",
+    "listFetched":  "Terjime tölegleriniň sanawy alyndy",
+    "deleteFailed":  "Tölegi pozmak başartmady",
+    "updateFailed":  "Tölegi täzelemek başartmady",
+    "createFailed":  "Tölegi döretmek başartmady",
+    "deleted":  "Töleg pozuldy",
+    "created":  "Terjime tölegi üstünlikli döredildi",
+    "fetchFailed":  "Tölegleriň sanawyny almak başartmady"
+}

@@ -1,0 +1,11 @@
+{
+    "updated":  "Ofis maglumatlary täzelendi",
+    "notFound":  "Görkezilen ID bilen ofis tapylmady",
+    "listFetched":  "Ofisleriň sanawy alyndy",
+    "deleteFailed":  "Ofisi pozmak başartmady",
+    "updateFailed":  "Ofisi täzelemek başartmady",
+    "createFailed":  "Ofisi döretmek başartmady",
+    "deleted":  "Ofis üstünlikli pozuldy",
+    "created":  "Ofis üstünlikli döredildi",
+    "fetchFailed":  "Ofisleriň sanawyny almak başartmady"
+}

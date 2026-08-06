@@ -6,6 +6,7 @@ import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Transfer')
 @ApiBearerAuth('bearerAuth')
@@ -16,21 +17,28 @@ export class TransferController {
   constructor(private readonly transferService: TransferService) { }
 
   @Post('/add-transfer')
-  async create(@Body() createDto: CreateTransferDto) {
-    return this.transferService.addTransfer(createDto);
+  async create(
+    @Body() createDto: CreateTransferDto,
+    @I18nLang() lang: string,
+  ) {
+    return this.transferService.addTransfer(createDto, lang);
   }
 
   @Get('/get-transfers')
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @I18nLang() lang: string = 'tk',
   ) {
-    return this.transferService.getAllTransfer(Number(page), Number(limit));
+    return this.transferService.getAllTransfer(Number(page), Number(limit), lang);
   }
 
   @Patch('/update-transfer')
-  async update(@Body() updateDto: UpdateTransferDto) {
-    return this.transferService.updateTransfer(updateDto);
+  async update(
+    @Body() updateDto: UpdateTransferDto,
+    @I18nLang() lang: string,
+  ) {
+    return this.transferService.updateTransfer(updateDto, lang);
   }
 
   @Delete('/delete-transfer')
@@ -42,7 +50,10 @@ export class TransferController {
       }
     }
   })
-  async remove(@Body('guid') guid: string) {
-    return this.transferService.deleteTransfer(guid);
+  async remove(
+    @Body('guid') guid: string,
+    @I18nLang() lang: string,
+  ) {
+    return this.transferService.deleteTransfer(guid, lang);
   }
 }

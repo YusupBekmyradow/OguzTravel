@@ -1,0 +1,11 @@
+{
+    "updated":  "Status täzelendi",
+    "notFound":  "Görkezilen ID bilen status tapylmady",
+    "listFetched":  "Statuslaryň sanawy alyndy",
+    "deleteFailed":  "Statusy pozmak başartmady",
+    "updateFailed":  "Statusy täzelemek başartmady",
+    "createFailed":  "Status döretmek başartmady",
+    "deleted":  "Status pozuldy",
+    "created":  "Status üstünlikli döredildi",
+    "fetchFailed":  "Statuslaryň sanawyny almak başartmady"
+}

@@ -1,0 +1,11 @@
+{
+    "updated":  "Transfer täzelendi",
+    "notFound":  "Görkezilen ID bilen transfer tapylmady",
+    "listFetched":  "Transferleriň sanawy alyndy",
+    "deleteFailed":  "Transferi pozmak başartmady",
+    "updateFailed":  "Transferi täzelemek başartmady",
+    "createFailed":  "Transferi döretmek başartmady",
+    "deleted":  "Transfer pozuldy",
+    "created":  "Transfer üstünlikli döredildi",
+    "fetchFailed":  "Transferleriň sanawyny almak başartmady"
+}

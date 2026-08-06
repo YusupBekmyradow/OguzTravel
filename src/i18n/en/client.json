@@ -1,0 +1,11 @@
+{
+    "updated":  "Client updated successfully",
+    "notFound":  "No client found with the provided ID",
+    "listFetched":  "Clients retrieved successfully",
+    "deleteFailed":  "Client deletion failed",
+    "updateFailed":  "Client update failed",
+    "createFailed":  "Client creation failed",
+    "deleted":  "Client deleted successfully",
+    "created":  "Client created successfully",
+    "fetchFailed":  "Failed to retrieve clients"
+}

@@ -1,0 +1,11 @@
+{
+    "updated":  "Translation updated successfully",
+    "notFound":  "No translation found with the provided ID",
+    "listFetched":  "Translations retrieved successfully",
+    "deleteFailed":  "Translation deletion failed",
+    "updateFailed":  "Translation update failed",
+    "createFailed":  "Translation creation failed",
+    "deleted":  "Translation deleted successfully",
+    "created":  "Translation created successfully",
+    "fetchFailed":  "Failed to retrieve translations"
+}

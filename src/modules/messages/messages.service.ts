@@ -1,4 +1,5 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+﻿import { HttpStatus, Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -24,6 +25,7 @@ export class MessagesService {
     @InjectModel(TaskAssignee) private readonly taskAssigneeRepository: typeof TaskAssignee,
     private readonly sequelize: Sequelize,
     private readonly imagesService: ImagesService,
+    private readonly i18n: I18nService,
   ) { }
 
   private getIncludes() {
@@ -136,10 +138,10 @@ export class MessagesService {
           totalPages: Math.ceil(count / limitNum),
           currentPage: pageNum,
         },
-        message: 'All notifications and tasks fetched successfully',
+        message: 'Notifications and tasks retrieved successfully',
       };
     } catch (error: any) {
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Fetch failed', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to retrieve notifications and tasks. Please try again later.', error);
     }
   }
 
@@ -234,7 +236,7 @@ async getAllTasks(
         return {
           status: 200,
           data: Object.values(statusGroups),
-          message: 'Tasks grouped by status successfully',
+          message: 'Tasks have been grouped by status successfully',
         };
       }
 
@@ -268,10 +270,10 @@ async getAllTasks(
           totalPages: Math.ceil(count / limitNum),
           currentPage: pageNum,
         },
-        message: 'Tasks fetched successfully',
+        message: 'Task list retrieved successfully',
       };
     } catch (error: any) {
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Tasks fetch failed', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to retrieve task list. Please try again later.', error);
     }
   }
   // async getAllTasks(
@@ -494,20 +496,20 @@ async getAllTasks(
           totalPages: Math.ceil(totalItems / limitNum),
           currentPage: pageNum,
         },
-        message: 'Tasks by status fetched successfully',
+        message: 'Tasks filtered by status retrieved successfully',
       };
     } catch (error: any) {
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Tasks fetch failed', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to retrieve tasks by status. Please try again later.', error);
     }
   }
 
 
 
-  async addMessage(senderGuid: string, createDto: CreateMessageDto) {
+  async addMessage(senderGuid: string, createDto: CreateMessageDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
       const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction, });
-      if (!sender) { await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'Sender user not found'); }
+      if (!sender) { await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'No sender account found with the provided ID'); }
 
       const { assignee_guids, ...messageData } = createDto as any;
       const createdMessage = await this.messageRepository.create({
@@ -525,10 +527,10 @@ async getAllTasks(
         await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction, });
       } await transaction.commit();
       const newMessage = await this.findMessageByGuid(createdMessage.guid);
-      return { status: 201, data: newMessage, message: 'Message sent successfully' };
+      return { status: 201, data: newMessage, message: this.i18n.t('messages.created', { lang }) };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Message creation failed', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.createFailed', { lang }), error);
     }
   }
 
@@ -541,7 +543,7 @@ async getAllTasks(
       const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction });
       if (!sender) {
         await transaction.rollback();
-        return errorResponse(HttpStatus.NOT_FOUND, 'Sender user not found');
+        return errorResponse(HttpStatus.NOT_FOUND, 'No sender account found with the provided ID');
       }
       let { assignee_guids, ...taskData } = createDto as any;
       if (!assignee_guids) {
@@ -566,10 +568,10 @@ async getAllTasks(
       }
       await transaction.commit();
       const newTask = await this.findMessageByGuid(createdTask.guid);
-      return { status: 201, data: newTask, message: 'Task sent successfully' };
+      return { status: 201, data: newTask, message: 'Task has been created and assigned successfully' };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Task creation failed', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to create the task. Please try again later.', error);
     }
   }
 
@@ -582,7 +584,7 @@ async getAllTasks(
 
       const message = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!message) {
-        await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
+        await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'No record found with the provided ID');
       }
       if (!updateData.images || updateData.images.length === 0) {
         delete updateData.images;
@@ -602,10 +604,10 @@ async getAllTasks(
       }
       await transaction.commit();
       const updatedRecord = await this.findMessageByGuid(guid);
-      return { status: 200, data: updatedRecord, message: 'Record updated successfully' };
+      return { status: 200, data: updatedRecord, message: 'Record has been updated successfully' };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to update the record. Please try again later.', error);
     }
   }
 
@@ -625,7 +627,7 @@ async getAllTasks(
       const task = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!task) {
         await transaction.rollback();
-        return errorResponse(HttpStatus.NOT_FOUND, 'Task not found');
+        return errorResponse(HttpStatus.NOT_FOUND, 'No task found with the provided ID');
       }
 
       if (images && images.length > 0 && task.images && Array.isArray(task.images)) {
@@ -649,16 +651,16 @@ async getAllTasks(
       await transaction.commit();
       const updatedTask = await this.findMessageByGuid(guid);
       if (!updatedTask) {
-        return errorResponse(HttpStatus.NOT_FOUND, 'Task not found after update');
+        return errorResponse(HttpStatus.NOT_FOUND, 'Task could not be retrieved after update');
       }
       return {
         status: 200,
         data: updatedTask.toJSON(),
-        message: 'Task updated successfully',
+        message: 'Task has been updated successfully',
       };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Task update failed', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to update the task. Please try again later.', error);
     }
   }
 
@@ -671,7 +673,7 @@ async getAllTasks(
       const record = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!record) {
         await transaction.rollback();
-        return errorResponse(HttpStatus.NOT_FOUND, 'Record not found');
+        return errorResponse(HttpStatus.NOT_FOUND, 'No record found with the provided ID');
       }
       await this.messageRepository.destroy({ where: { guid }, transaction });
       await transaction.commit();
@@ -679,10 +681,10 @@ async getAllTasks(
       if (record.images && Array.isArray(record.images) && record.images.length > 0) {
         this.imagesService.deleteFiles(record.images);
       }
-      return { status: 200, message: 'Record deleted successfully' };
+      return { status: 200, message: 'Record has been deleted successfully' };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Delete operation failed', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to delete the record. Please try again later.', error);
     }
   }
 
@@ -722,7 +724,13 @@ async getAllTasks(
       };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Marking read status failed', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to update read status. Please try again later.', error);
     }
   }
 }
+
+
+
+
+
+

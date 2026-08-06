@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+﻿import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { HarPaymentService } from './har_payment.service';
 import { CreateHarPaymentDto } from './dto/create-har_payment.dto';
 import { UpdateHarPaymentDto } from './dto/update-har_payment.dto';
@@ -6,6 +6,7 @@ import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Har_Payment')
 @ApiBearerAuth('bearerAuth')

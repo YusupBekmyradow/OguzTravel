@@ -1,0 +1,11 @@
+{
+    "updated":  "Translation payment updated successfully",
+    "notFound":  "No translation payment found with the provided ID",
+    "listFetched":  "Translation payments retrieved successfully",
+    "deleteFailed":  "Translation payment deletion failed",
+    "updateFailed":  "Translation payment update failed",
+    "createFailed":  "Translation payment creation failed",
+    "deleted":  "Translation payment deleted successfully",
+    "created":  "Translation payment created successfully",
+    "fetchFailed":  "Failed to retrieve translation payments"
+}

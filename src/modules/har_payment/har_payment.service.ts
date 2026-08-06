@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateHarPaymentDto } from './dto/create-har_payment.dto';
 import { UpdateHarPaymentDto } from './dto/update-har_payment.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -15,6 +16,7 @@ export class HarPaymentService {
   constructor(
     @InjectModel(HarPayment) private harPaymentRepo: typeof HarPayment,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   async addHarPayment(createDto: CreateHarPaymentDto) {
@@ -25,18 +27,18 @@ export class HarPaymentService {
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
       if (!createdPayment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Payment record could not be retrieved after creation');
       }
 
       const target = this.getTargetInfo(createDto);
       if (!target) {
-        return errorResponse(HttpStatuses.BAD_REQUEST, 'A valid reference guid must be provided');
+        return errorResponse(HttpStatuses.BAD_REQUEST, 'A valid reference GUID (hotel, airway, or railway) must be provided');
       }
 
       const stats = await this.getHarPaymentStats(target);
-      return successResponse(HttpStatuses.CREATED, { ...createdPayment.toJSON(), stats }, 'Payment created successfully');
+      return successResponse(HttpStatuses.CREATED, { ...createdPayment.toJSON(), stats }, 'Payment has been created successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Payment creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to create the payment. Please try again later.', error);
     }
   }
 
@@ -60,7 +62,7 @@ export class HarPaymentService {
         where.railway_guid = filters.railway_guid;
         target = { guid: filters.railway_guid, table: 'tbl_railway', col: 'railway_guid' };
       } else {
-        return errorResponse(HttpStatuses.BAD_REQUEST, 'At least one guid is required');
+        return errorResponse(HttpStatuses.BAD_REQUEST, 'At least one valid GUID (hotel, airway, or railway) must be provided');
       }
       const { rows, count } = await this.harPaymentRepo.findAndCountAll({
         where,
@@ -76,9 +78,9 @@ export class HarPaymentService {
         data: rows,
         stats,
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage }
-      }, 'Payments fetched successfully');
+      }, 'Payment records retrieved successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve payment records. Please try again later.', error);
     }
   }
 
@@ -87,7 +89,7 @@ export class HarPaymentService {
   async updateHarPayment(updateDto: UpdateHarPaymentDto) {
     try {
       const payment = await this.harPaymentRepo.findOne({ where: { guid: updateDto.guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'No payment record found with the provided ID');
 
       await this.harPaymentRepo.update(updateDto as any, { where: { guid: updateDto.guid } });
       const updated = await this.harPaymentRepo.findOne({
@@ -95,15 +97,15 @@ export class HarPaymentService {
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
 
-      if (!updated) return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
+      if (!updated) return errorResponse(HttpStatuses.NOT_FOUND, 'Updated payment record could not be retrieved');
 
       const target = this.getTargetInfo(updated);
-      if (!target) return errorResponse(HttpStatuses.BAD_REQUEST, 'Target reference missing');
+      if (!target) return errorResponse(HttpStatuses.BAD_REQUEST, 'The payment record has no valid reference (hotel, airway, or railway)');
 
       const stats = await this.getHarPaymentStats(target);
-      return successResponse(HttpStatuses.OK, { ...updated.toJSON(), stats }, 'Payment updated successfully');
+      return successResponse(HttpStatuses.OK, { ...updated.toJSON(), stats }, 'Payment has been updated successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update the payment. Please try again later.', error);
     }
   }
 
@@ -111,17 +113,17 @@ export class HarPaymentService {
   async deleteHarPayment(guid: string) {
     try {
       const payment = await this.harPaymentRepo.findOne({ where: { guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'No payment record found with the provided ID');
 
       const target = this.getTargetInfo(payment);
       await this.harPaymentRepo.destroy({ where: { guid } });
 
-      if (!target) return successResponse(HttpStatuses.OK, null, 'Payment deleted successfully');
+      if (!target) return successResponse(HttpStatuses.OK, null, 'Payment has been deleted successfully');
 
       const stats = await this.getHarPaymentStats(target);
-      return successResponse(HttpStatuses.OK, stats, 'Payment deleted successfully');
+      return successResponse(HttpStatuses.OK, stats, 'Payment has been deleted successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to delete the payment. Please try again later.', error);
     }
   }
 
@@ -159,3 +161,5 @@ export class HarPaymentService {
     };
   }
 }
+
+

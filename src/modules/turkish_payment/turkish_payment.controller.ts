@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+﻿import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { TurkishPaymentService } from './turkish_payment.service';
 import { CreateTurkishPaymentDto } from './dto/create-turkish_payment.dto';
 import { UpdateTurkishPaymentDto } from './dto/update-turkish_payment.dto';
@@ -6,6 +6,7 @@ import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Turkish_Payment')
 @ApiBearerAuth('bearerAuth')
@@ -46,3 +47,4 @@ export class TurkishPaymentController {
     return this.turkishPaymentService.deleteturkishPayment(guid);
   }
 }
+

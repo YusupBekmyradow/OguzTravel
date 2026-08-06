@@ -1,0 +1,11 @@
+{
+    "updated":  "Department updated successfully",
+    "notFound":  "No department found with the provided ID",
+    "listFetched":  "Departments retrieved successfully",
+    "deleteFailed":  "Department deletion failed",
+    "updateFailed":  "Department update failed",
+    "createFailed":  "Department creation failed",
+    "deleted":  "Department deleted successfully",
+    "created":  "Department created successfully",
+    "fetchFailed":  "Failed to retrieve departments"
+}

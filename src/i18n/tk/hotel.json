@@ -1,0 +1,11 @@
+{
+    "updated":  "Myhmanhana ýazgysy täzelendi",
+    "notFound":  "Görkezilen ID bilen myhmanhana ýazgysy tapylmady",
+    "listFetched":  "Myhmanhana ýazgylarynyň sanawy alyndy",
+    "deleteFailed":  "Pozmak başartmady",
+    "updateFailed":  "Täzelemek başartmady",
+    "createFailed":  "Myhmanhana ýazgysyny döretmek başartmady",
+    "deleted":  "Myhmanhana ýazgysy pozuldy",
+    "created":  "Myhmanhana ýazgysy üstünlikli döredildi",
+    "fetchFailed":  "Myhmanhana ýazgylarynyň sanawyny almak başartmady"
+}

@@ -1,0 +1,11 @@
+{
+    "updated":  "Paket täzelendi",
+    "notFound":  "Görkezilen ID bilen paket tapylmady",
+    "listFetched":  "Paketleriň sanawy alyndy",
+    "deleteFailed":  "Paketi pozmak başartmady",
+    "updateFailed":  "Paketi täzelemek başartmady",
+    "createFailed":  "Paketi döretmek başartmady",
+    "deleted":  "Paket pozuldy",
+    "created":  "Paket üstünlikli döredildi",
+    "fetchFailed":  "Paketleriň sanawyny almak başartmady"
+}

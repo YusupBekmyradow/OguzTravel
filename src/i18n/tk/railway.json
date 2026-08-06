@@ -1,0 +1,11 @@
+{
+    "updated":  "Petegi täzelendi",
+    "notFound":  "Görkezilen ID bilen petegi tapylmady",
+    "listFetched":  "Demir ýol petegleriň sanawy alyndy",
+    "deleteFailed":  "Petegi pozmak başartmady",
+    "updateFailed":  "Petegi täzelemek başartmady",
+    "createFailed":  "Petegi döretmek başartmady",
+    "deleted":  "Petegi pozuldy",
+    "created":  "Demir ýol petegi üstünlikli döredildi",
+    "fetchFailed":  "Petegleriň sanawyny almak başartmady"
+}

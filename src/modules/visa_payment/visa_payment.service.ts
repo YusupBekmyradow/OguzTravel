@@ -8,16 +8,18 @@ import { Employee } from '../employee/entities/employee.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { QueryTypes } from 'sequelize';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class VisaPaymentService {
   constructor(
     @InjectModel(VisaPayment) private visaPaymentRepo: typeof VisaPayment,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
 
-  async addVisaPayment(createDto: CreateVisaPaymentDto) {
+  async addVisaPayment(createDto: CreateVisaPaymentDto, lang: string) {
     try {
       const payment = await this.visaPaymentRepo.create({
         ...createDto,
@@ -26,7 +28,7 @@ export class VisaPaymentService {
         include: [{ model: Employee, as: 'visaoperator', attributes: ['guid', 'fullName'] }]
       });
       if (!createdPayment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('payment.notFoundAfterCreate', { lang }));
       }
 
       let statsResult = {};
@@ -40,15 +42,15 @@ export class VisaPaymentService {
         ...createdPayment.toJSON(),
         ...statsResult
       };
-      return successResponse(HttpStatuses.CREATED, combinedData, 'VisaPayment created successfully');
+      return successResponse(HttpStatuses.CREATED, combinedData, this.i18n.t('payment.created', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'VisaPayment creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('payment.createFailed', { lang }), error);
     }
   }
 
 
 
-  async getAllVisaPayment(page: number = 1, limit: number = 10, visa_guid?: string, inbound_guid?: string) {
+  async getAllVisaPayment(page: number = 1, limit: number = 10, visa_guid?: string, inbound_guid?: string, lang: string = 'tk') {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
@@ -86,26 +88,26 @@ export class VisaPaymentService {
           totalPages: Math.ceil(count / currentLimit),
           currentPage: currentPage
         },
-        message: 'VisaPayment fetched successfully'
+        message: this.i18n.t('payment.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'VisaPayment fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('payment.fetchFailed', { lang }), error);
     }
   }
 
 
 
-  async updateVisaPayment(updateDto: UpdateVisaPaymentDto) {
+  async updateVisaPayment(updateDto: UpdateVisaPaymentDto, lang: string) {
     try {
       const payment = await this.visaPaymentRepo.findOne({ where: { guid: updateDto.guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'VisaPayment not found');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('payment.notFound', { lang }));
       await this.visaPaymentRepo.update(updateDto as any, { where: { guid: updateDto.guid } });
       const updatedPayment = await this.visaPaymentRepo.findOne({
         where: { guid: updateDto.guid },
         include: [{ model: Employee, as: 'visaoperator', attributes: ['guid', 'fullName'] }]
       });
       if (!updatedPayment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('payment.updatedNotFound', { lang }));
       }
       let stats = {};
       if (updatedPayment.visa_guid) {
@@ -116,17 +118,17 @@ export class VisaPaymentService {
         ...updatedPayment.toJSON(),
         ...stats
       };
-      return successResponse(HttpStatuses.OK, combinedData, 'VisaPayment updated successfully');
+      return successResponse(HttpStatuses.OK, combinedData, this.i18n.t('payment.updated', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('payment.updateFailed', { lang }), error);
     }
   }
 
 
-  async deleteVisaPayment(guid: string) {
+  async deleteVisaPayment(guid: string, lang: string) {
     try {
       const payment = await this.visaPaymentRepo.findOne({ where: { guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'VisaPayment not found');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('payment.notFound', { lang }));
       const visa_guid = payment.visa_guid;
       const inbound_guid = payment.inbound_guid;
       await this.visaPaymentRepo.destroy({ where: { guid } });
@@ -135,9 +137,9 @@ export class VisaPaymentService {
         stats = await this.getVisaPaymentStats(visa_guid);
       } else if (inbound_guid) {
         stats = await this.getInboundPaymentStats(inbound_guid);
-      } return successResponse(HttpStatuses.OK, stats, 'VisaPayment deleted successfully');
+      } return successResponse(HttpStatuses.OK, stats, this.i18n.t('payment.deleted', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('payment.deleteFailed', { lang }), error);
     }
   }
 

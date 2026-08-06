@@ -1,0 +1,11 @@
+{
+    "updated":  "Ýazgy täzelendi",
+    "notFound":  "Görkezilen ID bilen ýazgy tapylmady",
+    "listFetched":  "Berlen hasabatlaryň sanawy alyndy",
+    "deleteFailed":  "Ýazgyny pozmak başartmady",
+    "updateFailed":  "Ýazgyny täzelemek başartmady",
+    "createFailed":  "Hasabat bermek başartmady",
+    "deleted":  "Ýazgy pozuldy",
+    "created":  "Hasabat üstünlikli berildi",
+    "fetchFailed":  "Sanawy almak başartmady"
+}

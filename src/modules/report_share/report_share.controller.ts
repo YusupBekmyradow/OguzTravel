@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -15,6 +15,7 @@ import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Report Share')
 @ApiBearerAuth('bearerAuth')
@@ -25,8 +26,8 @@ export class ReportShareController {
   constructor(private readonly reportShareService: ReportShareService) { }
 
   @Post('/add-report-share')
-  async create(@Body() createReportShareDto: CreateReportShareDto) {
-    return this.reportShareService.addReportShare(createReportShareDto);
+  async create(@Body() createReportShareDto: CreateReportShareDto, @I18nLang() lang: string) {
+    return this.reportShareService.addReportShare(createReportShareDto, lang);
   }
 
   @Get('/get-all-report-shares')
@@ -34,13 +35,13 @@ export class ReportShareController {
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiQuery({ name: 'assignment_opr_guid', required: false })
   @ApiQuery({ name: 'receiver_opr_guid', required: false })
-  async findAll(
+  async findAll(@I18nLang() lang: string = 'tk',
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('assignment_opr_guid') assignment_opr_guid?: string,
     @Query('receiver_opr_guid') receiver_opr_guid?: string,
   ) {
-    return this.reportShareService.getAllReportShares(
+    return this.reportShareService.getAllReportShares(lang, 
       page,
       limit,
       assignment_opr_guid,
@@ -49,8 +50,8 @@ export class ReportShareController {
   }
 
   @Patch('/update-report-share')
-  async update(@Body() updateReportShareDto: UpdateReportShareDto) {
-    return this.reportShareService.updateReportShare(updateReportShareDto);
+  async update(@Body() updateReportShareDto: UpdateReportShareDto, @I18nLang() lang: string) {
+    return this.reportShareService.updateReportShare(updateReportShareDto, lang);
   }
 
   @Delete('/delete-report-share')
@@ -62,7 +63,10 @@ export class ReportShareController {
       },
     },
   })
-  async remove(@Body('guid') guid: string) {
-    return this.reportShareService.deleteReportShare(guid);
+  async remove(@Body('guid') guid: string, @I18nLang() lang: string) {
+    return this.reportShareService.deleteReportShare(guid, lang);
   }
 }
+
+
+

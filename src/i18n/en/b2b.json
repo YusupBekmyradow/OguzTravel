@@ -1,0 +1,11 @@
+{
+    "updated":  "B2B ticket updated successfully",
+    "notFound":  "No B2B ticket found with the provided ID",
+    "listFetched":  "B2B tickets retrieved successfully",
+    "deleteFailed":  "B2B ticket deletion failed",
+    "updateFailed":  "B2B ticket update failed",
+    "createFailed":  "B2B ticket creation failed",
+    "deleted":  "B2B ticket deleted successfully",
+    "created":  "B2B ticket created successfully",
+    "fetchFailed":  "Failed to retrieve B2B tickets"
+}

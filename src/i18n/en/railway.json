@@ -1,0 +1,11 @@
+{
+    "updated":  "Railway ticket updated successfully",
+    "notFound":  "No railway record found with the provided ID",
+    "listFetched":  "Railway records retrieved successfully",
+    "deleteFailed":  "Railway ticket deletion failed",
+    "updateFailed":  "Railway ticket update failed",
+    "createFailed":  "Railway ticket creation failed",
+    "deleted":  "Railway ticket deleted successfully",
+    "created":  "Railway ticket created successfully",
+    "fetchFailed":  "Failed to retrieve railway records"
+}

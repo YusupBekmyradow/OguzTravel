@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { InjectModel } from '@nestjs/sequelize';
 import { Report } from './entities/report.entity';
 import { ReportShare } from '../report_share/entities/report_share.entity';
@@ -13,6 +14,7 @@ export class ReportService {
   constructor(
     @InjectModel(Report) private readonly reportRepository: typeof Report,
     @InjectModel(ReportShare) private readonly reportShareRepository: typeof ReportShare,
+    private readonly i18n: I18nService,
   ) { }
 
   async getTotalReportCount() {
@@ -32,14 +34,14 @@ export class ReportService {
         ...successResponse(
           HttpStatuses.CREATED,
           report,
-          'Report created successfully',
+          'Report has been created successfully',
         ),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Report creation failed',
+        'Failed to create the report. Please try again later.',
         error,
       );
     }
@@ -72,13 +74,13 @@ export class ReportService {
           totalPages: Math.ceil(count / limitNum),
           currentPage: pageNum,
         },
-        message: 'Reports fetched successfully',
+        message: 'Report records retrieved successfully',
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Reports fetch failed',
+        'Failed to retrieve report records. Please try again later.',
         error,
       );
     }
@@ -89,7 +91,7 @@ export class ReportService {
       const { guid, ...updateData } = updateReportDto;
       const report = await this.reportRepository.findOne({ where: { guid } });
       if (!report) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Report not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'No report found with the provided ID');
       }
 
       await this.reportRepository.update(updateData as any, {
@@ -106,14 +108,14 @@ export class ReportService {
         ...successResponse(
           HttpStatuses.OK,
           updatedReport,
-          'Report updated successfully',
+          'Report has been updated successfully',
         ),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Report update failed',
+        'Failed to update the report. Please try again later.',
         error,
       );
     }
@@ -126,7 +128,7 @@ export class ReportService {
       });
 
       if (deletedCount === 0) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Report not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'No report found with the provided ID');
       }
 
       const total_report_count = await this.getTotalReportCount();
@@ -135,16 +137,20 @@ export class ReportService {
         ...successResponse(
           HttpStatuses.OK,
           null,
-          'Report deleted successfully',
+          'Report has been deleted successfully',
         ),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Report delete failed',
+        'Failed to delete the report. Please try again later.',
         error,
       );
     }
   }
 }
+
+
+
+

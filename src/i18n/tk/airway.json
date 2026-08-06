@@ -1,0 +1,11 @@
+{
+    "updated":  "Uçuş ýazgysy täzelendi",
+    "notFound":  "Görkezilen ID bilen uçuş ýazgysy tapylmady",
+    "listFetched":  "Uçuş ýazgylarynyň sanawy alyndy",
+    "deleteFailed":  "Uçuş ýazgysyny pozmak başartmady",
+    "updateFailed":  "Uçuş ýazgysyny täzelemek başartmady",
+    "createFailed":  "Uçuş ýazgysyny döretmek başartmady",
+    "deleted":  "Uçuş ýazgysy pozuldy",
+    "created":  "Uçuş ýazgysy üstünlikli döredildi",
+    "fetchFailed":  "Uçuş ýazgylarynyň sanawyny almak başartmady"
+}

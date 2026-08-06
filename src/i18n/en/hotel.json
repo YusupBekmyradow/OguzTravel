@@ -1,0 +1,11 @@
+{
+    "updated":  "Hotel record updated successfully",
+    "notFound":  "No hotel record found with the provided ID",
+    "listFetched":  "Hotel records retrieved successfully",
+    "deleteFailed":  "Hotel deletion failed",
+    "updateFailed":  "Hotel update failed",
+    "createFailed":  "Hotel creation failed",
+    "deleted":  "Hotel record deleted successfully",
+    "created":  "Hotel record created successfully",
+    "fetchFailed":  "Failed to retrieve hotel records"
+}

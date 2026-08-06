@@ -6,6 +6,7 @@ import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Visa_Payment')
 @ApiBearerAuth('bearerAuth')
@@ -16,8 +17,11 @@ export class VisaPaymentController {
   constructor(private readonly visaPaymentService: VisaPaymentService) { }
 
   @Post('/add-visa-payment')
-  create(@Body() createVisaPaymentDto: CreateVisaPaymentDto) {
-    return this.visaPaymentService.addVisaPayment(createVisaPaymentDto);
+  create(
+    @Body() createVisaPaymentDto: CreateVisaPaymentDto,
+    @I18nLang() lang: string,
+  ) {
+    return this.visaPaymentService.addVisaPayment(createVisaPaymentDto, lang);
   }
 
   @Get('/getAll-visa-payment')
@@ -26,18 +30,23 @@ export class VisaPaymentController {
     @Query('limit') limit: number = 10,
     @Query('visa_guid') visa_guid?: string,
     @Query('inbound_guid') inbound_guid?: string,
+    @I18nLang() lang: string = 'tk',
   ) {
     return this.visaPaymentService.getAllVisaPayment(
       Number(page),
       Number(limit),
       visa_guid,
-      inbound_guid
+      inbound_guid,
+      lang,
     );
   }
 
   @Patch('/update-visa-payment')
-  async update(@Body() updateVisaPaymentDto: UpdateVisaPaymentDto) {
-    return this.visaPaymentService.updateVisaPayment(updateVisaPaymentDto);
+  async update(
+    @Body() updateVisaPaymentDto: UpdateVisaPaymentDto,
+    @I18nLang() lang: string,
+  ) {
+    return this.visaPaymentService.updateVisaPayment(updateVisaPaymentDto, lang);
   }
 
   @Delete('/delete-visa-payment')
@@ -48,7 +57,10 @@ export class VisaPaymentController {
       }
     }
   })
-  async remove(@Body('guid') guid: string) {
-    return this.visaPaymentService.deleteVisaPayment(guid);
+  async remove(
+    @Body('guid') guid: string,
+    @I18nLang() lang: string,
+  ) {
+    return this.visaPaymentService.deleteVisaPayment(guid, lang);
   }
 }

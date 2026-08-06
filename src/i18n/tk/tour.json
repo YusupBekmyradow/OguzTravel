@@ -1,0 +1,11 @@
+{
+    "updated":  "Tur täzelendi",
+    "notFound":  "Görkezilen ID bilen tur tapylmady",
+    "listFetched":  "Turlaryň sanawy alyndy",
+    "deleteFailed":  "Tur pozmak başartmady",
+    "updateFailed":  "Tur täzelemek başartmady",
+    "createFailed":  "Tur döretmek başartmady",
+    "deleted":  "Tur pozuldy",
+    "created":  "Tur üstünlikli döredildi",
+    "fetchFailed":  "Turlaryň sanawyny almak başartmady"
+}

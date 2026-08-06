@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateTurkishPaymentDto } from './dto/create-turkish_payment.dto';
 import { UpdateTurkishPaymentDto } from './dto/update-turkish_payment.dto';
 import { TurkishPayment } from './entities/turkish_payment.entity';
@@ -14,6 +15,7 @@ export class TurkishPaymentService {
   constructor(
     @InjectModel(TurkishPayment) private turkishPaymentRepo: typeof TurkishPayment,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   async addturkishPayment(createDto: CreateTurkishPaymentDto) {
@@ -27,7 +29,7 @@ export class TurkishPaymentService {
       });
 
       if (!createdPayment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Payment not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Payment record could not be retrieved after creation');
       }
       const statsResult = await this.getPaymentStats(createDto.turkish_airline_guid);
 
@@ -35,9 +37,9 @@ export class TurkishPaymentService {
         ...createdPayment.toJSON(),
         ...statsResult
       };
-      return successResponse(HttpStatuses.CREATED, combinedData, 'TurkishPayment created successfully');
+      return successResponse(HttpStatuses.CREATED, combinedData, 'Payment has been created successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TurkishPayment creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to create the payment. Please try again later.', error);
     }
   }
 
@@ -73,10 +75,10 @@ export class TurkishPaymentService {
           totalPages: Math.ceil(count / currentLimit),
           currentPage: currentPage
         },
-        message: 'TurkishPayment fetched successfully'
+        message: 'Payment records retrieved successfully'
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'TurkishPayment fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve payment records. Please try again later.', error);
     }
   }
 
@@ -84,7 +86,7 @@ export class TurkishPaymentService {
   async updateturkishPayment(updateDto: UpdateTurkishPaymentDto) {
     try {
       const payment = await this.turkishPaymentRepo.findOne({ where: { guid: updateDto.guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishPayment not found');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'No payment record found with the provided ID');
 
       await this.turkishPaymentRepo.update(updateDto as any, { where: { guid: updateDto.guid } });
 
@@ -93,7 +95,7 @@ export class TurkishPaymentService {
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
       if (!updatedPayment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Updated record not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, 'Updated payment record could not be retrieved');
       }
       if (updatedPayment) {
         const stats = await this.getPaymentStats(updatedPayment.turkish_airline_guid);
@@ -101,25 +103,25 @@ export class TurkishPaymentService {
           ...updatedPayment.toJSON(),
           ...stats
         };
-        return successResponse(HttpStatuses.OK, combinedData, 'TurkishPayment updated successfully');
+        return successResponse(HttpStatuses.OK, combinedData, 'Payment has been updated successfully');
       }
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update the payment. Please try again later.', error);
     }
   }
 
   async deleteturkishPayment(guid: string) {
     try {
       const payment = await this.turkishPaymentRepo.findOne({ where: { guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'TurkishPayment not found');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'No payment record found with the provided ID');
 
       const turkish_airline_guid = payment.turkish_airline_guid;
       await this.turkishPaymentRepo.destroy({ where: { guid } });
 
       const stats = await this.getPaymentStats(turkish_airline_guid);
-      return successResponse(HttpStatuses.OK, stats, 'TurkishPayment deleted successfully');
+      return successResponse(HttpStatuses.OK, stats, 'Payment has been deleted successfully');
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to delete the payment. Please try again later.', error);
     }
   }
 
@@ -148,3 +150,5 @@ export class TurkishPaymentService {
     };
   }
 }
+
+

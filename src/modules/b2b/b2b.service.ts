@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 import { CreateB2bDto } from './dto/create-b2b.dto';
 import { UpdateB2bDto } from './dto/update-b2b.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -10,6 +10,7 @@ import { Client } from '../client/entities/client.entity';
 import { Tstatus } from '../tstatus/entities/tstatus.entity';
 import { Office } from '../office/entities/office.entity';
 import { Sequelize } from 'sequelize-typescript';
+import { I18nService } from 'nestjs-i18n';
 import { TicketPayment } from '../ticket_payment/entities/ticket_payment.entity';
 import { Op } from 'sequelize';
 
@@ -20,6 +21,7 @@ export class B2bService {
     @InjectModel(TicketPayment) private ticketPaymentRepo: typeof TicketPayment,
     @InjectModel(Client) private clientRepository: typeof Client,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   private getB2bIncludes() {
@@ -90,7 +92,7 @@ export class B2bService {
   }
 
 
-  async addB2b(createB2bDto: CreateB2bDto) {
+  async addB2b(createB2bDto: CreateB2bDto, lang: string) {
     const t = await this.sequelize.transaction();
     try {
       const client = await this.clientRepository.findByPk(createB2bDto.client_guid, { transaction: t });
@@ -117,18 +119,18 @@ export class B2bService {
       });
 
       if (!newB2b) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'B2b not found')
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('b2b.notFound', { lang }))
       }
 
       const formattedData = this.formatB2bPassport(newB2b);
       return {
         status: 201,
         data: formattedData,
-        message: 'B2b created successfully'
+        message: this.i18n.t('b2b.created', { lang })
       }
     } catch (error: any) {
       await t.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'B2b creation failes', error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('b2b.createFailed', { lang }), error)
     }
   }
 
@@ -136,15 +138,8 @@ export class B2bService {
   async getAllB2b(
     page: number = 1,
     limit: number = 10,
-    filters?: {
-      datetime?: string | Date;
-      assignment_opr_guid?: string;
-      receiver_opr_guid?: string;
-      status_guid?: string;
-      travel_type?: number;
-      flight_date?: string | Date;
-      is_paid?: boolean;
-    }
+    filters?: { datetime?: string | Date; assignment_opr_guid?: string; receiver_opr_guid?: string; status_guid?: string; travel_type?: number; flight_date?: string | Date; is_paid?: boolean; },
+    lang: string = 'tk',
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
@@ -200,16 +195,16 @@ export class B2bService {
           totalPages: Math.ceil(count / limit),
           currentPage: currentPage,
         },
-        message: 'B2b fetched successfully',
+        message: this.i18n.t('b2b.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'B2b fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('b2b.fetchFailed', { lang }), error);
     }
   }
 
 
 
-  async updateB2b(updateDto: UpdateB2bDto) {
+  async updateB2b(updateDto: UpdateB2bDto, lang: string) {
     const t = await this.sequelize.transaction();
     try {
       const existingB2b = await this.b2bRepository.findOne({
@@ -218,7 +213,7 @@ export class B2bService {
       });
       if (!existingB2b) {
         await t.rollback();
-        return errorResponse(HttpStatuses.NOT_FOUND, 'B2b not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('b2b.notFound', { lang }));
       }
       let updateData: any = { ...updateDto };
       const targetClientGuid = updateDto.client_guid || existingB2b.client_guid;
@@ -237,25 +232,26 @@ export class B2bService {
       });
       await t.commit();
       const formattedData = this.formatB2bPassport(updatedB2b);
-      return { status: 200, data: formattedData, message: 'B2b updated successfully' };
+      return { status: 200, data: formattedData, message: this.i18n.t('b2b.updated', { lang }) };
     } catch (error: any) {
       await t.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('b2b.updateFailed', { lang }), error);
     }
   }
 
 
-  async deleteB2b(guid: string) {
+  async deleteB2b(guid: string, lang: string) {
     try {
       const b2b = await this.b2bRepository.findByPk(guid);
       if (!b2b) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'B2b not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('b2b.notFound', { lang }));
       }
       await b2b.destroy();
 
-      return successResponse(HttpStatuses.OK, null, 'B2b deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('b2b.deleted', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('b2b.deleteFailed', { lang }), error)
     }
   }
 }
+

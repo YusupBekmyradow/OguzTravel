@@ -1,0 +1,11 @@
+{
+    "updated":  "Müşderi maglumatlary täzelendi",
+    "notFound":  "Görkezilen ID bilen müşderi tapylmady",
+    "listFetched":  "Müşderileriň sanawy alyndy",
+    "deleteFailed":  "Müşderi pozmak başartmady",
+    "updateFailed":  "Müşderi täzelemek başartmady",
+    "createFailed":  "Müşderi goşmak başartmady",
+    "deleted":  "Müşderi pozuldy",
+    "created":  "Müşderi üstünlikli goşuldy",
+    "fetchFailed":  "Müşderileriň sanawyny almak başartmady"
+}

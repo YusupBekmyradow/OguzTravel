@@ -1,0 +1,11 @@
+{
+    "updated":  "HAR tölegi täzelendi",
+    "notFound":  "Görkezilen ID bilen HAR tölegi tapylmady",
+    "listFetched":  "HAR tölegleriniň sanawy alyndy",
+    "deleteFailed":  "Tölegi pozmak başartmady",
+    "updateFailed":  "Tölegi täzelemek başartmady",
+    "createFailed":  "HAR tölegini döretmek başartmady",
+    "deleted":  "HAR tölegi pozuldy",
+    "created":  "HAR tölegi üstünlikli döredildi",
+    "fetchFailed":  "HAR tölegleriniň sanawyny almak başartmady"
+}

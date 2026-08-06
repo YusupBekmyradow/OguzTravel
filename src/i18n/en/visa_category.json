@@ -1,0 +1,11 @@
+{
+    "updated":  "Visa category updated successfully",
+    "notFound":  "No visa category found with the provided ID",
+    "listFetched":  "Visa categories retrieved successfully",
+    "deleteFailed":  "Visa category deletion failed",
+    "updateFailed":  "Visa category update failed",
+    "createFailed":  "Visa category creation failed",
+    "deleted":  "Visa category deleted successfully",
+    "created":  "Visa category created successfully",
+    "fetchFailed":  "Failed to retrieve visa categories"
+}

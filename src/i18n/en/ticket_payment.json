@@ -1,0 +1,11 @@
+{
+    "updated":  "Ticket payment updated successfully",
+    "notFound":  "No ticket payment found with the provided ID",
+    "listFetched":  "Ticket payments retrieved successfully",
+    "deleteFailed":  "Ticket payment deletion failed",
+    "updateFailed":  "Ticket payment update failed",
+    "createFailed":  "Ticket payment creation failed",
+    "deleted":  "Ticket payment deleted successfully",
+    "created":  "Ticket payment created successfully",
+    "fetchFailed":  "Failed to retrieve ticket payments"
+}

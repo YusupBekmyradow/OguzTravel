@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
 import { CreateRailwayDto } from './dto/create-railway.dto';
 import { UpdateRailwayDto } from './dto/update-railway.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -17,6 +18,7 @@ export class RailwayService {
     @InjectModel(Railway) private railwayRepository: typeof Railway,
     @InjectModel(HarPayment) private harPaymentRepo: typeof HarPayment,
     private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   private getIncludes() {
@@ -62,7 +64,7 @@ export class RailwayService {
     };
   }
 
-  async addRailway(createDto: CreateRailwayDto) {
+  async addRailway(createDto: CreateRailwayDto, lang: string) {
     const t = await this.sequelize.transaction();
     try {
       const railway = await this.railwayRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
@@ -85,14 +87,14 @@ export class RailwayService {
         include: this.getIncludes()
       });
 
-      return { status: 201, data: newRailway, message: 'Railway created successfully' };
+      return { status: 201, data: newRailway, message: 'Railway record has been created successfully' };
     } catch (error: any) {
       await t.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Railway creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to create the railway record. Please try again later.', error);
     }
   }
 
-  async getAllRailway(page: number = 1, limit: number = 10) {
+  async getAllRailway(page: number = 1, limit: number = 10, lang: string = 'tk') {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
@@ -113,22 +115,22 @@ export class RailwayService {
         status: 200,
         data: rows,
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
-        message: 'Railway records fetched successfully'
+        message: this.i18n.t('railway.listFetched', { lang })
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Railway fetching error', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('railway.fetchFailed', { lang }), error);
     }
   }
 
 
-  async updateRailway(updateDto: UpdateRailwayDto) {
+  async updateRailway(updateDto: UpdateRailwayDto, lang: string) {
     try {
       const railway = await this.railwayRepository.findOne({
         where: { guid: updateDto.guid }
       });
 
       if (!railway) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Railway not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('railway.notFound', { lang }));
       }
       await railway.update(updateDto);
       const updatedRailway = await this.railwayRepository.findOne({
@@ -140,22 +142,25 @@ export class RailwayService {
         include: this.getIncludes()
       });
 
-      return { status: 200, data: updatedRailway, message: 'Railway updated successfully' };
+      return { status: 200, data: updatedRailway, message: this.i18n.t('railway.updated', { lang }) };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('railway.updateFailed', { lang }), error);
     }
   }
 
 
-  async deleteRailway(guid: string) {
+  async deleteRailway(guid: string, lang: string) {
     try {
       const railway = await this.railwayRepository.findByPk(guid);
-      if (!railway) return errorResponse(HttpStatuses.NOT_FOUND, 'Railway not found');
-
+      if (!railway) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('railway.notFound', { lang }));
       await railway.destroy();
-      return successResponse(HttpStatuses.OK, null, 'Railway deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('railway.deleted', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Deletion failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('railway.deleteFailed', { lang }), error);
     }
   }
 }
+
+
+
+

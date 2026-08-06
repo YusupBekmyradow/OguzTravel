@@ -1,0 +1,11 @@
+{
+    "updated":  "Office updated successfully",
+    "notFound":  "No office found with the provided ID",
+    "listFetched":  "Offices retrieved successfully",
+    "deleteFailed":  "Office deletion failed",
+    "updateFailed":  "Office update failed",
+    "createFailed":  "Office creation failed",
+    "deleted":  "Office deleted successfully",
+    "created":  "Office created successfully",
+    "fetchFailed":  "Failed to retrieve offices"
+}

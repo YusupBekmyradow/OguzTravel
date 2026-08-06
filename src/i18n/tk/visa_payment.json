@@ -1,0 +1,11 @@
+{
+    "updated":  "Wiza tölegi täzelendi",
+    "notFound":  "Görkezilen ID bilen wiza tölegi tapylmady",
+    "listFetched":  "Wiza tölegleriniň sanawy alyndy",
+    "deleteFailed":  "Wiza tölegini pozmak başartmady",
+    "updateFailed":  "Wiza tölegini täzelemek başartmady",
+    "createFailed":  "Wiza tölegini döretmek başartmady",
+    "deleted":  "Wiza tölegi pozuldy",
+    "created":  "Wiza tölegi üstünlikli döredildi",
+    "fetchFailed":  "Wiza tölegleriniň sanawyny almak başartmady"
+}

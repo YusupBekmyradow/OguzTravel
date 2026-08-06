@@ -1,0 +1,11 @@
+{
+    "updated":  "Peteg tölegi täzelendi",
+    "notFound":  "Görkezilen ID bilen peteg tölegi tapylmady",
+    "listFetched":  "Peteg tölegleriniň sanawy alyndy",
+    "deleteFailed":  "Tölegi pozmak başartmady",
+    "updateFailed":  "Tölegi täzelemek başartmady",
+    "createFailed":  "Peteg tölegini döretmek başartmady",
+    "deleted":  "Peteg tölegi pozuldy",
+    "created":  "Peteg tölegi üstünlikli döredildi",
+    "fetchFailed":  "Peteg tölegleriniň sanawyny almak başartmady"
+}

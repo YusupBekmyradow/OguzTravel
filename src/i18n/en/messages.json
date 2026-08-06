@@ -1,0 +1,11 @@
+{
+    "updated":  "Message updated successfully",
+    "notFound":  "No message found with the provided ID",
+    "listFetched":  "Messages retrieved successfully",
+    "deleteFailed":  "Message deletion failed",
+    "updateFailed":  "Message update failed",
+    "createFailed":  "Message sending failed",
+    "deleted":  "Message deleted successfully",
+    "created":  "Message sent successfully",
+    "fetchFailed":  "Failed to retrieve messages"
+}

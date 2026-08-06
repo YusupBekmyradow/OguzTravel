@@ -1,0 +1,11 @@
+{
+    "updated":  "Giriş ýazgysy täzelendi",
+    "notFound":  "Görkezilen ID bilen giriş ýazgysy tapylmady",
+    "listFetched":  "Giriş ýazgylarynyň sanawy alyndy",
+    "deleteFailed":  "Pozmak başartmady",
+    "updateFailed":  "Täzelemek başartmady",
+    "createFailed":  "Giriş ýazgysyny döretmek başartmady",
+    "deleted":  "Giriş ýazgysy pozuldy",
+    "created":  "Giriş ýazgysy üstünlikli döredildi",
+    "fetchFailed":  "Giriş ýazgylarynyň sanawyny almak başartmady"
+}

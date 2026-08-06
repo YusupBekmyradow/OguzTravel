@@ -1,0 +1,12 @@
+{
+    "updated":  "Ulanyjy maglumatlary täzelendi",
+    "notFound":  "Görkezilen ID bilen ulanyjy tapylmady",
+    "listFetched":  "Ulanyjylaryň sanawy alyndy",
+    "deleteFailed":  "Ulanyjy pozmak başartmady",
+    "updateFailed":  "Ulanyjy täzelemek başartmady",
+    "createFailed":  "Ulanyjy döretmek başartmady",
+    "deleted":  "Ulanyjy pozuldy",
+    "created":  "Ulanyjy hasaby üstünlikli döredildi",
+    "fetchFailed":  "Ulanyjylaryň sanawyny almak başartmady",
+    "employeeNotFound":  "Görkezilen ID bilen işgär tapylmady"
+}

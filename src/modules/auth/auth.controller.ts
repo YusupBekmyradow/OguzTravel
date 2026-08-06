@@ -6,41 +6,47 @@ import { AdminRoleGuard } from '../../guards/admin.guard';
 import { signInAuthDto } from './dto/signin-auth.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
-  // /* @UseGuards(JwtAuthGuard, AdminRoleGuard)
-  // @ApiBearerAuth('bearerAuth') */
-  // @Post('/signup')
-  // async signUp(@Body() signUpAuthDto: SignUpAuthDto) {
-  //   return this.authService.signUp(signUpAuthDto);
-  // }
-
   @Post('/signin')
-  async signIn(@Body() signInAuthDto: signInAuthDto) {
-    return this.authService.signIn(signInAuthDto)
+  async signIn(
+    @Body() signInAuthDto: signInAuthDto,
+    @I18nLang() lang: string,
+  ) {
+    return this.authService.signIn(signInAuthDto, lang);
   }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearerAuth')
   @Get('/me')
-  async getMe(@Req() req: any) {
-    return this.authService.getMe(req.user.guid);
+  async getMe(
+    @Req() req: any,
+    @I18nLang() lang: string,
+  ) {
+    return this.authService.getMe(req.user.guid, lang);
   }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearerAuth')
   @Post('/logout')
-  async logOut(@Req() req: any) {
-    return this.authService.logOut(req.user.guid)
+  async logOut(
+    @Req() req: any,
+    @I18nLang() lang: string,
+  ) {
+    return this.authService.logOut(req.user.guid, lang);
   }
 
   @Post('/refresh')
-  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
-    return this.authService.refreshToken(refreshTokenDto)
+  async refresh(
+    @Body() refreshTokenDto: RefreshTokenDto,
+    @I18nLang() lang: string,
+  ) {
+    return this.authService.refreshToken(refreshTokenDto, lang);
   }
 
 }

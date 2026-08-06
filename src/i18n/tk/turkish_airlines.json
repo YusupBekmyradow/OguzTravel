@@ -1,0 +1,17 @@
+{
+    "statusReport":  "Status hasabaty üstünlikli döredildi",
+    "monthlyReportFailed":  "Aýlyk hasabaty döretmek başartmady",
+    "deleted":  "Ýazgy pozuldy",
+    "statusReportFailed":  "Status hasabatyny döretmek başartmady",
+    "monthlyReport":  "Aýlyk hasabat üstünlikli döredildi",
+    "fetchFailed":  "Ýazgylaryň sanawyny almak başartmady",
+    "createFailed":  "Ýazgyny döretmek başartmady",
+    "updateFailed":  "Ýazgyny täzelemek başartmady",
+    "deleteFailed":  "Ýazgyny pozmak başartmady",
+    "quarterlyReport":  "Çärýeklik hasabat alyndy",
+    "created":  "Turkish Airlines ýazgysy üstünlikli döredildi",
+    "notFound":  "Görkezilen ID bilen ýazgy tapylmady",
+    "listFetched":  "Turkish Airlines ýazgylarynyň sanawy alyndy",
+    "quarterlyReportFailed":  "Çärýeklik hasabaty almak başartmady",
+    "updated":  "Ýazgy täzelendi"
+}
