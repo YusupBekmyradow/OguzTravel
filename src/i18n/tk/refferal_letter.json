@@ -1,11 +1,11 @@
 {
-    "updated":  "Ugratma haty täzelendi",
-    "notFound":  "Görkezilen ID bilen ugratma haty tapylmady",
-    "listFetched":  "Ugratma hatlarynyň sanawy alyndy",
-    "deleteFailed":  "Haty pozmak başartmady",
-    "updateFailed":  "Haty täzelemek başartmady",
-    "createFailed":  "Ugratma hatyny döretmek başartmady",
-    "deleted":  "Ugratma haty pozuldy",
-    "created":  "Ugratma haty üstünlikli döredildi",
-    "fetchFailed":  "Hatlaryň sanawyny almak başartmady"
+    "updated": "Ugrukdyryş haty üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça ugrukdyryş haty tapylmady",
+    "listFetched": "Ugrukdyryş hatlarynyň sanawy üstünlikli alyndy",
+    "deleteFailed": "Ugrukdyryş haty pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Ugrukdyryş haty täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Ugrukdyryş haty döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Ugrukdyryş haty üstünlikli pozuldy",
+    "created": "Ugrukdyryş haty üstünlikli döredildi",
+    "fetchFailed": "Ugrukdyryş hatlarynyň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

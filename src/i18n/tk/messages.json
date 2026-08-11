@@ -1,11 +1,11 @@
 {
-    "updated":  "Habar täzelendi",
-    "notFound":  "Görkezilen ID bilen habar tapylmady",
-    "listFetched":  "Habarlaryň sanawy alyndy",
-    "deleteFailed":  "Habary pozmak başartmady",
-    "updateFailed":  "Habary täzelemek başartmady",
-    "createFailed":  "Habar ibermek başartmady",
-    "deleted":  "Habar pozuldy",
-    "created":  "Habar üstünlikli iberildi",
-    "fetchFailed":  "Habarlaryň sanawyny almak başartmady"
+    "updated": "Habar üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça habar tapylmady",
+    "listFetched": "Habarlaryň sanawy üstünlikli alyndy",
+    "deleteFailed": "Habar pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Habar täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Habar iberilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Habar üstünlikli pozuldy",
+    "created": "Habar üstünlikli iberildi",
+    "fetchFailed": "Habarlaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

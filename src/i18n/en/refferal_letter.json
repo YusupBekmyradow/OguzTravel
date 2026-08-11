@@ -1,11 +1,11 @@
 {
-    "updated":  "Referral letter updated successfully",
-    "notFound":  "No referral letter found with the provided ID",
-    "listFetched":  "Referral letters retrieved successfully",
-    "deleteFailed":  "Referral letter deletion failed",
-    "updateFailed":  "Referral letter update failed",
-    "createFailed":  "Referral letter creation failed",
-    "deleted":  "Referral letter deleted successfully",
-    "created":  "Referral letter created successfully",
-    "fetchFailed":  "Failed to retrieve referral letters"
+    "updated": "Referral letter updated successfully",
+    "notFound": "Referral letter not found for the specified ID",
+    "listFetched": "Referral letter list fetched successfully",
+    "deleteFailed": "Failed to delete referral letter. An error occurred.",
+    "updateFailed": "Failed to update referral letter. An error occurred.",
+    "createFailed": "Failed to create referral letter. An error occurred.",
+    "deleted": "Referral letter deleted successfully",
+    "created": "Referral letter created successfully",
+    "fetchFailed": "Failed to fetch referral letter list. An error occurred."
 }

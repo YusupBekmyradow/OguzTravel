@@ -1,11 +1,11 @@
 {
-    "updated":  "Tour updated successfully",
-    "notFound":  "No tour found with the provided ID",
-    "listFetched":  "Tours retrieved successfully",
-    "deleteFailed":  "Tour deletion failed",
-    "updateFailed":  "Tour update failed",
-    "createFailed":  "Tour creation failed",
-    "deleted":  "Tour deleted successfully",
-    "created":  "Tour created successfully",
-    "fetchFailed":  "Failed to retrieve tours"
+    "updated": "Tour details updated successfully",
+    "notFound": "Tour not found for the specified ID",
+    "listFetched": "Tour list fetched successfully",
+    "deleteFailed": "Failed to delete tour. An error occurred.",
+    "updateFailed": "Failed to update tour details. An error occurred.",
+    "createFailed": "Failed to create tour. An error occurred.",
+    "deleted": "Tour record deleted successfully",
+    "created": "Tour created successfully",
+    "fetchFailed": "Failed to fetch tour list. An error occurred."
 }

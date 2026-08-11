@@ -14,7 +14,7 @@ export class OperatorRoleGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
     if (!user || user.role !== 'Operator') {
-      throw new UnauthorizedException('operator login required');
+      throw new UnauthorizedException();
     }
 
     return true;

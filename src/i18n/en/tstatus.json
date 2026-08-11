@@ -1,11 +1,11 @@
 {
-    "updated":  "Status updated successfully",
-    "notFound":  "No status found with the provided ID",
-    "listFetched":  "Statuses retrieved successfully",
-    "deleteFailed":  "Status deletion failed",
-    "updateFailed":  "Status update failed",
-    "createFailed":  "Status creation failed",
-    "deleted":  "Status deleted successfully",
-    "created":  "Status created successfully",
-    "fetchFailed":  "Failed to retrieve statuses"
+    "updated": "Tour status updated successfully",
+    "notFound": "Status not found for the specified ID",
+    "listFetched": "Status list fetched successfully",
+    "deleteFailed": "Failed to delete status. An error occurred.",
+    "updateFailed": "Failed to update status. An error occurred.",
+    "createFailed": "Failed to create status. An error occurred.",
+    "deleted": "Status deleted successfully",
+    "created": "Status created successfully",
+    "fetchFailed": "Failed to fetch status list. An error occurred."
 }

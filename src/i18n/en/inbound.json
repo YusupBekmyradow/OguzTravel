@@ -1,11 +1,11 @@
 {
-    "updated":  "Inbound record updated successfully",
-    "notFound":  "No inbound record found with the provided ID",
-    "listFetched":  "Inbound records retrieved successfully",
-    "deleteFailed":  "Inbound deletion failed",
-    "updateFailed":  "Inbound update failed",
-    "createFailed":  "Inbound creation failed",
-    "deleted":  "Inbound record deleted successfully",
-    "created":  "Inbound record created successfully",
-    "fetchFailed":  "Failed to retrieve inbound records"
+    "updated": "Inbound record updated successfully",
+    "notFound": "Inbound record not found for the specified ID",
+    "listFetched": "Inbound record list fetched successfully",
+    "deleteFailed": "Failed to delete Inbound record. An error occurred.",
+    "updateFailed": "Failed to update Inbound record. An error occurred.",
+    "createFailed": "Failed to create Inbound record. An error occurred.",
+    "deleted": "Inbound record deleted successfully",
+    "created": "Inbound record created successfully",
+    "fetchFailed": "Failed to fetch Inbound records. An error occurred."
 }

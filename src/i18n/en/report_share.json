@@ -1,11 +1,11 @@
 {
-    "updated":  "Report share updated successfully",
-    "notFound":  "No report share found with the provided ID",
-    "listFetched":  "Report shares retrieved successfully",
-    "deleteFailed":  "Report share deletion failed",
-    "updateFailed":  "Report share update failed",
-    "createFailed":  "Report share creation failed",
-    "deleted":  "Report share deleted successfully",
-    "created":  "Report share created successfully",
-    "fetchFailed":  "Failed to retrieve report shares"
+    "updated": "Report share access updated successfully",
+    "notFound": "Report share record not found for the specified ID",
+    "listFetched": "Shared reports list fetched successfully",
+    "deleteFailed": "Failed to delete report share. An error occurred.",
+    "updateFailed": "Failed to update report share. An error occurred.",
+    "createFailed": "Failed to share report. An error occurred.",
+    "deleted": "Report share record deleted successfully",
+    "created": "Report shared successfully",
+    "fetchFailed": "Failed to fetch shared reports list. An error occurred."
 }

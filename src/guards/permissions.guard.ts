@@ -23,10 +23,9 @@ export class PermissionsGuard implements CanActivate {
     const user = request.user;
 
     if (!user) {
-      throw new UnauthorizedException('Kullanıcı girişi gereklidir.');
+      throw new UnauthorizedException();
     }
 
-    // Endpoint üzerinde özel bir izin tanımlanmamışsa erişime izin ver
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
     }
@@ -36,7 +35,6 @@ export class PermissionsGuard implements CanActivate {
       user.role === 'Admin' ||
       user.role === 'admin';
 
-    // Eğer permissions alanı hiç tanımlanmamışsa (undefined/null) ve kullanıcı Admin ise tam erişim ver
     if (isAdmin && (user.permissions === undefined || user.permissions === null)) {
       return true;
     }
@@ -45,15 +43,12 @@ export class PermissionsGuard implements CanActivate {
       ? user.permissions
       : [];
 
-    // Kullanıcının izinleri arasında istenen izinlerden en az biri var mı kontrol et
     const hasPermission = requiredPermissions.some((permission) =>
       userPermissions.includes(permission),
     );
 
     if (!hasPermission) {
-      throw new ForbiddenException(
-        `Erişim engellendi. Gerekli izin: ${requiredPermissions.join(', ')}`,
-      );
+      throw new ForbiddenException();
     }
 
     return true;

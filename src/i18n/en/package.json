@@ -1,11 +1,11 @@
 {
-    "updated":  "Package updated successfully",
-    "notFound":  "No package found with the provided ID",
-    "listFetched":  "Packages retrieved successfully",
-    "deleteFailed":  "Package deletion failed",
-    "updateFailed":  "Package update failed",
-    "createFailed":  "Package creation failed",
-    "deleted":  "Package deleted successfully",
-    "created":  "Package created successfully",
-    "fetchFailed":  "Failed to retrieve packages"
+    "updated": "Tour package updated successfully",
+    "notFound": "Package not found for the specified ID",
+    "listFetched": "Package list fetched successfully",
+    "deleteFailed": "Failed to delete package. An error occurred.",
+    "updateFailed": "Failed to update package. An error occurred.",
+    "createFailed": "Failed to create package. An error occurred.",
+    "deleted": "Package deleted successfully",
+    "created": "Tour package created successfully",
+    "fetchFailed": "Failed to fetch package list. An error occurred."
 }

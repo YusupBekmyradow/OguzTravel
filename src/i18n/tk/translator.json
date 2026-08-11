@@ -1,11 +1,11 @@
 {
-    "updated":  "Terjimeçi maglumatlary täzelendi",
-    "notFound":  "Görkezilen ID bilen terjimeçi tapylmady",
-    "listFetched":  "Terjimeçileriň sanawy alyndy",
-    "deleteFailed":  "Pozmak başartmady",
-    "updateFailed":  "Täzelemek başartmady",
-    "createFailed":  "Terjimeçi goşmak başartmady",
-    "deleted":  "Terjimeçi pozuldy",
-    "created":  "Terjimeçi üstünlikli goşuldy",
-    "fetchFailed":  "Terjimeçileriň sanawyny almak başartmady"
+    "updated": "Terjimeçi maglumatlary üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça terjimeçi tapylmady",
+    "listFetched": "Terjimeçileriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Terjimeçi pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Terjimeçi maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Terjimeçi döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Terjimeçi maglumaty üstünlikli pozuldy",
+    "created": "Terjimeçi üstünlikli goşuldy",
+    "fetchFailed": "Terjimeçileriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

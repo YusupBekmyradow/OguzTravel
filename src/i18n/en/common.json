@@ -1,5 +1,8 @@
 {
-  "notFound": "No record found with the provided ID",
-  "serverError": "An unexpected error occurred. Please try again later.",
-  "fetchError": "Failed to retrieve the records. Please try again later."
+  "notFound": "The requested resource or data was not found.",
+  "serverError": "An unexpected system error occurred. Please try again later.",
+  "fetchError": "Failed to fetch data. Please try again later.",
+  "unauthorized": "Authentication required to access the system.",
+  "forbidden": "You do not have permission to perform this action.",
+  "badRequest": "Invalid request. Please check your input."
 }

@@ -1,11 +1,11 @@
 {
-    "updated":  "TTP tölegi täzelendi",
-    "notFound":  "Görkezilen ID bilen TTP tölegi tapylmady",
-    "listFetched":  "TTP tölegleriniň sanawy alyndy",
-    "deleteFailed":  "Tölegi pozmak başartmady",
-    "updateFailed":  "Tölegi täzelemek başartmady",
-    "createFailed":  "TTP tölegini döretmek başartmady",
-    "deleted":  "TTP tölegi pozuldy",
-    "created":  "TTP tölegi üstünlikli döredildi",
-    "fetchFailed":  "TTP tölegleriniň sanawyny almak başartmady"
+    "updated": "TTP tölegi üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça TTP tölegi tapylmady",
+    "listFetched": "TTP tölegleriniň sanawy üstünlikli alyndy",
+    "deleteFailed": "TTP tölegi pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "TTP tölegi täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "TTP tölegi döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "TTP tölegi üstünlikli pozuldy",
+    "created": "TTP tölegi üstünlikli döredildi",
+    "fetchFailed": "TTP tölegleriniň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

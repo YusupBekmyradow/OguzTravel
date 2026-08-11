@@ -1,11 +1,11 @@
 {
-    "updated":  "Paket täzelendi",
-    "notFound":  "Görkezilen ID bilen paket tapylmady",
-    "listFetched":  "Paketleriň sanawy alyndy",
-    "deleteFailed":  "Paketi pozmak başartmady",
-    "updateFailed":  "Paketi täzelemek başartmady",
-    "createFailed":  "Paketi döretmek başartmady",
-    "deleted":  "Paket pozuldy",
-    "created":  "Paket üstünlikli döredildi",
-    "fetchFailed":  "Paketleriň sanawyny almak başartmady"
+    "updated": "Syýahat paketi üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça paket tapylmady",
+    "listFetched": "Paketleriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Paket pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Paket täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Paket döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Paket üstünlikli pozuldy",
+    "created": "Paket üstünlikli döredildi",
+    "fetchFailed": "Paketleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

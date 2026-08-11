@@ -14,7 +14,7 @@ export class AdminRoleGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
     if (!user || user.role !== 'Admin') {
-      throw new UnauthorizedException('admin login required');
+      throw new UnauthorizedException();
     }
 
     return true;

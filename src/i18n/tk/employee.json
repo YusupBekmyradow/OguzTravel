@@ -1,12 +1,14 @@
 {
-    "updated":  "Işgäriň maglumatlary täzelendi",
-    "notFound":  "Görkezilen ID bilen işgär tapylmady",
-    "listFetched":  "Işgärleriň sanawy alyndy",
-    "deleteFailed":  "Işgäri pozmak başartmady",
-    "updateFailed":  "Işgäri täzelemek başartmady",
-    "createFailed":  "Işgäri döretmek başartmady",
-    "notFoundAfterCreation":  "Işgär döredilenden soň tapylmady",
-    "deleted":  "Işgär üstünlikli pozuldy",
-    "created":  "Işgär üstünlikli döredildi",
-    "fetchFailed":  "Işgärleriň sanawyny almak başartmady"
+    "updated": "Işgär maglumatlary üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça işgär tapylmady",
+    "listFetched": "Işgärleriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Işgär pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Işgär maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Işgär döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Işgär maglumaty üstünlikli pozuldy",
+    "created": "Işgär üstünlikli goşuldy",
+    "fetchFailed": "Işgärleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
+    "notFoundAfterCreate": "Işgär döredilenden soň tapylmady",
+    "positionFetched": "Işgär wezipeleri üstünlikli alyndy",
+    "positionFetchFailed": "Işgär wezipelerini alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

@@ -1,11 +1,11 @@
 {
-    "updated":  "Myhmanhana ýazgysy täzelendi",
-    "notFound":  "Görkezilen ID bilen myhmanhana ýazgysy tapylmady",
-    "listFetched":  "Myhmanhana ýazgylarynyň sanawy alyndy",
-    "deleteFailed":  "Pozmak başartmady",
-    "updateFailed":  "Täzelemek başartmady",
-    "createFailed":  "Myhmanhana ýazgysyny döretmek başartmady",
-    "deleted":  "Myhmanhana ýazgysy pozuldy",
-    "created":  "Myhmanhana ýazgysy üstünlikli döredildi",
-    "fetchFailed":  "Myhmanhana ýazgylarynyň sanawyny almak başartmady"
+    "updated": "Myhmanhana maglumatlary üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça myhmanhana tapylmady",
+    "listFetched": "Myhmanhanalaryň sanawy üstünlikli alyndy",
+    "deleteFailed": "Myhmanhana pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Myhmanhana maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Myhmanhana döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Myhmanhana maglumaty üstünlikli pozuldy",
+    "created": "Myhmanhana üstünlikli döredildi",
+    "fetchFailed": "Myhmanhanalaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

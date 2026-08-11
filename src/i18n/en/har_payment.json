@@ -1,11 +1,11 @@
 {
-    "updated":  "HAR payment updated successfully",
-    "notFound":  "No HAR payment found with the provided ID",
-    "listFetched":  "HAR payments retrieved successfully",
-    "deleteFailed":  "HAR payment deletion failed",
-    "updateFailed":  "HAR payment update failed",
-    "createFailed":  "HAR payment creation failed",
-    "deleted":  "HAR payment deleted successfully",
-    "created":  "HAR payment created successfully",
-    "fetchFailed":  "Failed to retrieve HAR payments"
+    "updated": "Har payment updated successfully",
+    "notFound": "Har payment not found for the specified ID",
+    "listFetched": "Har payment list fetched successfully",
+    "deleteFailed": "Failed to delete Har payment. An error occurred.",
+    "updateFailed": "Failed to update Har payment. An error occurred.",
+    "createFailed": "Failed to create Har payment. An error occurred.",
+    "deleted": "Har payment deleted successfully",
+    "created": "Har payment created successfully",
+    "fetchFailed": "Failed to fetch Har payment list. An error occurred."
 }

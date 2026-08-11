@@ -1,11 +1,11 @@
 {
-    "updated":  "Wezipe täzelendi",
-    "notFound":  "Görkezilen ID bilen wezipe tapylmady",
-    "listFetched":  "Wezipeleriň sanawy alyndy",
-    "deleteFailed":  "Wezipäni pozmak başartmady",
-    "updateFailed":  "Wezipäni täzelemek başartmady",
-    "createFailed":  "Wezipäni döretmek başartmady",
-    "deleted":  "Wezipe pozuldy",
-    "created":  "Wezipe üstünlikli döredildi",
-    "fetchFailed":  "Wezipeleriň sanawyny almak başartmady"
+    "updated": "Wezipe maglumaty üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça wezipe tapylmady",
+    "listFetched": "Wezipeleriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Wezipe pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Wezipe täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Wezipe döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Wezipe maglumaty üstünlikli pozuldy",
+    "created": "Wezipe üstünlikli döredildi",
+    "fetchFailed": "Wezipeleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

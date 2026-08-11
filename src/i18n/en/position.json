@@ -1,11 +1,11 @@
 {
-    "updated":  "Position updated successfully",
-    "notFound":  "No position found with the provided ID",
-    "listFetched":  "Positions retrieved successfully",
-    "deleteFailed":  "Position deletion failed",
-    "updateFailed":  "Position update failed",
-    "createFailed":  "Position creation failed",
-    "deleted":  "Position deleted successfully",
-    "created":  "Position created successfully",
-    "fetchFailed":  "Failed to retrieve positions"
+    "updated": "Position details updated successfully",
+    "notFound": "Position not found for the specified ID",
+    "listFetched": "Position list fetched successfully",
+    "deleteFailed": "Failed to delete position. An error occurred.",
+    "updateFailed": "Failed to update position details. An error occurred.",
+    "createFailed": "Failed to create position. An error occurred.",
+    "deleted": "Position record deleted successfully",
+    "created": "Position created successfully",
+    "fetchFailed": "Failed to fetch position list. An error occurred."
 }

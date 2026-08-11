@@ -1,11 +1,11 @@
 {
-    "updated":  "Tur täzelendi",
-    "notFound":  "Görkezilen ID bilen tur tapylmady",
-    "listFetched":  "Turlaryň sanawy alyndy",
-    "deleteFailed":  "Tur pozmak başartmady",
-    "updateFailed":  "Tur täzelemek başartmady",
-    "createFailed":  "Tur döretmek başartmady",
-    "deleted":  "Tur pozuldy",
-    "created":  "Tur üstünlikli döredildi",
-    "fetchFailed":  "Turlaryň sanawyny almak başartmady"
+    "updated": "Tur maglumaty üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça tur tapylmady",
+    "listFetched": "Turlaryň sanawy üstünlikli alyndy",
+    "deleteFailed": "Tur pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Tur maglumaty täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Tur döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Tur maglumaty üstünlikli pozuldy",
+    "created": "Tur üstünlikli döredildi",
+    "fetchFailed": "Turlaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

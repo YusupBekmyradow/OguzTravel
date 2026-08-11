@@ -1,11 +1,11 @@
 {
-    "updated":  "Translator updated successfully",
-    "notFound":  "No translator found with the provided ID",
-    "listFetched":  "Translators retrieved successfully",
-    "deleteFailed":  "Translator deletion failed",
-    "updateFailed":  "Translator update failed",
-    "createFailed":  "Translator creation failed",
-    "deleted":  "Translator deleted successfully",
-    "created":  "Translator added successfully",
-    "fetchFailed":  "Failed to retrieve translators"
+    "updated": "Translator details updated successfully",
+    "notFound": "Translator not found for the specified ID",
+    "listFetched": "Translator list fetched successfully",
+    "deleteFailed": "Failed to delete translator. An error occurred.",
+    "updateFailed": "Failed to update translator details. An error occurred.",
+    "createFailed": "Failed to add translator. An error occurred.",
+    "deleted": "Translator record deleted successfully",
+    "created": "Translator added successfully",
+    "fetchFailed": "Failed to fetch translator list. An error occurred."
 }

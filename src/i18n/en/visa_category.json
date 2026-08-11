@@ -1,11 +1,11 @@
 {
-    "updated":  "Visa category updated successfully",
-    "notFound":  "No visa category found with the provided ID",
-    "listFetched":  "Visa categories retrieved successfully",
-    "deleteFailed":  "Visa category deletion failed",
-    "updateFailed":  "Visa category update failed",
-    "createFailed":  "Visa category creation failed",
-    "deleted":  "Visa category deleted successfully",
-    "created":  "Visa category created successfully",
-    "fetchFailed":  "Failed to retrieve visa categories"
+    "updated": "Visa category updated successfully",
+    "notFound": "Visa category not found for the specified ID",
+    "listFetched": "Visa category list fetched successfully",
+    "deleteFailed": "Failed to delete visa category. An error occurred.",
+    "updateFailed": "Failed to update visa category. An error occurred.",
+    "createFailed": "Failed to create visa category. An error occurred.",
+    "deleted": "Visa category deleted successfully",
+    "created": "Visa category created successfully",
+    "fetchFailed": "Failed to fetch visa categories. An error occurred."
 }

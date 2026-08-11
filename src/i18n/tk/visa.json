@@ -1,13 +1,13 @@
 {
-    "updated":  "Wiza ýüztutmasy täzelendi",
-    "notFound":  "Görkezilen ID bilen wiza tapylmady",
-    "listFetched":  "Wiza ýazgylarynyň sanawy alyndy",
-    "deleteFailed":  "Wiza ýüztutmasyny pozmak başartmady",
-    "updateFailed":  "Wiza ýüztutmasyny täzelemek başartmady",
-    "clientNotFound":  "Görkezilen ID bilen müşderi tapylmady",
-    "createFailed":  "Wiza ýüztutmasyny döretmek başartmady",
-    "deleted":  "Wiza ýüztutmasy pozuldy",
-    "created":  "Wiza ýüztutmasy üstünlikli döredildi",
-    "fetchFailed":  "Wiza ýazgylarynyň sanawyny almak başartmady",
-    "notFoundAfterCreate":  "Wiza döredilenden soň tapylmady"
+    "updated": "Wiza ýüztutmasy üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça wiza tapylmady",
+    "listFetched": "Wiza ýazgylarynyň sanawy üstünlikli alyndy",
+    "deleteFailed": "Wiza ýüztutmasy pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Wiza ýüztutmasy täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "clientNotFound": "Görkezilen ID boýunça müşderi tapylmady",
+    "createFailed": "Wiza ýüztutmasy döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Wiza ýüztutmasy üstünlikli pozuldy",
+    "created": "Wiza ýüztutmasy üstünlikli döredildi",
+    "fetchFailed": "Wiza ýazgylarynyň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
+    "notFoundAfterCreate": "Wiza döredilenden soň tapylmady"
 }

@@ -1,11 +1,11 @@
 {
-    "updated":  "Office updated successfully",
-    "notFound":  "No office found with the provided ID",
-    "listFetched":  "Offices retrieved successfully",
-    "deleteFailed":  "Office deletion failed",
-    "updateFailed":  "Office update failed",
-    "createFailed":  "Office creation failed",
-    "deleted":  "Office deleted successfully",
-    "created":  "Office created successfully",
-    "fetchFailed":  "Failed to retrieve offices"
+    "updated": "Office details updated successfully",
+    "notFound": "Office not found for the specified ID",
+    "listFetched": "Office list fetched successfully",
+    "deleteFailed": "Failed to delete office. An error occurred.",
+    "updateFailed": "Failed to update office details. An error occurred.",
+    "createFailed": "Failed to create office. An error occurred.",
+    "deleted": "Office record deleted successfully",
+    "created": "Office created successfully",
+    "fetchFailed": "Failed to fetch office list. An error occurred."
 }

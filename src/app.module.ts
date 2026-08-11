@@ -61,7 +61,9 @@ dotenv.config();
         watch: true,
       },
       resolvers: [
-        { use: HeaderResolver, options: ['x-custom-lang', 'x-lang', 'lang'] },
+        new QueryResolver(['lang', 'l']),
+        new HeaderResolver(['x-custom-lang', 'x-lang', 'lang']),
+        new AcceptLanguageResolver(),
       ],
     }),
 

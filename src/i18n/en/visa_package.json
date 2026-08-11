@@ -1,12 +1,12 @@
 {
-    "updated":  "Visa package updated successfully",
-    "notFound":  "No visa package found with the provided ID",
-    "listFetched":  "Visa packages retrieved successfully",
-    "deleteFailed":  "Visa package deletion failed",
-    "updateFailed":  "Visa package update failed",
-    "createFailed":  "Visa package creation failed",
-    "deleted":  "Visa package deleted successfully",
-    "created":  "Visa package created successfully",
-    "fetchFailed":  "Failed to retrieve visa packages",
-    "categoryNotFound":  "No visa category found with the provided index"
+    "updated": "Visa package updated successfully",
+    "notFound": "Visa package not found for the specified ID",
+    "listFetched": "Visa package list fetched successfully",
+    "deleteFailed": "Failed to delete visa package. An error occurred.",
+    "updateFailed": "Failed to update visa package. An error occurred.",
+    "createFailed": "Failed to create visa package. An error occurred.",
+    "deleted": "Visa package deleted successfully",
+    "created": "Visa package created successfully",
+    "fetchFailed": "Failed to fetch visa packages. An error occurred.",
+    "categoryNotFound": "Visa category not found for the specified index"
 }

@@ -1,11 +1,11 @@
 {
-    "updated":  "Railway ticket updated successfully",
-    "notFound":  "No railway record found with the provided ID",
-    "listFetched":  "Railway records retrieved successfully",
-    "deleteFailed":  "Railway ticket deletion failed",
-    "updateFailed":  "Railway ticket update failed",
-    "createFailed":  "Railway ticket creation failed",
-    "deleted":  "Railway ticket deleted successfully",
-    "created":  "Railway ticket created successfully",
-    "fetchFailed":  "Failed to retrieve railway records"
+    "updated": "Railway record updated successfully",
+    "notFound": "Railway record not found for the specified ID",
+    "listFetched": "Railway records fetched successfully",
+    "deleteFailed": "Failed to delete railway record. An error occurred.",
+    "updateFailed": "Failed to update railway record. An error occurred.",
+    "createFailed": "Failed to create railway record. An error occurred.",
+    "deleted": "Railway record deleted successfully",
+    "created": "Railway record created successfully",
+    "fetchFailed": "Failed to fetch railway records. An error occurred."
 }

@@ -1,11 +1,11 @@
 {
-    "updated":  "Payment updated successfully",
-    "notFound":  "No payment found with the provided ID",
-    "listFetched":  "Turkish Airlines payments retrieved successfully",
-    "deleteFailed":  "Payment deletion failed",
-    "updateFailed":  "Payment update failed",
-    "createFailed":  "Payment creation failed",
-    "deleted":  "Payment deleted successfully",
-    "created":  "Turkish Airlines payment created successfully",
-    "fetchFailed":  "Failed to retrieve payments"
+    "updated": "Turkish Airlines payment updated successfully",
+    "notFound": "Payment not found for the specified ID",
+    "listFetched": "Payment list fetched successfully",
+    "deleteFailed": "Failed to delete payment. An error occurred.",
+    "updateFailed": "Failed to update payment. An error occurred.",
+    "createFailed": "Failed to create payment. An error occurred.",
+    "deleted": "Payment deleted successfully",
+    "created": "Turkish Airlines payment created successfully",
+    "fetchFailed": "Failed to fetch payment list. An error occurred."
 }

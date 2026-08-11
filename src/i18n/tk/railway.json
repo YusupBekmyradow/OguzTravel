@@ -1,11 +1,11 @@
 {
-    "updated":  "Petegi täzelendi",
-    "notFound":  "Görkezilen ID bilen petegi tapylmady",
-    "listFetched":  "Demir ýol petegleriň sanawy alyndy",
-    "deleteFailed":  "Petegi pozmak başartmady",
-    "updateFailed":  "Petegi täzelemek başartmady",
-    "createFailed":  "Petegi döretmek başartmady",
-    "deleted":  "Petegi pozuldy",
-    "created":  "Demir ýol petegi üstünlikli döredildi",
-    "fetchFailed":  "Petegleriň sanawyny almak başartmady"
+    "updated": "Demir ýol gatnawy üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça demir ýol gatnawy tapylmady",
+    "listFetched": "Demir ýol gatnawlarynyň sanawy üstünlikli alyndy",
+    "deleteFailed": "Demir ýol gatnawy pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Demir ýol gatnawy täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Demir ýol gatnawy döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Demir ýol gatnawy üstünlikli pozuldy",
+    "created": "Demir ýol gatnawy üstünlikli döredildi",
+    "fetchFailed": "Demir ýol gatnawlarynyň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

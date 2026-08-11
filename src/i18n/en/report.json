@@ -1,6 +1,11 @@
 {
-    "listFetched":  "Report data retrieved successfully",
-    "created":  "Report created successfully",
-    "createFailed":  "Report creation failed",
-    "fetchFailed":  "Failed to retrieve report data"
+    "updated": "Report details updated successfully",
+    "notFound": "Report not found for the specified ID",
+    "listFetched": "Report list fetched successfully",
+    "deleteFailed": "Failed to delete report. An error occurred.",
+    "updateFailed": "Failed to update report. An error occurred.",
+    "createFailed": "Failed to generate report. An error occurred.",
+    "deleted": "Report record deleted successfully",
+    "created": "Report generated successfully",
+    "fetchFailed": "Failed to fetch report list. An error occurred."
 }

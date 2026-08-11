@@ -1,11 +1,11 @@
 {
-    "updated":  "Hotel record updated successfully",
-    "notFound":  "No hotel record found with the provided ID",
-    "listFetched":  "Hotel records retrieved successfully",
-    "deleteFailed":  "Hotel deletion failed",
-    "updateFailed":  "Hotel update failed",
-    "createFailed":  "Hotel creation failed",
-    "deleted":  "Hotel record deleted successfully",
-    "created":  "Hotel record created successfully",
-    "fetchFailed":  "Failed to retrieve hotel records"
+    "updated": "Hotel details updated successfully",
+    "notFound": "Hotel not found for the specified ID",
+    "listFetched": "Hotel list fetched successfully",
+    "deleteFailed": "Failed to delete hotel. An error occurred.",
+    "updateFailed": "Failed to update hotel details. An error occurred.",
+    "createFailed": "Failed to add hotel. An error occurred.",
+    "deleted": "Hotel record deleted successfully",
+    "created": "Hotel added successfully",
+    "fetchFailed": "Failed to fetch hotel list. An error occurred."
 }

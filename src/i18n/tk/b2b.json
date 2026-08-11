@@ -1,11 +1,11 @@
 {
-    "updated":  "B2B petegi täzelendi",
-    "notFound":  "Görkezilen ID bilen B2B petegi tapylmady",
-    "listFetched":  "B2B petegleriň sanawy alyndy",
-    "deleteFailed":  "B2B pedegin pozmak başartmady",
-    "updateFailed":  "B2B pedegin täzelemek başartmady",
-    "createFailed":  "B2B pedegin döretmek başartmady",
-    "deleted":  "B2B petegi pozuldy",
-    "created":  "B2B petegi üstünlikli döredildi",
-    "fetchFailed":  "B2B petegleriň sanawyny almak başartmady"
+    "updated": "B2B ýazgysy üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça B2B ýazgysy tapylmady",
+    "listFetched": "B2B ýazgylarynyň sanawy üstünlikli alyndy",
+    "deleteFailed": "B2B ýazgysy pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "B2B ýazgysy täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "B2B ýazgysy döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "B2B ýazgysy üstünlikli pozuldy",
+    "created": "B2B ýazgysy üstünlikli döredildi",
+    "fetchFailed": "B2B ýazgylarynyň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

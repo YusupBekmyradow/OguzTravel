@@ -1,11 +1,11 @@
 {
-    "updated":  "Message updated successfully",
-    "notFound":  "No message found with the provided ID",
-    "listFetched":  "Messages retrieved successfully",
-    "deleteFailed":  "Message deletion failed",
-    "updateFailed":  "Message update failed",
-    "createFailed":  "Message sending failed",
-    "deleted":  "Message deleted successfully",
-    "created":  "Message sent successfully",
-    "fetchFailed":  "Failed to retrieve messages"
+    "updated": "Message updated successfully",
+    "notFound": "Message not found for the specified ID",
+    "listFetched": "Message list fetched successfully",
+    "deleteFailed": "Failed to delete message. An error occurred.",
+    "updateFailed": "Failed to update message. An error occurred.",
+    "createFailed": "Failed to send message. An error occurred.",
+    "deleted": "Message deleted successfully",
+    "created": "Message sent successfully",
+    "fetchFailed": "Failed to fetch message list. An error occurred."
 }

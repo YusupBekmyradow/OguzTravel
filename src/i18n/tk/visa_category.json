@@ -1,11 +1,11 @@
 {
-    "updated":  "Kategoriýa täzelendi",
-    "notFound":  "Görkezilen ID bilen kategoriýa tapylmady",
-    "listFetched":  "Wiza kategoriýalarynyň sanawy alyndy",
-    "deleteFailed":  "Kategoriýany pozmak başartmady",
-    "updateFailed":  "Kategoriýany täzelemek başartmady",
-    "createFailed":  "Kategoriýany döretmek başartmady",
-    "deleted":  "Kategoriýa pozuldy",
-    "created":  "Wiza kategoriýasy üstünlikli döredildi",
-    "fetchFailed":  "Kategoriýalaryň sanawyny almak başartmady"
+    "updated": "Wiza kategoriýasy üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça kategoriýa tapylmady",
+    "listFetched": "Wiza kategoriýalarynyň sanawy üstünlikli alyndy",
+    "deleteFailed": "Kategoriýa pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Kategoriýa täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Kategoriýa döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Wiza kategoriýasy üstünlikli pozuldy",
+    "created": "Wiza kategoriýasy üstünlikli döredildi",
+    "fetchFailed": "Kategoriýalaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

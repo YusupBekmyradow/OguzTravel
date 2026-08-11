@@ -1,11 +1,11 @@
 {
-    "updated":  "Giriş ýazgysy täzelendi",
-    "notFound":  "Görkezilen ID bilen giriş ýazgysy tapylmady",
-    "listFetched":  "Giriş ýazgylarynyň sanawy alyndy",
-    "deleteFailed":  "Pozmak başartmady",
-    "updateFailed":  "Täzelemek başartmady",
-    "createFailed":  "Giriş ýazgysyny döretmek başartmady",
-    "deleted":  "Giriş ýazgysy pozuldy",
-    "created":  "Giriş ýazgysy üstünlikli döredildi",
-    "fetchFailed":  "Giriş ýazgylarynyň sanawyny almak başartmady"
+    "updated": "Inbound maglumaty üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça Inbound ýazgysy tapylmady",
+    "listFetched": "Inbound ýazgylarynyň sanawy üstünlikli alyndy",
+    "deleteFailed": "Inbound ýazgysy pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Inbound maglumaty täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Inbound ýazgysy döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Inbound ýazgysy üstünlikli pozuldy",
+    "created": "Inbound ýazgysy üstünlikli döredildi",
+    "fetchFailed": "Inbound ýazgylarynyň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

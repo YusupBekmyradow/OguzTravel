@@ -1,11 +1,11 @@
 {
-    "updated":  "Terjime täzelendi",
-    "notFound":  "Görkezilen ID bilen terjime tapylmady",
-    "listFetched":  "Terjimeleriň sanawy alyndy",
-    "deleteFailed":  "Terjimäni pozmak başartmady",
-    "updateFailed":  "Terjimäni täzelemek başartmady",
-    "createFailed":  "Terjimäni döretmek başartmady",
-    "deleted":  "Terjime pozuldy",
-    "created":  "Terjime üstünlikli döredildi",
-    "fetchFailed":  "Terjimeleriň sanawyny almak başartmady"
+    "updated": "Terjime maglumaty üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça terjime tapylmady",
+    "listFetched": "Terjimeleriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Terjime pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Terjime maglumaty täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Terjime döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Terjime maglumaty üstünlikli pozuldy",
+    "created": "Terjime üstünlikli döredildi",
+    "fetchFailed": "Terjimeleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

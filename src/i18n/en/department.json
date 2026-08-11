@@ -1,11 +1,11 @@
 {
-    "updated":  "Department updated successfully",
-    "notFound":  "No department found with the provided ID",
-    "listFetched":  "Departments retrieved successfully",
-    "deleteFailed":  "Department deletion failed",
-    "updateFailed":  "Department update failed",
-    "createFailed":  "Department creation failed",
-    "deleted":  "Department deleted successfully",
-    "created":  "Department created successfully",
-    "fetchFailed":  "Failed to retrieve departments"
+    "updated": "Department details updated successfully",
+    "notFound": "Department not found for the specified ID",
+    "listFetched": "Department list fetched successfully",
+    "deleteFailed": "Failed to delete department. An error occurred.",
+    "updateFailed": "Failed to update department details. An error occurred.",
+    "createFailed": "Failed to create department. An error occurred.",
+    "deleted": "Department record deleted successfully",
+    "created": "Department created successfully",
+    "fetchFailed": "Failed to fetch department list. An error occurred."
 }

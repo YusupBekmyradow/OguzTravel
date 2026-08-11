@@ -1,11 +1,11 @@
 {
-    "updated":  "Ofis maglumatlary täzelendi",
-    "notFound":  "Görkezilen ID bilen ofis tapylmady",
-    "listFetched":  "Ofisleriň sanawy alyndy",
-    "deleteFailed":  "Ofisi pozmak başartmady",
-    "updateFailed":  "Ofisi täzelemek başartmady",
-    "createFailed":  "Ofisi döretmek başartmady",
-    "deleted":  "Ofis üstünlikli pozuldy",
-    "created":  "Ofis üstünlikli döredildi",
-    "fetchFailed":  "Ofisleriň sanawyny almak başartmady"
+    "updated": "Ofis maglumatlary üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça ofis tapylmady",
+    "listFetched": "Ofisleriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Ofis pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Ofis maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Ofis döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Ofis maglumaty üstünlikli pozuldy",
+    "created": "Ofis üstünlikli döredildi",
+    "fetchFailed": "Ofisleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

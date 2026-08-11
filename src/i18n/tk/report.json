@@ -1,6 +1,11 @@
 {
-    "listFetched":  "Hasabat maglumatlary alyndy",
-    "created":  "Hasabat döredildi",
-    "createFailed":  "Hasabat döretmek başartmady",
-    "fetchFailed":  "Hasabat maglumatlary almak başartmady"
+    "updated": "Hasabat maglumatlary üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça hasabat tapylmady",
+    "listFetched": "Hasabatlaryň sanawy üstünlikli alyndy",
+    "deleteFailed": "Hasabat pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Hasabat täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Hasabat döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Hasabat maglumaty üstünlikli pozuldy",
+    "created": "Hasabat üstünlikli berildi",
+    "fetchFailed": "Hasabatlaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

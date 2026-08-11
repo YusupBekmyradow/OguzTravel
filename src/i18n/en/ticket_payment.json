@@ -1,11 +1,11 @@
 {
-    "updated":  "Ticket payment updated successfully",
-    "notFound":  "No ticket payment found with the provided ID",
-    "listFetched":  "Ticket payments retrieved successfully",
-    "deleteFailed":  "Ticket payment deletion failed",
-    "updateFailed":  "Ticket payment update failed",
-    "createFailed":  "Ticket payment creation failed",
-    "deleted":  "Ticket payment deleted successfully",
-    "created":  "Ticket payment created successfully",
-    "fetchFailed":  "Failed to retrieve ticket payments"
+    "updated": "Ticket payment updated successfully",
+    "notFound": "Ticket payment not found for the specified ID",
+    "listFetched": "Ticket payment list fetched successfully",
+    "deleteFailed": "Failed to delete ticket payment. An error occurred.",
+    "updateFailed": "Failed to update ticket payment. An error occurred.",
+    "createFailed": "Failed to create ticket payment. An error occurred.",
+    "deleted": "Ticket payment deleted successfully",
+    "created": "Ticket payment created successfully",
+    "fetchFailed": "Failed to fetch ticket payment list. An error occurred."
 }

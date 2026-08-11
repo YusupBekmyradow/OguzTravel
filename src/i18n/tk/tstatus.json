@@ -1,11 +1,11 @@
 {
-    "updated":  "Status täzelendi",
-    "notFound":  "Görkezilen ID bilen status tapylmady",
-    "listFetched":  "Statuslaryň sanawy alyndy",
-    "deleteFailed":  "Statusy pozmak başartmady",
-    "updateFailed":  "Statusy täzelemek başartmady",
-    "createFailed":  "Status döretmek başartmady",
-    "deleted":  "Status pozuldy",
-    "created":  "Status üstünlikli döredildi",
-    "fetchFailed":  "Statuslaryň sanawyny almak başartmady"
+    "updated": "Status üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça status tapylmady",
+    "listFetched": "Statuslaryň sanawy üstünlikli alyndy",
+    "deleteFailed": "Status pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Status täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Status döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Status üstünlikli pozuldy",
+    "created": "Status üstünlikli döredildi",
+    "fetchFailed": "Statuslaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

@@ -1,11 +1,11 @@
 {
-    "updated":  "Uçuş ýazgysy täzelendi",
-    "notFound":  "Görkezilen ID bilen uçuş ýazgysy tapylmady",
-    "listFetched":  "Uçuş ýazgylarynyň sanawy alyndy",
-    "deleteFailed":  "Uçuş ýazgysyny pozmak başartmady",
-    "updateFailed":  "Uçuş ýazgysyny täzelemek başartmady",
-    "createFailed":  "Uçuş ýazgysyny döretmek başartmady",
-    "deleted":  "Uçuş ýazgysy pozuldy",
-    "created":  "Uçuş ýazgysy üstünlikli döredildi",
-    "fetchFailed":  "Uçuş ýazgylarynyň sanawyny almak başartmady"
+    "updated": "Awia gatnaw maglumaty üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça awia gatnaw tapylmady",
+    "listFetched": "Awia gatnawlaryň sanawy üstünlikli alyndy",
+    "deleteFailed": "Awia gatnaw pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Awia gatnaw maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Awia gatnaw döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Awia gatnaw maglumaty üstünlikli pozuldy",
+    "created": "Awia gatnaw üstünlikli döredildi",
+    "fetchFailed": "Awia gatnawlaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

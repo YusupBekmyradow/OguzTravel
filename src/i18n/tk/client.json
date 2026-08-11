@@ -1,11 +1,11 @@
 {
-    "updated":  "Müşderi maglumatlary täzelendi",
-    "notFound":  "Görkezilen ID bilen müşderi tapylmady",
-    "listFetched":  "Müşderileriň sanawy alyndy",
-    "deleteFailed":  "Müşderi pozmak başartmady",
-    "updateFailed":  "Müşderi täzelemek başartmady",
-    "createFailed":  "Müşderi goşmak başartmady",
-    "deleted":  "Müşderi pozuldy",
-    "created":  "Müşderi üstünlikli goşuldy",
-    "fetchFailed":  "Müşderileriň sanawyny almak başartmady"
+    "updated": "Müşderi maglumatlary üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça müşderi tapylmady",
+    "listFetched": "Müşderileriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Müşderi pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Müşderi maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Müşderi döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Müşderi maglumaty üstünlikli pozuldy",
+    "created": "Müşderi üstünlikli goşuldy",
+    "fetchFailed": "Müşderileriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

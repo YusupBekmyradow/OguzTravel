@@ -1,11 +1,11 @@
 {
-    "updated":  "Töleg täzelendi",
-    "notFound":  "Görkezilen ID bilen töleg tapylmady",
-    "listFetched":  "Terjime tölegleriniň sanawy alyndy",
-    "deleteFailed":  "Tölegi pozmak başartmady",
-    "updateFailed":  "Tölegi täzelemek başartmady",
-    "createFailed":  "Tölegi döretmek başartmady",
-    "deleted":  "Töleg pozuldy",
-    "created":  "Terjime tölegi üstünlikli döredildi",
-    "fetchFailed":  "Tölegleriň sanawyny almak başartmady"
+    "updated": "Töleg üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça töleg tapylmady",
+    "listFetched": "Tölegleriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Töleg pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Töleg täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Töleg döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Töleg üstünlikli pozuldy",
+    "created": "Töleg üstünlikli döredildi",
+    "fetchFailed": "Tölegleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

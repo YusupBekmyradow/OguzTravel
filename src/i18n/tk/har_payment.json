@@ -1,11 +1,11 @@
 {
-    "updated":  "HAR tölegi täzelendi",
-    "notFound":  "Görkezilen ID bilen HAR tölegi tapylmady",
-    "listFetched":  "HAR tölegleriniň sanawy alyndy",
-    "deleteFailed":  "Tölegi pozmak başartmady",
-    "updateFailed":  "Tölegi täzelemek başartmady",
-    "createFailed":  "HAR tölegini döretmek başartmady",
-    "deleted":  "HAR tölegi pozuldy",
-    "created":  "HAR tölegi üstünlikli döredildi",
-    "fetchFailed":  "HAR tölegleriniň sanawyny almak başartmady"
+    "updated": "Töleg üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça tölegi tapylmady",
+    "listFetched": "Tölegleriniň sanawy üstünlikli alyndy",
+    "deleteFailed": "Töleg pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Töleg täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Töleg döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Töleg üstünlikli pozuldy",
+    "created": "Töleg üstünlikli döredildi",
+    "fetchFailed": "Töleg sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

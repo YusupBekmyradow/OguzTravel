@@ -1,11 +1,11 @@
 {
-    "updated":  "Client updated successfully",
-    "notFound":  "No client found with the provided ID",
-    "listFetched":  "Clients retrieved successfully",
-    "deleteFailed":  "Client deletion failed",
-    "updateFailed":  "Client update failed",
-    "createFailed":  "Client creation failed",
-    "deleted":  "Client deleted successfully",
-    "created":  "Client created successfully",
-    "fetchFailed":  "Failed to retrieve clients"
+    "updated": "Client details updated successfully",
+    "notFound": "Client not found for the specified ID",
+    "listFetched": "Client list fetched successfully",
+    "deleteFailed": "Failed to delete client. An error occurred.",
+    "updateFailed": "Failed to update client details. An error occurred.",
+    "createFailed": "Failed to add client. An error occurred.",
+    "deleted": "Client record deleted successfully",
+    "created": "Client added successfully",
+    "fetchFailed": "Failed to fetch client list. An error occurred."
 }

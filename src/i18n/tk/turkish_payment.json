@@ -1,11 +1,11 @@
 {
-    "updated":  "Töleg täzelendi",
-    "notFound":  "Görkezilen ID bilen töleg tapylmady",
-    "listFetched":  "Tölegleriň sanawy alyndy",
-    "deleteFailed":  "Tölegi pozmak başartmady",
-    "updateFailed":  "Tölegi täzelemek başartmady",
-    "createFailed":  "Töleg döretmek başartmady",
-    "deleted":  "Töleg pozuldy",
-    "created":  "Turkish Airlines tölegi üstünlikli döredildi",
-    "fetchFailed":  "Tölegleriň sanawyny almak başartmady"
+    "updated": "Turkish Airlines tölegi üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça töleg tapylmady",
+    "listFetched": "Tölegleriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Töleg pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Töleg täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Töleg döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Töleg üstünlikli pozuldy",
+    "created": "Turkish Airlines tölegi üstünlikli döredildi",
+    "fetchFailed": "Tölegleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

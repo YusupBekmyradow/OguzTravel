@@ -1,5 +1,8 @@
 {
-  "notFound": "Berilen ID bilen ýazgy tapylmady",
-  "serverError": "Garaşylmadyk ýalňyşlyk ýüze çykdy. Soňrak täzeden synanyşyň.",
-  "fetchError": "Ýazgylary almak başartmady. Soňrak täzeden synanyşyň."
+  "notFound": "Görkezilen maglumat tapylmady.",
+  "serverError": "Ulgamda näsazlyk ýüze çykdy. Biraz soň täzeden synanyşyň.",
+  "fetchError": "Maglumatlary alyp bolmaýar. Biraz soň täzeden synanyşyň.",
+  "unauthorized": "Ilki bilen ulgama girmegiňizi haýyş edýäris.",
+  "forbidden": "Bu işi ýerine ýetirmäge ygtyýaryňyz ýok.",
+  "badRequest": "Nädogry haýyş. Maglumatlaryňyzy barap, täzeden synanyşyň."
 }

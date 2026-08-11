@@ -1,12 +1,12 @@
 {
-    "updated":  "Wiza paketi täzelendi",
-    "notFound":  "Görkezilen ID bilen wiza paketi tapylmady",
-    "listFetched":  "Wiza paketleriniň sanawy alyndy",
-    "deleteFailed":  "Wiza paketini pozmak başartmady",
-    "updateFailed":  "Wiza paketini täzelemek başartmady",
-    "createFailed":  "Wiza paketini döretmek başartmady",
-    "deleted":  "Wiza paketi pozuldy",
-    "created":  "Wiza paketi üstünlikli döredildi",
-    "fetchFailed":  "Wiza paketleriniň sanawyny almak başartmady",
-    "categoryNotFound":  "Görkezilen indeks bilen wiza kategoriýasy tapylmady"
+    "updated": "Wiza paketi üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça wiza paketi tapylmady",
+    "listFetched": "Wiza paketleriniň sanawy üstünlikli alyndy",
+    "deleteFailed": "Wiza paketi pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Wiza paketi täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Wiza paketi döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Wiza paketi üstünlikli pozuldy",
+    "created": "Wiza paketi üstünlikli döredildi",
+    "fetchFailed": "Wiza paketleriniň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
+    "categoryNotFound": "Görkezilen indeks boýunça wiza kategoriýasy tapylmady"
 }

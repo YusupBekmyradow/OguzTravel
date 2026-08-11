@@ -1,11 +1,11 @@
 {
-    "updated":  "Translation updated successfully",
-    "notFound":  "No translation found with the provided ID",
-    "listFetched":  "Translations retrieved successfully",
-    "deleteFailed":  "Translation deletion failed",
-    "updateFailed":  "Translation update failed",
-    "createFailed":  "Translation creation failed",
-    "deleted":  "Translation deleted successfully",
-    "created":  "Translation created successfully",
-    "fetchFailed":  "Failed to retrieve translations"
+    "updated": "Translation record updated successfully",
+    "notFound": "Translation not found for the specified ID",
+    "listFetched": "Translation list fetched successfully",
+    "deleteFailed": "Failed to delete translation. An error occurred.",
+    "updateFailed": "Failed to update translation. An error occurred.",
+    "createFailed": "Failed to create translation. An error occurred.",
+    "deleted": "Translation record deleted successfully",
+    "created": "Translation created successfully",
+    "fetchFailed": "Failed to fetch translation list. An error occurred."
 }

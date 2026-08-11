@@ -1,11 +1,11 @@
 {
-    "updated":  "Ýazgy täzelendi",
-    "notFound":  "Görkezilen ID bilen ýazgy tapylmady",
-    "listFetched":  "Berlen hasabatlaryň sanawy alyndy",
-    "deleteFailed":  "Ýazgyny pozmak başartmady",
-    "updateFailed":  "Ýazgyny täzelemek başartmady",
-    "createFailed":  "Hasabat bermek başartmady",
-    "deleted":  "Ýazgy pozuldy",
-    "created":  "Hasabat üstünlikli berildi",
-    "fetchFailed":  "Sanawy almak başartmady"
+    "updated": "Hasabat paýlaşygy üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça paýlaşyk tapylmady",
+    "listFetched": "Hasabat paýlaşyklarynyň sanawy üstünlikli alyndy",
+    "deleteFailed": "Hasabat paýlaşygy pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Hasabat paýlaşygy täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Hasabat paýlaşygy döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Hasabat paýlaşygy üstünlikli pozuldy",
+    "created": "Hasabat paýlaşygy üstünlikli döredildi",
+    "fetchFailed": "Hasabat paýlaşyklarynyň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

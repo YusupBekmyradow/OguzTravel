@@ -1,11 +1,11 @@
 {
-    "updated":  "B2B ticket updated successfully",
-    "notFound":  "No B2B ticket found with the provided ID",
-    "listFetched":  "B2B tickets retrieved successfully",
-    "deleteFailed":  "B2B ticket deletion failed",
-    "updateFailed":  "B2B ticket update failed",
-    "createFailed":  "B2B ticket creation failed",
-    "deleted":  "B2B ticket deleted successfully",
-    "created":  "B2B ticket created successfully",
-    "fetchFailed":  "Failed to retrieve B2B tickets"
+    "updated": "B2B record updated successfully",
+    "notFound": "B2B record not found for the specified ID",
+    "listFetched": "B2B records fetched successfully",
+    "deleteFailed": "Failed to delete B2B record. An error occurred.",
+    "updateFailed": "Failed to update B2B record. An error occurred.",
+    "createFailed": "Failed to create B2B record. An error occurred.",
+    "deleted": "B2B record deleted successfully",
+    "created": "B2B record created successfully",
+    "fetchFailed": "Failed to fetch B2B records. An error occurred."
 }

@@ -1,11 +1,11 @@
 {
-    "updated":  "Bölüm täzelendi",
-    "notFound":  "Görkezilen ID bilen bölüm tapylmady",
-    "listFetched":  "Bölümleriň sanawy alyndy",
-    "deleteFailed":  "Bölümi pozmak başartmady",
-    "updateFailed":  "Bölümi täzelemek başartmady",
-    "createFailed":  "Bölümi döretmek başartmady",
-    "deleted":  "Bölüm pozuldy",
-    "created":  "Bölüm üstünlikli döredildi",
-    "fetchFailed":  "Bölümleriň sanawyny almak başartmady"
+    "updated": "Bölüm maglumatlary üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça bölüm tapylmady",
+    "listFetched": "Bölümleriň sanawy üstünlikli alyndy",
+    "deleteFailed": "Bölüm pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Bölüm maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Bölüm döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Bölüm maglumaty üstünlikli pozuldy",
+    "created": "Bölüm üstünlikli döredildi",
+    "fetchFailed": "Bölümleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }

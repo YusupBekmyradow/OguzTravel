@@ -1,11 +1,11 @@
 {
-    "updated":  "Airway record updated successfully",
-    "notFound":  "No airway record found with the provided ID",
-    "listFetched":  "Airway records retrieved successfully",
-    "deleteFailed":  "Airway deletion failed",
-    "updateFailed":  "Airway update failed",
-    "createFailed":  "Airway creation failed",
-    "deleted":  "Airway record deleted successfully",
-    "created":  "Airway record created successfully",
-    "fetchFailed":  "Failed to retrieve airway records"
+    "updated": "Airway record updated successfully",
+    "notFound": "Airway record not found for the specified ID",
+    "listFetched": "Airway records fetched successfully",
+    "deleteFailed": "Failed to delete airway record. An error occurred.",
+    "updateFailed": "Failed to update airway record. An error occurred.",
+    "createFailed": "Failed to create airway record. An error occurred.",
+    "deleted": "Airway record deleted successfully",
+    "created": "Airway record created successfully",
+    "fetchFailed": "Failed to fetch airway records. An error occurred."
 }

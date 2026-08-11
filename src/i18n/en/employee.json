@@ -1,12 +1,14 @@
 {
-    "updated":  "Employee updated successfully",
-    "notFound":  "No employee found with the provided ID",
-    "listFetched":  "Employees retrieved successfully",
-    "deleteFailed":  "Employee deletion failed",
-    "updateFailed":  "Employee update failed",
-    "createFailed":  "Employee creation failed",
-    "notFoundAfterCreation":  "Employee not found after creation",
-    "deleted":  "Employee deleted successfully",
-    "created":  "Employee created successfully",
-    "fetchFailed":  "Failed to retrieve employees"
+    "updated": "Employee details updated successfully",
+    "notFound": "Employee not found for the specified ID",
+    "listFetched": "Employee list fetched successfully",
+    "deleteFailed": "Failed to delete employee. An error occurred.",
+    "updateFailed": "Failed to update employee details. An error occurred.",
+    "createFailed": "Failed to add employee. An error occurred.",
+    "deleted": "Employee record deleted successfully",
+    "created": "Employee added successfully",
+    "fetchFailed": "Failed to fetch employee list. An error occurred.",
+    "notFoundAfterCreate": "Employee not found after creation",
+    "positionFetched": "Employee positions fetched successfully",
+    "positionFetchFailed": "Failed to fetch employee positions. An error occurred."
 }
