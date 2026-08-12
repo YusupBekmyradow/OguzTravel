@@ -22,6 +22,7 @@ import { HarPayment } from "../../har_payment/entities/har_payment.entity";
 import { TtpPayment } from "../../ttp_payment/entities/ttp_payment.entity";
 import { Inbound } from "../../inbound/entities/inbound.entity";
 import { ReportShare } from "../../report_share/entities/report_share.entity";
+import { Receiving } from "../../receiving/entities/receiving.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -115,261 +116,209 @@ export class Employee extends Model<Employee> {
 
   @HasMany(() => User, {
     foreignKey: 'employee_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare user: User[];
 
   @HasMany(() => B2b, {
     foreignKey: 'assignment_opr_guid',
     sourceKey: 'guid',
-    as: 'assignment_operator',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'assignment_operator'
   })
   declare b2bOperator: B2b[];
 
   @HasMany(() => B2b, {
     foreignKey: 'receiver_opr_guid',
     sourceKey: 'guid',
-    as: 'receiver_operator',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'receiver_operator'
   })
   declare b2bRecipient: B2b[];
 
   @HasMany(() => Visa, {
     foreignKey: 'receiver_opr_guid',
     sourceKey: 'guid',
-    as: 'receiveroperator',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'receiveroperator'
   })
   declare visa: Visa[];
 
   @HasMany(() => TurkishAirline, {
     foreignKey: 'assignment_opr_guid',
     sourceKey: 'guid',
-    as: 'ta_assignment_operator',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'ta_assignment_operator'
   })
   declare airlineOperator: TurkishAirline[];
 
   @HasMany(() => TurkishAirline, {
     foreignKey: 'receiver_opr_guid',
     sourceKey: 'guid',
-    as: 'ta_receiver_operator',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'ta_receiver_operator'
   })
   declare airlineRecipient: TurkishAirline[];
 
   @HasMany(() => TicketPayment, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'ticketPayments',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'ticketPayments'
   })
   declare paymentOpr: TicketPayment[];
 
   @HasMany(() => TurkishPayment, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'turkishPayments',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'turkishPayments'
   })
   declare turkpaymentOpr: TurkishPayment[];
 
   @HasMany(() => RefferalLetter, {
     foreignKey: 'received_opr_guid',
     sourceKey: 'guid',
-    as: 'refferaloperator',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'refferaloperator'
   })
   declare refferalLetter: RefferalLetter[];
 
   @HasMany(() => VisaPayment, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'visaPayments',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'visaPayments'
   })
   declare visaPayment: VisaPayment[];
 
   @HasMany(() => GeneralTranslation, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'generalTranslation',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'generalTranslation'
   })
   declare generalTranslation: GeneralTranslation[];
 
   @HasMany(() => TransPayment, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'transPayments',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'transPayments'
   })
   declare transPaymentOpr: TransPayment[];
 
   @HasMany(() => Hotel, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'hotel',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'hotel'
   })
   declare hotel: Hotel[];
 
   @HasMany(() => Hotel, {
     foreignKey: 'prepared_opr_guid',
     sourceKey: 'guid',
-    as: 'hotelOpr',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'hotelOpr'
   })
   declare hotelOpr: Hotel[];
 
   @HasMany(() => Airway, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'airway',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'airway'
   })
   declare airway: Airway[];
 
   @HasMany(() => Airway, {
     foreignKey: 'prepared_opr_guid',
     sourceKey: 'guid',
-    as: 'airwayOpr',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'airwayOpr'
   })
   declare airwayOpr: Airway[];
 
   @HasMany(() => Railway, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'railway',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'railway'
   })
   declare railway: Railway[];
 
   @HasMany(() => Railway, {
     foreignKey: 'prepared_opr_guid',
     sourceKey: 'guid',
-    as: 'railwayOpr',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'railwayOpr'
   })
   declare railwayOpr: Railway[];
 
   @HasMany(() => Tour, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'tour',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'tour'
   })
   declare tour: Tour[];
 
   @HasMany(() => Tour, {
     foreignKey: 'prepared_opr_guid',
     sourceKey: 'guid',
-    as: 'tourOpr',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'tourOpr'
   })
   declare tourOpr: Tour[];
 
   @HasMany(() => Transfer, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'transfer',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'transfer'
   })
   declare transfer: Transfer[];
 
   @HasMany(() => Transfer, {
     sourceKey: 'guid',
     foreignKey: 'prepared_opr_guid',
-    as: 'transferOpr',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'transferOpr'
   })
   declare transferOpr: Transfer[];
 
   @HasMany(() => Package, {
     foreignKey: 'opr_guid',
     sourceKey: 'guid',
-    as: 'package',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'package'
   })
   declare package: Package[];
 
   @HasMany(() => Package, {
     sourceKey: 'guid',
     foreignKey: 'prepared_opr_guid',
-    as: 'packageOpr',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'packageOpr'
   })
   declare packageOpr: Package[];
 
   @HasMany(() => HarPayment, {
     sourceKey: 'guid',
     foreignKey: 'opr_guid',
-    as: 'harPaymentOpr',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'harPaymentOpr'
   })
   declare harPaymentOpr: HarPayment[];
 
   @HasMany(() => TtpPayment, {
     sourceKey: 'guid',
     foreignKey: 'opr_guid',
-    as: 'ttpPaymentOpr',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'ttpPaymentOpr'
   })
   declare ttpPayment: TtpPayment[];
 
   @HasMany(() => Inbound, {
     foreignKey: 'receiver_opr_guid',
     sourceKey: 'guid',
-    as: 'INreceiveroperator',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'INreceiveroperator'
   })
   declare inbound: Inbound[];
 
   @HasMany(() => ReportShare, {
     foreignKey: 'assignment_opr_guid',
     sourceKey: 'guid',
-    as: 'reportAS_operator',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'reportAS_operator'
   })
   declare rShareOperator: ReportShare[];
 
   @HasMany(() => ReportShare, {
     foreignKey: 'receiver_opr_guid',
     sourceKey: 'guid',
-    as: 'reportRe_operator',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'reportRe_operator'
   })
   declare rShareRecipient: ReportShare[];
+
+  @HasMany(() => Receiving, {
+    foreignKey: 'operator_guid',
+    sourceKey: 'guid'
+  })
+  declare receiving: Receiving[];
 }

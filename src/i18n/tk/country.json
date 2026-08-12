@@ -1,0 +1,11 @@
+{
+    "updated": "Ýurt maglumatlary üstünlikli täzelendi",
+    "notFound": "Görkezilen ID boýunça ýurt tapylmady",
+    "listFetched": "Ýurtlaryň sanawy üstünlikli alyndy",
+    "deleteFailed": "Ýurt pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "updateFailed": "Ýurt maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "createFailed": "Ýurt döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Ýurt maglumaty üstünlikli pozuldy",
+    "created": "Ýurt üstünlikli döredildi",
+    "fetchFailed": "Ýurtlaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
+}

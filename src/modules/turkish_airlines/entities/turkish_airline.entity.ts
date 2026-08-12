@@ -213,11 +213,9 @@ export class TurkishAirline extends Model<TurkishAirline> {
     declare office: Office;
 
     @HasMany(() => TurkishPayment, {
-        foreignKey: 'turkish_airline_guid',
-        sourceKey: 'guid',
-        onDelete: 'SET NULL',
-        onUpdate: 'SET NULL'
-    })
+    foreignKey: 'turkish_airline_guid',
+    sourceKey: 'guid'
+  })
     declare turkishPayment: TurkishPayment[];
     @BeforeSave
     @BeforeUpdate

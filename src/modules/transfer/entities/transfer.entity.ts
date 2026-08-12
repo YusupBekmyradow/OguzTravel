@@ -148,11 +148,9 @@ export class Transfer extends Model<Transfer> {
     declare preparedOpr: Employee;
 
     @HasMany(() => TtpPayment, {
-        sourceKey: 'guid',
-        foreignKey: 'transfer_guid',
-        onDelete: 'SET NULL',
-        onUpdate: 'SET NULL'
-    })
+    sourceKey: 'guid',
+    foreignKey: 'transfer_guid'
+  })
     declare ttpPayment: TtpPayment[];
 
     @BeforeSave

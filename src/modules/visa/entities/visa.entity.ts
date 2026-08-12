@@ -164,9 +164,7 @@ export class Visa extends Model<Visa> {
 
   @HasMany(() => VisaPayment, {
     foreignKey: 'visa_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare visaPayment: VisaPayment[];
 

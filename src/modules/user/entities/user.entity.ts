@@ -100,17 +100,13 @@ export class User extends Model<User> {
 
   @HasMany(() => TaskAssignee, {
     foreignKey: 'assignee_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare empltaskAssignee: TaskAssignee[];
 
   @HasMany(() => Message, {
     foreignKey: 'adm_user_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare admmessage: Message[];
 

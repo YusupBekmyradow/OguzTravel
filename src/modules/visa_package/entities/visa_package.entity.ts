@@ -82,45 +82,35 @@ export class VisaPackage extends Model<VisaPackage> {
   @HasMany(() => Visa, {
     foreignKey: 'package_guid',
     sourceKey: 'guid',
-    as: 'package',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'package'
   })
   declare visapackage: Visa[];
 
   @HasMany(() => Visa, {
     foreignKey: 'service_guid',
     sourceKey: 'guid',
-    as: 'service',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'service'
   })
   declare visaservice: Visa[];
 
   @HasMany(() => Visa, {
     foreignKey: 'hotel_booking_guid',
     sourceKey: 'guid',
-    as: 'hotel_booking',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'hotel_booking'
   })
   declare visahotel_booking: Visa[];
 
   @HasMany(() => Visa, {
     foreignKey: 'translation_guid',
     sourceKey: 'guid',
-    as: 'translation',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'translation'
   })
   declare visatranslation: Visa[];
 
   @HasMany(() => Visa, {
     foreignKey: 'courier_guid',
     sourceKey: 'guid',
-    as: 'courier',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    as: 'courier'
   })
   declare visacourier: Visa[];
 }

@@ -147,11 +147,9 @@ export class Airway extends Model<Airway> {
     declare preparedOpr: Employee;
 
     @HasMany(() => HarPayment, {
-        sourceKey: 'guid',
-        foreignKey: 'airway_guid',
-        onDelete: 'SET NULL',
-        onUpdate: 'SET NULL'
-    })
+    sourceKey: 'guid',
+    foreignKey: 'airway_guid'
+  })
     declare harPaymentOpr: HarPayment[];
 
     @BeforeSave

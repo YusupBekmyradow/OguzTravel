@@ -1,0 +1,11 @@
+{
+    "updated": "Country details updated successfully",
+    "notFound": "Country not found for the specified ID",
+    "listFetched": "Country list fetched successfully",
+    "deleteFailed": "Failed to delete country. An error occurred.",
+    "updateFailed": "Failed to update country details. An error occurred.",
+    "createFailed": "Failed to create country. An error occurred.",
+    "deleted": "Country record deleted successfully",
+    "created": "Country created successfully",
+    "fetchFailed": "Failed to fetch country list. An error occurred."
+}

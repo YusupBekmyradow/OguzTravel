@@ -152,9 +152,7 @@ export class Hotel extends Model<Hotel> {
 
   @HasMany(() => HarPayment, {
     sourceKey: 'guid',
-    foreignKey: 'hotel_guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    foreignKey: 'hotel_guid'
   })
   declare harPaymentOpr: HarPayment[];
 

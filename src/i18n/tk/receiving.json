@@ -1,0 +1,15 @@
+{
+    "created": "Kabul edişlik maglumaty üstünlikli döredildi",
+    "createFailed": "Kabul edişlik maglumaty döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "updated": "Kabul edişlik maglumatlary üstünlikli täzelendi",
+    "updateFailed": "Kabul edişlik maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Kabul edişlik maglumaty üstünlikli pozuldy",
+    "deleteFailed": "Kabul edişlik maglumaty pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "listFetched": "Kabul edişlikleriň sanawy üstünlikli alyndy",
+    "fetchFailed": "Kabul edişlikleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
+    "notFound": "Görkezilen ID boýunça kabul edişlik tapylmady",
+    "fieldRequired": "Meýdança girizilmelidir",
+    "invalidOption": "Ýalňyş meýdança bahasy",
+    "invalidNumber": "San bolmalydyr",
+    "invalidDate": "Sene bolmalydyr"
+}

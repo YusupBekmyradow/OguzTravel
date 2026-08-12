@@ -192,9 +192,7 @@ export class B2b extends Model<B2b> {
 
   @HasMany(() => TicketPayment, {
     foreignKey: 'b2b_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare ticketPayment: TicketPayment[];
   @BeforeSave

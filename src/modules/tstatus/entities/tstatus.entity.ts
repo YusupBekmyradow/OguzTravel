@@ -36,17 +36,13 @@ export class Tstatus extends Model<Tstatus> {
 
   @HasMany(() => B2b, {
     foreignKey: 'status_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare b2b: B2b[];
 
   @HasMany(() => TurkishAirline, {
     foreignKey: 'status_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare turkishAirline: TurkishAirline[];
 }

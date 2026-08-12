@@ -1,0 +1,15 @@
+{
+    "created": "Receiving record created successfully",
+    "createFailed": "Failed to create receiving record. An error occurred.",
+    "updated": "Receiving record updated successfully",
+    "updateFailed": "Failed to update receiving record. An error occurred.",
+    "deleted": "Receiving record deleted successfully",
+    "deleteFailed": "Failed to delete receiving record. An error occurred.",
+    "listFetched": "Receiving list fetched successfully",
+    "fetchFailed": "Failed to fetch receiving list. An error occurred.",
+    "notFound": "Receiving record not found for specified ID",
+    "fieldRequired": "Field is required",
+    "invalidOption": "Invalid field value option",
+    "invalidNumber": "Value must be a valid number",
+    "invalidDate": "Value must be a valid date"
+}

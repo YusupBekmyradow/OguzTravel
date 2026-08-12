@@ -136,11 +136,9 @@ export class Tour extends Model<Tour> {
     declare preparedOpr: Employee;
 
     @HasMany(() => TtpPayment, {
-        sourceKey: 'guid',
-        foreignKey: 'tour_guid',
-        onDelete: 'SET NULL',
-        onUpdate: 'SET NULL'
-    })
+    sourceKey: 'guid',
+    foreignKey: 'tour_guid'
+  })
     declare ttpPayment: TtpPayment[];
 
     @BeforeSave

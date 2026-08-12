@@ -124,11 +124,9 @@ export class Package extends Model<Package> {
     declare preparedOpr: Employee;
 
     @HasMany(() => TtpPayment, {
-        sourceKey: 'guid',
-        foreignKey: 'package_guid',
-        onDelete: 'SET NULL',
-        onUpdate: 'SET NULL'
-    })
+    sourceKey: 'guid',
+    foreignKey: 'package_guid'
+  })
     declare ttpPayment: TtpPayment[];
 
     @BeforeSave

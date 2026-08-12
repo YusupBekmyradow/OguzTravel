@@ -86,9 +86,7 @@ export class Message extends Model<Message> {
 
   @HasMany(() => TaskAssignee, {
     foreignKey: 'task_guid',
-    sourceKey: 'guid',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
+    sourceKey: 'guid'
   })
   declare empltaskAssignee: TaskAssignee[];
 

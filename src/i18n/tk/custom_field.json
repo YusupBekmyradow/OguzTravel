@@ -1,0 +1,12 @@
+{
+    "created": "Hususy meýdança üstünlikli döredildi",
+    "createFailed": "Hususy meýdança döredilmedi. Ýalňyşlyk ýüze çykdy.",
+    "updated": "Hususy meýdança maglumatlary üstünlikli täzelendi",
+    "updateFailed": "Hususy meýdança maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+    "deleted": "Hususy meýdança üstünlikli pozuldy",
+    "deleteFailed": "Hususy meýdança pozulmady. Ýalňyşlyk ýüze çykdy.",
+    "listFetched": "Hususy meýdançalaryň sanawy üstünlikli alyndy",
+    "fetchFailed": "Hususy meýdançalaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
+    "notFound": "Görkezilen ID boýunça hususy meýdança tapylmady",
+    "keyExists": "Bu ýurt üçin meýdança kody eýýäm bar"
+}

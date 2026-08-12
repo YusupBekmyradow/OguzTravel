@@ -1,6 +1,7 @@
 import { Table, Column, Model, DataType, HasMany } from 'sequelize-typescript';
 import { Employee } from '../../employee/entities/employee.entity';
 import { TurkishAirline } from '../../turkish_airlines/entities/turkish_airline.entity';
+import { Receiving } from '../../receiving/entities/receiving.entity';
 
 @Table({
   tableName: 'tbl_offices',
@@ -41,19 +42,21 @@ export class Office extends Model<Office> {
 
   @HasMany(() => Employee, {
     foreignKey: 'office_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare employees: Employee[];
 
   @HasMany(() => TurkishAirline, {
     foreignKey: 'office_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare turkishAirline: TurkishAirline[];
+
+  @HasMany(() => Receiving, {
+    foreignKey: 'office_guid',
+    sourceKey: 'guid'
+  })
+  declare receiving: Receiving[];
 }
 
 

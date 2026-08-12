@@ -1,0 +1,12 @@
+{
+    "created": "Custom field created successfully",
+    "createFailed": "Failed to create custom field. An error occurred.",
+    "updated": "Custom field updated successfully",
+    "updateFailed": "Failed to update custom field. An error occurred.",
+    "deleted": "Custom field deleted successfully",
+    "deleteFailed": "Failed to delete custom field. An error occurred.",
+    "listFetched": "Custom field list fetched successfully",
+    "fetchFailed": "Failed to fetch custom field list. An error occurred.",
+    "notFound": "Custom field not found for specified ID",
+    "keyExists": "Field key already exists for this country"
+}

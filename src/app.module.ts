@@ -42,7 +42,9 @@ import { MessagesModule } from './modules/messages/messages.module';
 import { ReportModule } from './modules/report/report.module';
 import { ReportShareModule } from './modules/report_share/report_share.module';
 import { ImageUploadModule } from './common/image-upload/image-upload.module';
+import { CountryModule } from './modules/country/country.module';
 import { JwtModule } from '@nestjs/jwt';
+import { ReceivingModule } from './modules/receiving/receiving.module';
 dotenv.config();
 
 @Module({
@@ -102,7 +104,9 @@ dotenv.config();
     MessagesModule,
     ReportModule,
     ReportShareModule,
-    ImageUploadModule
+    ImageUploadModule,
+    CountryModule,
+    ReceivingModule
   ],
   controllers: [AppController],
   providers: [

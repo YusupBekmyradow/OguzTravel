@@ -113,10 +113,8 @@ export class Inbound extends Model<Inbound> {
     declare client: Client;
 
     @HasMany(() => VisaPayment, {
-        foreignKey: 'inbound_guid',
-        sourceKey: 'guid',
-        onDelete: 'SET NULL',
-        onUpdate: 'SET NULL'
-    })
+    foreignKey: 'inbound_guid',
+    sourceKey: 'guid'
+  })
     declare visaPayment: VisaPayment[];
 }

@@ -144,9 +144,7 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
 
   @HasMany(() => TransPayment, {
     foreignKey: 'translation_guid',
-    sourceKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
+    sourceKey: 'guid'
   })
   declare transPayment: TransPayment[];
 }
