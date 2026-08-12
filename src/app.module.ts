@@ -44,7 +44,7 @@ import { ReportShareModule } from './modules/report_share/report_share.module';
 import { ImageUploadModule } from './common/image-upload/image-upload.module';
 import { CountryModule } from './modules/country/country.module';
 import { JwtModule } from '@nestjs/jwt';
-import { ReceivingModule } from './modules/receiving/receiving.module';
+import { CustomFieldModule } from './modules/custom_field/custom_field.module';
 dotenv.config();
 
 @Module({
@@ -105,8 +105,8 @@ dotenv.config();
     ReportModule,
     ReportShareModule,
     ImageUploadModule,
+    CustomFieldModule,
     CountryModule,
-    ReceivingModule
   ],
   controllers: [AppController],
   providers: [

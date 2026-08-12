@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { FieldType } from '../../../enums/custom-field-type.enum';
 
 export class CustomFieldLabelDto {
   @ApiProperty({ example: 'Pasport Belgisi' })
@@ -20,16 +21,6 @@ export class CustomFieldLabelDto {
 }
 
 export class CreateCustomFieldDto {
-  @ApiProperty({ example: 'uuid-country-guid' })
-  @IsUUID()
-  @IsNotEmpty()
-  declare country_guid: string;
-
-  @ApiProperty({ example: 'passport_number' })
-  @IsString()
-  @IsNotEmpty()
-  declare field_key: string;
-
   @ApiProperty({ type: CustomFieldLabelDto })
   @IsObject()
   @IsNotEmpty()
@@ -37,10 +28,10 @@ export class CreateCustomFieldDto {
   @Type(() => CustomFieldLabelDto)
   declare field_label: CustomFieldLabelDto;
 
-  @ApiProperty({ example: 'text', description: 'text | number | date | select' })
-  @IsString()
+  @ApiProperty({ enum: FieldType, example: FieldType.TEXT })
+  @IsEnum(FieldType)
   @IsNotEmpty()
-  declare field_type: string;
+  declare field_type: FieldType;
 
   @ApiProperty({ example: ['Option 1', 'Option 2'], required: false })
   @IsOptional()
@@ -52,9 +43,4 @@ export class CreateCustomFieldDto {
   @IsOptional()
   @IsNumber()
   declare sort_order?: number;
-
-  @ApiProperty({ example: true, required: false })
-  @IsOptional()
-  @IsBoolean()
-  declare is_active?: boolean;
 }

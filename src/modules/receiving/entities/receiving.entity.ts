@@ -7,7 +7,6 @@ import { Country } from "../../country/entities/country.entity";
 @Table({
   tableName: 'tbl_receivings',
   timestamps: true,
-  paranoid: true,
 })
 
 export class Receiving extends Model<Receiving> {
@@ -54,13 +53,6 @@ export class Receiving extends Model<Receiving> {
     allowNull: true
   })
   declare visa_type?: string;
-
-  @Column({
-    type: DataType.JSONB,
-    allowNull: false,
-    defaultValue: {},
-  })
-  declare extra_data: Record<string, any>;
 
   @Column({
     type: DataType.INTEGER,

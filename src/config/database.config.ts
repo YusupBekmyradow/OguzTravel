@@ -53,7 +53,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaCategory,
       VisaPackage, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
-      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, ReportShare, Country, Receiving, CustomField]
+      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, ReportShare, CustomField, Country, Receiving,]
   };
 };
 

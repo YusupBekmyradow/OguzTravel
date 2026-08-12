@@ -1,203 +1,160 @@
-// import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-// import { InjectModel } from '@nestjs/sequelize';
-// import { CustomField } from './entities/custom_field.entity';
-// import { CreateCustomFieldDto } from './dto/create-custom-field.dto';
-// import { UpdateCustomFieldDto } from './dto/update-custom-field.dto';
-// import { errorResponse, successResponse } from '../../helpers/responseFunctions';
-// import { HttpStatuses } from '../../helpers/httpStatuses.enum';
-// import { I18nService } from 'nestjs-i18n';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/sequelize';
+import { Op } from 'sequelize';
+import { I18nService } from 'nestjs-i18n';
+import { CustomField } from './entities/custom_field.entity';
+import { CreateCustomFieldDto } from './dto/create-custom-field.dto';
+import { UpdateCustomFieldDto } from './dto/update-custom-field.dto';
+import { FieldType } from '../../enums/custom-field-type.enum';
+import { errorResponse, successResponse } from '../../helpers/responseFunctions';
+import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 
-// @Injectable()
-// export class CustomFieldService {
-//   constructor(
-//     @InjectModel(CustomField)
-//     private readonly customFieldRepository: typeof CustomField,
-//     private readonly i18n: I18nService,
-//   ) { }
+interface FindCustomFieldsParams {
+  page?: number;
+  limit?: number;
+  field_type?: FieldType;
+  option_search?: string;
+}
 
-//   async addCustomField(createCustomFieldDto: CreateCustomFieldDto, lang: string = 'tk') {
-//     try {
-//       const existing = await this.customFieldRepository.findOne({
-//         where: {
-//           country_guid: createCustomFieldDto.country_guid,
-//           field_key: createCustomFieldDto.field_key,
-//         },
-//       });
+@Injectable()
+export class CustomFieldService {
+  constructor(
+    @InjectModel(CustomField)
+    private readonly customFieldRepository: typeof CustomField,
+    private readonly i18n: I18nService,
+  ) { }
 
-//       if (existing) {
-//         throw new BadRequestException(
-//           this.i18n.t('custom_field.keyExists', { lang }) ||
-//           `Field key '${createCustomFieldDto.field_key}' already exists for this country`,
-//         );
-//       }
-//       if (createCustomFieldDto.field_type === 'select') {
-//         if (!createCustomFieldDto.options || createCustomFieldDto.options.length === 0) {
-//           throw new BadRequestException('Options are required and must not be empty when field_type is select');
-//         }
-//       } else {
-//         createCustomFieldDto.options = null as any;
-//       }
-//       const customField = await this.customFieldRepository.create({
-//         ...createCustomFieldDto,
-//         is_required: true,
-//       } as any);
+  async addCustomField(dto: CreateCustomFieldDto, lang: string = 'tk') {
+    try {
+      const created = await this.customFieldRepository.create({ ...dto } as any);
 
-//       return successResponse(
-//         HttpStatuses.CREATED,
-//         customField,
-//         this.i18n.t('custom_field.created', { lang }),
-//       );
-//     } catch (error) {
-//       if (error instanceof BadRequestException || error instanceof NotFoundException) {
-//         throw error;
-//       }
-//       return errorResponse(
-//         HttpStatuses.INTERNAL_SERVER_ERROR,
-//         this.i18n.t('custom_field.createFailed', { lang }),
-//         error,
-//       );
-//     }
-//   }
+      return successResponse(
+        HttpStatuses.CREATED,
+        created,
+        this.i18n.t('custom_field.created', { lang }),
+      );
+    } catch (error) {
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('custom_field.createFailed', { lang }),
+        error,
+      );
+    }
+  }
 
 
   
-//   async getCustomFieldsByCountry(countryGuid: string, lang: string = 'tk') {
-//     try {
-//       const fields = await this.customFieldRepository.findAll({
-//         where: {
-//           country_guid: countryGuid,
-//           is_active: true,
-//         },
-//         order: [['sort_order', 'ASC']],
-//       });
-//       return successResponse(
-//         HttpStatuses.OK,
-//         fields,
-//         this.i18n.t('custom_field.listFetched', { lang }),
-//       );
-//     } catch (error) {
-//       return errorResponse(
-//         HttpStatuses.INTERNAL_SERVER_ERROR,
-//         this.i18n.t('custom_field.fetchFailed', { lang }),
-//         error,
-//       );
-//     }
-//   }
+  async getCustomFieldsByCountry(
+    lang: string = 'tk',
+    params: FindCustomFieldsParams,
+  ) {
+    try {
+      const page = params.page && params.page > 0 ? params.page : 1;
+      const limit = params.limit && params.limit > 0 ? params.limit : 20;
+      const offset = (page - 1) * limit;
+      const where: any = {};
+      if (params.field_type) {
+        where.field_type = params.field_type;
+      }
+      if (params.option_search) {
+        where.field_type = FieldType.SELECT;
+        where.options = {
+          [Op.contains]: [params.option_search],
+        };
+      }
+      const { rows, count } = await this.customFieldRepository.findAndCountAll({
+        where,
+        limit,
+        offset,
+        order: [['sort_order', 'ASC']],
+      });
 
-  
-//   async updateCustomField(updateCustomFieldDto: UpdateCustomFieldDto, lang: string = 'tk') {
-//     try {
-//       const targetGuid = updateCustomFieldDto.guid;
-//       if (!targetGuid) {
-//         throw new BadRequestException('Guid is required for update');
-//       }
-
-//       const field = await this.customFieldRepository.findOne({
-//         where: { guid: targetGuid },
-//       });
-
-//       if (!field) {
-//         throw new NotFoundException(
-//           this.i18n.t('custom_field.notFound', { lang }) || 'Custom field not found',
-//         );
-//       }
-
-//       const targetCountryGuid = updateCustomFieldDto.country_guid || field.country_guid;
-//       const targetFieldKey = updateCustomFieldDto.field_key || field.field_key;
-
-//       if (
-//         (updateCustomFieldDto.field_key && updateCustomFieldDto.field_key !== field.field_key) ||
-//         (updateCustomFieldDto.country_guid && updateCustomFieldDto.country_guid !== field.country_guid)
-//       ) {
-//         const existing = await this.customFieldRepository.findOne({
-//           where: {
-//             country_guid: targetCountryGuid,
-//             field_key: targetFieldKey,
-//           },
-//         });
-
-//         if (existing && existing.guid !== targetGuid) {
-//           throw new BadRequestException(
-//             this.i18n.t('custom_field.keyExists', { lang }) ||
-//             `Field key '${targetFieldKey}' already exists for this country`,
-//           );
-//         }
-//       }
-
-//       const finalFieldType = updateCustomFieldDto.field_type || field.field_type;
-//       let finalOptions = updateCustomFieldDto.options !== undefined ? updateCustomFieldDto.options : field.options;
-
-//       if (finalFieldType === 'select') {
-//         if (!finalOptions || finalOptions.length === 0) {
-//           throw new BadRequestException('Options are required and must not be empty when field_type is select');
-//         }
-//       } else {
-//         finalOptions = null as any;
-//       }
-
-//       const updateData: any = {
-//         ...updateCustomFieldDto,
-//         field_type: finalFieldType,
-//         options: finalOptions,
-//         is_required: true,
-//       };
-//       delete updateData.guid;
-
-//       await this.customFieldRepository.update(updateData, {
-//         where: { guid: targetGuid },
-//       });
-
-//       const updatedField = await this.customFieldRepository.findOne({
-//         where: { guid: targetGuid },
-//       });
-
-//       return successResponse(
-//         HttpStatuses.OK,
-//         updatedField,
-//         this.i18n.t('custom_field.updated', { lang }),
-//       );
-//     } catch (error) {
-//       if (error instanceof BadRequestException || error instanceof NotFoundException) {
-//         throw error;
-//       }
-//       return errorResponse(
-//         HttpStatuses.INTERNAL_SERVER_ERROR,
-//         this.i18n.t('custom_field.updateFailed', { lang }),
-//         error,
-//       );
-//     }
-//   }
+      return {
+        status: 200,
+        data: rows,
+        meta: {
+          totalItems: count,
+          totalPages: Math.ceil(count / limit),
+          currentPage: page,
+        },
+        message: this.i18n.t('general_translation.listFetched', { lang }),
+      };
+    } catch (error) {
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('custom_field.fetchFailed', { lang }),
+        error,
+      );
+    }
+  }
 
 
+  async updateCustomField(dto: UpdateCustomFieldDto, lang: string = 'tk') {
+    try {
+      const { guid, ...rest } = dto;
 
-//   async deleteCustomField(guid: string, lang: string = 'tk') {
-//     try {
-//       const field = await this.customFieldRepository.findOne({ where: { guid } });
-//       if (!field) {
-//         throw new NotFoundException(
-//           this.i18n.t('custom_field.notFound', { lang }) || 'Custom field not found',
-//         );
-//       }
+      const field = await this.customFieldRepository.findOne({ where: { guid } });
+      if (!field) {
+        throw new NotFoundException(
+          this.i18n.t('custom_field.notFound', { lang }) || 'Custom field not found',
+        );
+      }
 
-//       await this.customFieldRepository.update(
-//         { is_active: false } as any,
-//         { where: { guid } },
-//       );
+      if (rest.field_type && rest.field_type !== FieldType.SELECT) {
+        rest.options = null as any;
+      }
 
-//       return successResponse(
-//         HttpStatuses.OK,
-//         null,
-//         this.i18n.t('custom_field.deleted', { lang }),
-//       );
-//     } catch (error) {
-//       if (error instanceof BadRequestException || error instanceof NotFoundException) {
-//         throw error;
-//       }
-//       return errorResponse(
-//         HttpStatuses.INTERNAL_SERVER_ERROR,
-//         this.i18n.t('custom_field.deleteFailed', { lang }),
-//         error,
-//       );
-//     }
-//   }
-// }
+      await field.update(rest);
+
+      return successResponse(
+        HttpStatuses.OK,
+        field,
+        this.i18n.t('custom_field.updated', { lang }),
+      );
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('custom_field.updateFailed', { lang }),
+        error,
+      );
+    }
+  }
+
+
+  async deleteCustomField(guid: string, lang: string = 'tk') {
+    try {
+      if (!guid) {
+        throw new BadRequestException('guid is required');
+      }
+
+      const field = await this.customFieldRepository.findOne({ where: { guid } });
+      if (!field) {
+        throw new NotFoundException(
+          this.i18n.t('custom_field.notFound', { lang }) || 'Custom field not found',
+        );
+      }
+      await field.destroy();
+      return successResponse(
+        HttpStatuses.OK,
+        null,
+        this.i18n.t('custom_field.deleted', { lang }),
+      );
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('custom_field.deleteFailed', { lang }),
+        error,
+      );
+    }
+  }
+}

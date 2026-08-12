@@ -1,5 +1,5 @@
-import { BelongsTo, Column, DataType, Model, Table } from 'sequelize-typescript';
-import { Country } from '../../country/entities/country.entity';
+import { Column, DataType, Model, Table } from 'sequelize-typescript';
+import { FieldType } from '../../../enums/custom-field-type.enum';
 
 @Table({
   tableName: 'tbl_custom_fields',
@@ -15,18 +15,6 @@ export class CustomField extends Model<CustomField> {
   declare guid: string;
 
   @Column({
-    type: DataType.UUID,
-    allowNull: true,
-  })
-  declare country_guid: string;
-
-  @Column({
-    type: DataType.STRING,
-    allowNull: false,
-  })
-  declare field_key: string;
-
-  @Column({
     type: DataType.JSONB,
     allowNull: false,
     defaultValue: {},
@@ -38,10 +26,10 @@ export class CustomField extends Model<CustomField> {
   };
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.ENUM(...Object.values(FieldType)),
     allowNull: false,
   })
-  declare field_type: string;
+  declare field_type: FieldType;
 
   @Column({
     type: DataType.JSONB,
@@ -51,31 +39,9 @@ export class CustomField extends Model<CustomField> {
   declare options?: string[];
 
   @Column({
-    type: DataType.BOOLEAN,
-    allowNull: false,
-    defaultValue: true,
-  })
-  declare is_required: boolean;
-
-  @Column({
     type: DataType.INTEGER,
     allowNull: false,
     defaultValue: 0,
   })
   declare sort_order: number;
-
-  @Column({
-    type: DataType.BOOLEAN,
-    allowNull: false,
-    defaultValue: true,
-  })
-  declare is_active: boolean;
-
-  @BelongsTo(() => Country, {
-    targetKey: 'guid',
-    foreignKey: 'country_guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL',
-  })
-  declare country: Country;
 }

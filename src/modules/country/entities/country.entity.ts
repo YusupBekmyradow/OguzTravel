@@ -3,16 +3,12 @@ import {
   Column,
   Model,
   DataType,
-  HasMany,
 } from "sequelize-typescript";
-import { Receiving } from "../../receiving/entities/receiving.entity";
-import { CustomField } from "../../custom_field/entities/custom_field.entity";
 
 @Table({
   tableName: "tbl_country",
   timestamps: true
 })
-
 export class Country extends Model<Country> {
   @Column({
     primaryKey: true,
@@ -37,18 +33,13 @@ export class Country extends Model<Country> {
   declare name: {
     tk: string;
     ru: string;
-    en: string
+    en: string;
   };
 
-  @HasMany(() => Receiving, {
-    foreignKey: "country_guid",
-    sourceKey: "guid"
+  @Column({
+    type: DataType.JSONB,
+    allowNull: false,
+    defaultValue: [],
   })
-  declare receiving: Receiving[];
-
-  @HasMany(() => CustomField, {
-    foreignKey: "country_guid",
-    sourceKey: "guid"
-  })
-  declare custom_fields: CustomField[];
+  declare custom_field_guids: string[];
 }
