@@ -8,13 +8,20 @@ import {
   Query,
   DefaultValuePipe,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { CountryService } from './country.service';
 import { CreateCountryDto } from './dto/create-country.dto';
 import { I18nLang } from 'nestjs-i18n';
-import { ApiTags, ApiOperation, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Countries')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/receivings')
 @Controller('countries')
 export class CountryController {
   constructor(private readonly countryService: CountryService) { }

@@ -17,60 +17,101 @@ import { Office } from '../office/entities/office.entity';
 @Injectable()
 export class ReceivingService {
   constructor(
-    @InjectModel(Receiving)
-    private readonly receivingRepository: typeof Receiving,
-    @InjectModel(Country)
-    private readonly countryRepository: typeof Country,
-    @InjectModel(Client)
-    private readonly clientRepository: typeof Client,
-    @InjectModel(Employee)
-    private readonly employeeRepository: typeof Employee,
-    @InjectModel(Office)
-    private readonly officeRepository: typeof Office,
-    @InjectModel(CustomField)
-    private readonly customFieldRepository: typeof CustomField,
+    @InjectModel(Receiving) private readonly receivingRepository: typeof Receiving,
+    @InjectModel(Country) private readonly countryRepository: typeof Country,
+    @InjectModel(CustomField) private readonly customFieldRepository: typeof CustomField,
+    @InjectModel(Client) private readonly clientRepository: typeof Client,
     private readonly i18n: I18nService,
   ) { }
 
+  private getReceivingIncludes() {
+    return [
+      {
+        model: Client,
+        attributes: [
+          'guid',
+          'fullName',
+          'passport_number',
+          'passportExpiryDate',
+          'passportCountryOfIssue',
+          'passport_count',
+          'passportHistory',
+          'phone_number',
+          'dateOfBirth',
+        ],
+      },
+      Employee,
+      Office,
+      Country,
+    ];
+  }
 
-  private formatReceivingResponse(item: any, lang: string = 'tk') {
-    const plain = item.get ? item.get({ plain: true }) : item;
+
+  private formatReceivingPassport(item: any, lang: string = 'tk') {
+    if (!item) return item;
+    const jsonItem = item.toJSON ? item.toJSON() : item;
+    const client = jsonItem.client;
+
+    if (client) {
+      if (jsonItem.passport_count && client.passport_count && jsonItem.passport_count !== client.passport_count) {
+        if (Array.isArray(client.passportHistory)) {
+          const oldPassport = client.passportHistory.find(
+            (p: any) => p.passport_count === jsonItem.passport_count
+          );
+          if (oldPassport) {
+            client.passport_number = oldPassport.passport_number;
+            client.passportExpiryDate = oldPassport.passportExpiryDate;
+            client.passportCountryOfIssue = oldPassport.passportCountryOfIssue;
+          }
+        }
+      }
+      delete client.passportHistory;
+    }
 
     return {
-      guid: plain.guid,
-      application_date: plain.application_date,
-      visa_type: plain.visa_type,
-      note: plain.note,
-      custom_field_values: plain.custom_field_values,
-      createdAt: plain.createdAt,
-      updatedAt: plain.updatedAt,
-      client_name: plain.client?.fullName || null,
-      passport_number: plain.client?.passport_number || null,
-      phone_number: plain.client?.phone_number || null,
-      dateOfBirth: plain.client?.dateOfBirth || null,
-      operator_fullName: plain.operator?.fullName || null,
-      office_fullName: plain.office?.fullName ? (plain.office.fullName[lang] || plain.office.fullName['tk'] || plain.office.fullName) : null,
-      office_shortName: plain.office?.shortName ? (plain.office.shortName[lang] || plain.office.shortName['tk'] || plain.office.shortName) : null,
-      country_name: plain.country?.name ? (plain.country.name[lang] || plain.country.name['tk'] || plain.country.name) : null,
-      office_guid: plain.office_guid,
-      operator_guid: plain.operator_guid,
-      client_guid: plain.client_guid,
-      country_guid: plain.country_guid,
+      guid: jsonItem.guid,
+      application_date: jsonItem.application_date,
+      visa_type: jsonItem.visa_type,
+      note: jsonItem.note,
+      custom_field_values: jsonItem.custom_field_values,
+      passport_count: jsonItem.passport_count,
+      createdAt: jsonItem.createdAt,
+      updatedAt: jsonItem.updatedAt,
+      
+      client_name: client?.fullName || null,
+      passport_number: client?.passport_number || null,
+      phone_number: client?.phone_number || null,
+      dateOfBirth: client?.dateOfBirth || null,
+      passportExpiryDate: client?.passportExpiryDate || null,
+      passportCountryOfIssue: client?.passportCountryOfIssue || null,
+      
+      operator_fullName: jsonItem.operator?.fullName || null,
+      
+      office_fullName: jsonItem.office?.fullName ? (jsonItem.office.fullName[lang] || jsonItem.office.fullName['tk'] || jsonItem.office.fullName) : null,
+      office_shortName: jsonItem.office?.shortName ? (jsonItem.office.shortName[lang] || jsonItem.office.shortName['tk'] || jsonItem.office.shortName) : null,
+      
+      country_name: jsonItem.country?.name ? (jsonItem.country.name[lang] || jsonItem.country.name['tk'] || jsonItem.country.name) : null,
+      office_guid: jsonItem.office_guid,
+      operator_guid: jsonItem.operator_guid,
+      client_guid: jsonItem.client_guid,
+      country_guid: jsonItem.country_guid,
     };
   }
 
-  async create(dto: CreateReceivingDto, lang: string = 'tk') {
+
+
+  async addReceiving(dto: CreateReceivingDto, lang: string = 'tk') {
     try {
       const country = await this.countryRepository.findByPk(dto.country_guid);
       if (!country) {
         throw new NotFoundException(this.i18n.t('country.notFound', { lang }));
       }
+      const client = await this.clientRepository.findByPk(dto.client_guid);
       let processedCustomValues: Record<string, any> = {};
       if (dto.custom_field_values && country.custom_field_guids && country.custom_field_guids.length > 0) {
         const customFields = await this.customFieldRepository.findAll({
           where: { guid: { [Op.in]: country.custom_field_guids } },
         });
-
         for (const [key, value] of Object.entries(dto.custom_field_values)) {
           const matchedField = customFields.find((f) => f.field_key === key);
           if (matchedField) {
@@ -81,14 +122,14 @@ export class ReceivingService {
       const receiving = await this.receivingRepository.create({
         ...dto,
         custom_field_values: processedCustomValues,
+        passport_count: client ? (client.passport_count || 1) : 1,
       } as any);
-
       const createdWithRelations = await this.receivingRepository.findByPk(receiving.guid, {
-        include: [Client, Employee, Office, Country],
+        include: this.getReceivingIncludes(),
       });
       return successResponse(
         HttpStatuses.CREATED,
-        this.formatReceivingResponse(createdWithRelations, lang),
+        this.formatReceivingPassport(createdWithRelations, lang),
         this.i18n.t('receiving.created', { lang }),
       );
     } catch (error) {
@@ -98,7 +139,7 @@ export class ReceivingService {
 
 
 
-  async findAll(query: { page?: number; limit?: number; search?: string; country_guid?: string; office_guid?: string }, lang: string = 'tk') {
+  async findAllReceiving(query: { page?: number; limit?: number; search?: string; country_guid?: string; office_guid?: string }, lang: string = 'tk') {
     try {
       const page = Number(query.page) || 1;
       const limit = Number(query.limit) || 10;
@@ -116,10 +157,10 @@ export class ReceivingService {
         where: whereClause,
         limit,
         offset,
-        include: [Client, Employee, Office, Country],
+        include: this.getReceivingIncludes(),
         order: [['createdAt', 'DESC']],
       });
-      const formattedData = rows.map((row) => this.formatReceivingResponse(row, lang));
+      const formattedData = rows.map((row) => this.formatReceivingPassport(row, lang));
       return successResponse(HttpStatuses.OK, {
         totalItems: count,
         totalPages: Math.ceil(count / limit),
@@ -132,18 +173,26 @@ export class ReceivingService {
   }
 
 
-  async update(dto: UpdateReceivingDto, lang: string = 'tk') {
+
+  async updateReceiving(dto: UpdateReceivingDto, lang: string = 'tk') {
     try {
       const targetGuid = dto.guid
       const receiving = await this.receivingRepository.findByPk(targetGuid);
       if (!receiving) {
         throw new NotFoundException(this.i18n.t('receiving.notFound', { lang }));
       }
+      let updateData: any = { ...dto };
+      const targetClientGuid = dto.client_guid || receiving.client_guid;
+      const client = await this.clientRepository.findByPk(targetClientGuid);
+      if (client) {
+        updateData.passport_count = client.passport_count || 1;
+      } else {
+        updateData.passport_count = receiving.passport_count;
+      }
       let processedCustomValues = receiving.custom_field_values;
       if (dto.custom_field_values) {
         const targetCountryGuid = dto.country_guid || receiving.country_guid;
         const country = await this.countryRepository.findByPk(targetCountryGuid);
-
         if (country && country.custom_field_guids) {
           const customFields = await this.customFieldRepository.findAll({
             where: { guid: { [Op.in]: country.custom_field_guids } },
@@ -158,15 +207,12 @@ export class ReceivingService {
           }
         }
       }
-      await receiving.update({
-        ...dto,
-        custom_field_values: processedCustomValues,
-      });
-
+      updateData.custom_field_values = processedCustomValues;
+      await receiving.update(updateData);
       const updatedWithRelations = await this.receivingRepository.findByPk(targetGuid, {
-        include: [Client, Employee, Office, Country],
+        include: this.getReceivingIncludes(),
       });
-      return successResponse(HttpStatuses.OK, this.formatReceivingResponse(updatedWithRelations, lang), this.i18n.t('receiving.updated', { lang }));
+      return successResponse(HttpStatuses.OK, this.formatReceivingPassport(updatedWithRelations, lang), this.i18n.t('receiving.updated', { lang }));
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('receiving.updateFailed', { lang }), error);
     }
@@ -179,7 +225,6 @@ export class ReceivingService {
       if (!receiving) {
         throw new NotFoundException(this.i18n.t('receiving.notFound', { lang }));
       }
-
       await receiving.destroy();
       return successResponse(HttpStatuses.OK, { guid: bodyGuid }, this.i18n.t('receiving.deleted', { lang }));
     } catch (error) {

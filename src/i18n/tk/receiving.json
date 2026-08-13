@@ -5,7 +5,7 @@
     "updateFailed": "Kabul edişlik maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
     "deleted": "Kabul edişlik maglumaty üstünlikli pozuldy",
     "deleteFailed": "Kabul edişlik maglumaty pozulmady. Ýalňyşlyk ýüze çykdy.",
-    "listFetched": "Kabul edişlikleriň sanawy üstünlikli alyndy",
+    "fetched": "Kabul edişlik maglumaty üstünlikli alyndy",
     "fetchFailed": "Kabul edişlikleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
     "notFound": "Görkezilen ID boýunça kabul edişlik tapylmady",
     "fieldRequired": "Meýdança girizilmelidir",

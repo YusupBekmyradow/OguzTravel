@@ -6,16 +6,21 @@ import {
   Patch,
   Delete,
   Query,
-  Param,
-  Headers,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { ReceivingService } from './receiving.service';
 import { CreateReceivingDto } from './dto/create-receiving.dto';
 import { UpdateReceivingDto } from './dto/update-receiving.dto';
 import { I18nLang } from 'nestjs-i18n';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('Receivings')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/receivings')
 @Controller('receivings')
 export class ReceivingController {
   constructor(private readonly receivingService: ReceivingService) { }
@@ -25,7 +30,7 @@ export class ReceivingController {
     @Body() dto: CreateReceivingDto,
     @I18nLang() lang: string
   ) {
-    return this.receivingService.create(dto, lang);
+    return this.receivingService.addReceiving(dto, lang);
   }
 
 
@@ -38,7 +43,7 @@ export class ReceivingController {
     @Query('office_guid') office_guid?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    return this.receivingService.findAll({ page, limit, search, country_guid, office_guid }, lang);
+    return this.receivingService.findAllReceiving({ page, limit, search, country_guid, office_guid }, lang);
   }
 
 
@@ -47,7 +52,7 @@ export class ReceivingController {
     @Body() dto: UpdateReceivingDto,
     @I18nLang() lang: string
   ) {
-    return this.receivingService.update(dto, lang);
+    return this.receivingService.updateReceiving(dto, lang);
   }
 
 

@@ -6,16 +6,23 @@ import {
   Patch,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { CustomFieldService } from './custom_field.service';
 import { CreateCustomFieldDto } from './dto/create-custom-field.dto';
 import { UpdateCustomFieldDto } from './dto/update-custom-field.dto';
-import { ApiTags, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { I18nLang } from 'nestjs-i18n';
 import { FieldType } from '../../enums/custom-field-type.enum';
+import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 
 @ApiTags('Custom Fields')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/receivings')
 @Controller('custom_fields')
 export class CustomFieldController {
   constructor(private readonly customFieldService: CustomFieldService) { }

@@ -76,6 +76,12 @@ export class Receiving extends Model<Receiving> {
   })
   declare note?: string;
 
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true
+  })
+  declare passport_count: number;
+
   @BelongsTo(() => Country, {
     targetKey: 'guid',
     foreignKey: 'country_guid',
