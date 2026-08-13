@@ -3,7 +3,9 @@ import {
   Column,
   Model,
   DataType,
+  HasMany,
 } from "sequelize-typescript";
+import { Receiving } from "../../receiving/entities/receiving.entity";
 
 @Table({
   tableName: "tbl_country",
@@ -42,4 +44,12 @@ export class Country extends Model<Country> {
     defaultValue: [],
   })
   declare custom_field_guids: string[];
+
+  @HasMany(() => Receiving, {
+    sourceKey: 'guid',
+    foreignKey: 'country_guid',
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
+  declare receiving: Receiving[];
 }

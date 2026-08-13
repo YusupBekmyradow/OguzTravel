@@ -43,4 +43,9 @@ export class CreateCustomFieldDto {
   @IsOptional()
   @IsNumber()
   declare sort_order?: number;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  declare field_key?: string;
 }

@@ -1,4 +1,4 @@
-import { BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
+import { BelongsTo, Column, DataType, ForeignKey, HasMany, Model, Table } from "sequelize-typescript";
 import { Office } from "../../office/entities/office.entity";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Client } from "../../client/entities/client.entity";
@@ -34,12 +34,6 @@ export class Receiving extends Model<Receiving> {
     type: DataType.UUID,
     allowNull: true
   })
-  declare country_guid?: string;
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: true
-  })
   declare operator_guid?: string;
 
   @Column({
@@ -62,11 +56,33 @@ export class Receiving extends Model<Receiving> {
   })
   declare index_number: number;
 
+  @ForeignKey(() => Country)
+  @Column({
+    type: DataType.UUID,
+    allowNull: false,
+  })
+  declare country_guid: string;
+
+  @Column({
+    type: DataType.JSONB,
+    allowNull: false,
+    defaultValue: {},
+  })
+  declare custom_field_values: Record<string, any>;
+
   @Column({
     type: DataType.TEXT,
     allowNull: true
   })
   declare note?: string;
+
+  @BelongsTo(() => Country, {
+    targetKey: 'guid',
+    foreignKey: 'country_guid',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL',
+  })
+  declare country: Country;
 
   @BelongsTo(() => Office, {
     targetKey: 'guid',
@@ -91,12 +107,4 @@ export class Receiving extends Model<Receiving> {
     onUpdate: 'SET NULL'
   })
   declare client: Client;
-
-  @BelongsTo(() => Country, {
-    targetKey: 'guid',
-    foreignKey: 'country_guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare country: Country;
 }

@@ -40,8 +40,15 @@ export class CustomField extends Model<CustomField> {
 
   @Column({
     type: DataType.INTEGER,
+    allowNull: true,
+    defaultValue: 0,
+  })
+  declare sort_order?: number;
+
+  @Column({
+    type: DataType.STRING,
     allowNull: false,
     defaultValue: 0,
   })
-  declare sort_order: number;
+  declare field_key: string;
 }

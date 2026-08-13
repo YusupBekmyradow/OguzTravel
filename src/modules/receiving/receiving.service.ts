@@ -1,247 +1,189 @@
-// import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-// import { InjectModel } from '@nestjs/sequelize';
-// import { Receiving } from './entities/receiving.entity';
-// import { CustomField } from '../custom_field/entities/custom_field.entity';
-// import { Country } from '../country/entities/country.entity';
-// import { Office } from '../office/entities/office.entity';
-// import { Employee } from '../employee/entities/employee.entity';
-// import { Client } from '../client/entities/client.entity';
-// import { CreateReceivingDto } from './dto/create-receiving.dto';
-// import { UpdateReceivingDto } from './dto/update-receiving.dto';
-// import { errorResponse, successResponse } from '../../helpers/responseFunctions';
-// import { HttpStatuses } from '../../helpers/httpStatuses.enum';
-// import { I18nService } from 'nestjs-i18n';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/sequelize';
+import { Receiving } from './entities/receiving.entity';
+import { CreateReceivingDto } from './dto/create-receiving.dto';
+import { UpdateReceivingDto } from './dto/update-receiving.dto';
+import { Op } from 'sequelize';
+import { Country } from '../country/entities/country.entity';
+import { CustomField } from '../custom_field/entities/custom_field.entity';
+import { HttpStatuses } from '../../helpers/httpStatuses.enum';
+import { errorResponse, successResponse } from '../../helpers/responseFunctions';
+import { I18nService } from 'nestjs-i18n';
+import { Client } from '../client/entities/client.entity';
+import { Employee } from '../employee/entities/employee.entity';
+import { Office } from '../office/entities/office.entity';
 
-// @Injectable()
-// export class ReceivingService {
-//   constructor(
-//     @InjectModel(Receiving)
-//     private readonly receivingRepository: typeof Receiving,
-//     @InjectModel(CustomField)
-//     private readonly customFieldRepository: typeof CustomField,
-//     private readonly i18n: I18nService,
-//   ) { }
 
-//   private async validateExtraData(
-//     countryGuid?: string,
-//     extraData: Record<string, any> = {},
-//     lang: string = 'tk',
-//   ): Promise<void> {
-//     if (!countryGuid) return;
+@Injectable()
+export class ReceivingService {
+  constructor(
+    @InjectModel(Receiving)
+    private readonly receivingRepository: typeof Receiving,
+    @InjectModel(Country)
+    private readonly countryRepository: typeof Country,
+    @InjectModel(Client)
+    private readonly clientRepository: typeof Client,
+    @InjectModel(Employee)
+    private readonly employeeRepository: typeof Employee,
+    @InjectModel(Office)
+    private readonly officeRepository: typeof Office,
+    @InjectModel(CustomField)
+    private readonly customFieldRepository: typeof CustomField,
+    private readonly i18n: I18nService,
+  ) { }
 
-//     const fields = await this.customFieldRepository.findAll({
-//       where: {
-//         country_guid: countryGuid,
-//         is_active: true,
-//       },
-//     });
 
-//     for (const field of fields) {
-//       const val = extraData ? extraData[field.field_key] : undefined;
+  private formatReceivingResponse(item: any, lang: string = 'tk') {
+    const plain = item.get ? item.get({ plain: true }) : item;
 
-//       // Required check (all custom fields are required)
-//       if (val === undefined || val === null || val === '') {
-//         throw new BadRequestException(
-//           `Field '${field.field_key}' is required and cannot be empty in extra_data`,
-//         );
-//       }
+    return {
+      guid: plain.guid,
+      application_date: plain.application_date,
+      visa_type: plain.visa_type,
+      note: plain.note,
+      custom_field_values: plain.custom_field_values,
+      createdAt: plain.createdAt,
+      updatedAt: plain.updatedAt,
+      client_name: plain.client?.fullName || null,
+      passport_number: plain.client?.passport_number || null,
+      phone_number: plain.client?.phone_number || null,
+      dateOfBirth: plain.client?.dateOfBirth || null,
+      operator_fullName: plain.operator?.fullName || null,
+      office_fullName: plain.office?.fullName ? (plain.office.fullName[lang] || plain.office.fullName['tk'] || plain.office.fullName) : null,
+      office_shortName: plain.office?.shortName ? (plain.office.shortName[lang] || plain.office.shortName['tk'] || plain.office.shortName) : null,
+      country_name: plain.country?.name ? (plain.country.name[lang] || plain.country.name['tk'] || plain.country.name) : null,
+      office_guid: plain.office_guid,
+      operator_guid: plain.operator_guid,
+      client_guid: plain.client_guid,
+      country_guid: plain.country_guid,
+    };
+  }
 
-//       // Select check
-//       if (field.field_type === 'select') {
-//         const options = field.options || [];
-//         if (!options.includes(String(val))) {
-//           throw new BadRequestException(
-//             `Value '${val}' for field '${field.field_key}' is not allowed in options: ${options.join(', ')}`,
-//           );
-//         }
-//       }
+  async create(dto: CreateReceivingDto, lang: string = 'tk') {
+    try {
+      const country = await this.countryRepository.findByPk(dto.country_guid);
+      if (!country) {
+        throw new NotFoundException(this.i18n.t('country.notFound', { lang }));
+      }
+      let processedCustomValues: Record<string, any> = {};
+      if (dto.custom_field_values && country.custom_field_guids && country.custom_field_guids.length > 0) {
+        const customFields = await this.customFieldRepository.findAll({
+          where: { guid: { [Op.in]: country.custom_field_guids } },
+        });
 
-//       // Number check
-//       if (field.field_type === 'number') {
-//         if (typeof val !== 'number' && isNaN(Number(val))) {
-//           throw new BadRequestException(
-//             `Value '${val}' for field '${field.field_key}' must be a valid number`,
-//           );
-//         }
-//       }
+        for (const [key, value] of Object.entries(dto.custom_field_values)) {
+          const matchedField = customFields.find((f) => f.field_key === key);
+          if (matchedField) {
+            processedCustomValues[key] = value;
+          }
+        }
+      }
+      const receiving = await this.receivingRepository.create({
+        ...dto,
+        custom_field_values: processedCustomValues,
+      } as any);
 
-//       // Date check
-//       if (field.field_type === 'date') {
-//         if (isNaN(Date.parse(val))) {
-//           throw new BadRequestException(
-//             `Value '${val}' for field '${field.field_key}' must be a valid date string`,
-//           );
-//         }
-//       }
-//     }
-//   }
+      const createdWithRelations = await this.receivingRepository.findByPk(receiving.guid, {
+        include: [Client, Employee, Office, Country],
+      });
+      return successResponse(
+        HttpStatuses.CREATED,
+        this.formatReceivingResponse(createdWithRelations, lang),
+        this.i18n.t('receiving.created', { lang }),
+      );
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('receiving.createFailed', { lang }), error);
+    }
+  }
 
-//   private getIncludes() {
-//     return [
-//       { model: Country },
-//       { model: Office },
-//       { model: Employee, as: 'operator_rec', attributes:['guid','fullName'] },
-//       { model: Client, attributes:['guid','fullName','dateOfBirth','passport_number']},
-//     ];
-//   }
 
-//   async addReceiving(createReceivingDto: CreateReceivingDto, lang: string = 'tk') {
-//     try {
-//       await this.validateExtraData(
-//         createReceivingDto.country_guid,
-//         createReceivingDto.extra_data,
-//         lang,
-//       );
 
-//       const receiving = await this.receivingRepository.create({ ...createReceivingDto } as any);
-//       const createdReceiving = await this.receivingRepository.findOne({
-//         where: { guid: receiving.guid },
-//         include: this.getIncludes(),
-//       });
+  async findAll(query: { page?: number; limit?: number; search?: string; country_guid?: string; office_guid?: string }, lang: string = 'tk') {
+    try {
+      const page = Number(query.page) || 1;
+      const limit = Number(query.limit) || 10;
+      const offset = (page - 1) * limit;
+      const whereClause: any = {};
+      if (query.country_guid) whereClause.country_guid = query.country_guid;
+      if (query.office_guid) whereClause.office_guid = query.office_guid;
+      if (query.search) {
+        whereClause[Op.or] = [
+          { visa_type: { [Op.iLike]: `%${query.search}%` } },
+          { note: { [Op.iLike]: `%${query.search}%` } },
+        ];
+      }
+      const { rows, count } = await this.receivingRepository.findAndCountAll({
+        where: whereClause,
+        limit,
+        offset,
+        include: [Client, Employee, Office, Country],
+        order: [['createdAt', 'DESC']],
+      });
+      const formattedData = rows.map((row) => this.formatReceivingResponse(row, lang));
+      return successResponse(HttpStatuses.OK, {
+        totalItems: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        data: formattedData,
+      }, this.i18n.t('receiving.fetched', { lang }));
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('receiving.fetchFailed', { lang }), error);
+    }
+  }
 
-//       return successResponse(
-//         HttpStatuses.CREATED,
-//         createdReceiving,
-//         this.i18n.t('receiving.created', { lang }),
-//       );
-//     } catch (error) {
-//       if (error instanceof BadRequestException || error instanceof NotFoundException) {
-//         throw error;
-//       }
-//       return errorResponse(
-//         HttpStatuses.INTERNAL_SERVER_ERROR,
-//         this.i18n.t('receiving.createFailed', { lang }),
-//         error,
-//       );
-//     }
-//   }
 
-//   async getAllReceiving(
-//     page: number = 1,
-//     limit: number = 10,
-//     filters?: { country_guid?: string; office_guid?: string; operator_guid?: string },
-//     lang: string = 'tk',
-//   ) {
-//     try {
-//       const currentPage = Math.max(1, Number(page));
-//       const currentLimit = Math.max(1, Number(limit));
-//       const offset = (currentPage - 1) * currentLimit;
+  async update(dto: UpdateReceivingDto, lang: string = 'tk') {
+    try {
+      const targetGuid = dto.guid
+      const receiving = await this.receivingRepository.findByPk(targetGuid);
+      if (!receiving) {
+        throw new NotFoundException(this.i18n.t('receiving.notFound', { lang }));
+      }
+      let processedCustomValues = receiving.custom_field_values;
+      if (dto.custom_field_values) {
+        const targetCountryGuid = dto.country_guid || receiving.country_guid;
+        const country = await this.countryRepository.findByPk(targetCountryGuid);
 
-//       const whereClause: any = {};
-//       if (filters?.country_guid) whereClause.country_guid = filters.country_guid;
-//       if (filters?.office_guid) whereClause.office_guid = filters.office_guid;
-//       if (filters?.operator_guid) whereClause.operator_guid = filters.operator_guid;
+        if (country && country.custom_field_guids) {
+          const customFields = await this.customFieldRepository.findAll({
+            where: { guid: { [Op.in]: country.custom_field_guids } },
+          });
 
-//       const { rows, count } = await this.receivingRepository.findAndCountAll({
-//         where: whereClause,
-//         include: this.getIncludes(),
-//         order: [['createdAt', 'DESC']],
-//         limit: currentLimit,
-//         offset,
-//       });
+          processedCustomValues = {};
+          for (const [key, value] of Object.entries(dto.custom_field_values)) {
+            const matchedField = customFields.find((f) => f.field_key === key);
+            if (matchedField) {
+              processedCustomValues[key] = value;
+            }
+          }
+        }
+      }
+      await receiving.update({
+        ...dto,
+        custom_field_values: processedCustomValues,
+      });
 
-//       return {
-//         status: HttpStatuses.OK,
-//         data: rows,
-//         meta: {
-//           totalItems: count,
-//           totalPages: Math.ceil(count / currentLimit),
-//           currentPage,
-//         },
-//         message: this.i18n.t('receiving.listFetched', { lang }),
-//       };
-//     } catch (error) {
-//       return errorResponse(
-//         HttpStatuses.INTERNAL_SERVER_ERROR,
-//         this.i18n.t('receiving.fetchFailed', { lang }),
-//         error,
-//       );
-//     }
-//   }
+      const updatedWithRelations = await this.receivingRepository.findByPk(targetGuid, {
+        include: [Client, Employee, Office, Country],
+      });
+      return successResponse(HttpStatuses.OK, this.formatReceivingResponse(updatedWithRelations, lang), this.i18n.t('receiving.updated', { lang }));
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('receiving.updateFailed', { lang }), error);
+    }
+  }
 
-  
 
-//   async updateReceiving(updateReceivingDto: UpdateReceivingDto, lang: string = 'tk') {
-//     try {
-//       const targetGuid =updateReceivingDto.guid;
-//       if (!targetGuid) {
-//         throw new BadRequestException('Guid is required for update');
-//       }
+  async deleteReceiving(bodyGuid: string, lang: string = 'tk') {
+    try {
+      const receiving = await this.receivingRepository.findByPk(bodyGuid);
+      if (!receiving) {
+        throw new NotFoundException(this.i18n.t('receiving.notFound', { lang }));
+      }
 
-//       const receiving = await this.receivingRepository.findOne({
-//         where: { guid: targetGuid },
-//       });
-
-//       if (!receiving) {
-//         throw new NotFoundException(
-//           this.i18n.t('receiving.notFound', { lang }) || 'Receiving record not found',
-//         );
-//       }
-
-//       if (updateReceivingDto.extra_data !== undefined || updateReceivingDto.country_guid !== undefined) {
-//         const targetCountry = updateReceivingDto.country_guid || receiving.country_guid;
-//         const mergedExtraData = {
-//           ...(receiving.extra_data || {}),
-//           ...(updateReceivingDto.extra_data || {}),
-//         };
-//         await this.validateExtraData(targetCountry, mergedExtraData, lang);
-//       }
-
-//       const updateData: any = { ...updateReceivingDto };
-//       delete updateData.guid;
-
-//       await this.receivingRepository.update(updateData, {
-//         where: { guid: targetGuid },
-//       });
-
-//       const updatedReceiving = await this.receivingRepository.findOne({
-//         where: { guid: targetGuid },
-//         include: this.getIncludes(),
-//       });
-
-//       return successResponse(
-//         HttpStatuses.OK,
-//         updatedReceiving,
-//         this.i18n.t('receiving.updated', { lang }),
-//       );
-//     } catch (error) {
-//       if (error instanceof BadRequestException || error instanceof NotFoundException) {
-//         throw error;
-//       }
-//       return errorResponse(
-//         HttpStatuses.INTERNAL_SERVER_ERROR,
-//         this.i18n.t('receiving.updateFailed', { lang }),
-//         error,
-//       );
-//     }
-//   }
-
-  
-//   async deleteReceiving(guid: string, lang: string = 'tk') {
-//     try {
-//       const receiving = await this.receivingRepository.findOne({ where: { guid } });
-//       if (!receiving) {
-//         throw new NotFoundException(
-//           this.i18n.t('receiving.notFound', { lang }) || 'Receiving record not found',
-//         );
-//       }
-
-//       await this.receivingRepository.destroy({ where: { guid } });
-
-//       return successResponse(
-//         HttpStatuses.OK,
-//         null,
-//         this.i18n.t('receiving.deleted', { lang }),
-//       );
-//     } catch (error) {
-//       if (error instanceof BadRequestException || error instanceof NotFoundException) {
-//         throw error;
-//       }
-//       return errorResponse(
-//         HttpStatuses.INTERNAL_SERVER_ERROR,
-//         this.i18n.t('receiving.deleteFailed', { lang }),
-//         error,
-//       );
-//     }
-//   }
-// }
+      await receiving.destroy();
+      return successResponse(HttpStatuses.OK, { guid: bodyGuid }, this.i18n.t('receiving.deleted', { lang }));
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('receiving.deleteFailed', { lang }), error);
+    }
+  }
+}

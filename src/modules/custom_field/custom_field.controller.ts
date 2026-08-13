@@ -18,7 +18,7 @@ import { FieldType } from '../../enums/custom-field-type.enum';
 @ApiTags('Custom Fields')
 @Controller('custom_fields')
 export class CustomFieldController {
-  constructor(private readonly customFieldService: CustomFieldService) {}
+  constructor(private readonly customFieldService: CustomFieldService) { }
 
   @Post('/add-custom-field')
   async create(
@@ -28,7 +28,7 @@ export class CustomFieldController {
     return this.customFieldService.addCustomField(createCustomFieldDto, lang);
   }
 
-  @Get('/get-by-country')
+  @Get('/get-all-field')
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'field_type', required: false, enum: FieldType })

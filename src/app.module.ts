@@ -45,6 +45,7 @@ import { ImageUploadModule } from './common/image-upload/image-upload.module';
 import { CountryModule } from './modules/country/country.module';
 import { JwtModule } from '@nestjs/jwt';
 import { CustomFieldModule } from './modules/custom_field/custom_field.module';
+import { ReceivingModule } from './modules/receiving/receiving.module';
 dotenv.config();
 
 @Module({
@@ -107,6 +108,7 @@ dotenv.config();
     ImageUploadModule,
     CustomFieldModule,
     CountryModule,
+    ReceivingModule
   ],
   controllers: [AppController],
   providers: [
