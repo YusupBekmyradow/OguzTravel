@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -12,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { CountryService } from './country.service';
 import { CreateCountryDto } from './dto/create-country.dto';
+import { UpdateCountryDto } from './dto/update-country.dto';
 import { I18nLang } from 'nestjs-i18n';
 import { ApiTags, ApiOperation, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { PermissionsGuard } from '../../guards/permissions.guard';
@@ -43,6 +45,16 @@ export class CountryController {
     @I18nLang() lang: string = 'tk',
   ) {
     return this.countryService.findAll(page, limit, lang);
+  }
+
+
+  @Patch('/update-country')
+  @ApiOperation({ summary: 'Update a country' })
+  async update(
+    @Body() updateCountryDto: UpdateCountryDto,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.countryService.update(updateCountryDto, lang);
   }
 
 

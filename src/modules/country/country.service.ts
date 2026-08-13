@@ -2,6 +2,7 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Country } from './entities/country.entity';
 import { CreateCountryDto } from './dto/create-country.dto';
+import { UpdateCountryDto } from './dto/update-country.dto';
 import { CustomField } from '../custom_field/entities/custom_field.entity';
 import { I18nService } from 'nestjs-i18n';
 import { Op } from 'sequelize';
@@ -27,7 +28,6 @@ export class CountryService {
         name: dto.name,
         custom_field_guids: dto.custom_field_guids || [],
       } as any);
-
       let hydratedFields: any[] = [];
       if (country.custom_field_guids && country.custom_field_guids.length > 0) {
         const fields = await this.customFieldRepository.findAll({
@@ -43,7 +43,7 @@ export class CountryService {
         guid: country.guid,
         code: country.code,
         name: country.name,
-        custom_fields: hydratedFields, 
+        custom_fields: hydratedFields,
         createdAt: country.createdAt,
         updatedAt: country.updatedAt,
       };
@@ -56,6 +56,64 @@ export class CountryService {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
         this.i18n.t('country.createFailed', { lang }),
+        error,
+      );
+    }
+  }
+
+
+  async update(dto: UpdateCountryDto, lang: string = 'tk') {
+    try {
+      const country = await this.countryRepository.findOne({ where: { guid: dto.guid } });
+      if (!country) {
+        return errorResponse(
+          HttpStatuses.NOT_FOUND,
+          this.i18n.t('country.notFound', { lang }),
+        );
+      }
+      await this.countryRepository.update(
+        {
+          ...(dto.code !== undefined && { code: dto.code }),
+          ...(dto.name !== undefined && { name: dto.name }),
+          ...(dto.custom_field_guids !== undefined && { custom_field_guids: dto.custom_field_guids }),
+        },
+        { where: { guid: dto.guid } },
+      );
+      const updated = await this.countryRepository.findOne({ where: { guid: dto.guid } });
+      if (!updated) {
+        return errorResponse(
+          HttpStatuses.NOT_FOUND,
+          this.i18n.t('country.notFound', { lang }),
+        );
+      }
+      let hydratedFields: any[] = [];
+      if (updated.custom_field_guids && updated.custom_field_guids.length > 0) {
+        const fields = await this.customFieldRepository.findAll({
+          where: {
+            guid: { [Op.in]: updated.custom_field_guids },
+          },
+        });
+        hydratedFields = updated.custom_field_guids
+          .map((g) => fields.find((f) => f.guid === g))
+          .filter(Boolean) as any[];
+      }
+      const responseData = {
+        guid: updated.guid,
+        code: updated.code,
+        name: updated.name,
+        custom_fields: hydratedFields,
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+      };
+      return successResponse(
+        HttpStatuses.OK,
+        responseData,
+        this.i18n.t('country.updated', { lang }),
+      );
+    } catch (error) {
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('country.updateFailed', { lang }),
         error,
       );
     }
