@@ -7,6 +7,7 @@ import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
+import { QueryTypes } from 'sequelize';
 
 @Injectable()
 export class ReportService {
@@ -17,9 +18,13 @@ export class ReportService {
   ) { }
 
   async getTotalReportCount() {
-    const totalLetterSum = await this.reportRepository.sum('total_letter') || 0;
-    const totalCountSum = await this.reportShareRepository.sum('total_count') || 0;
-    return totalLetterSum - totalCountSum;
+    const result: any[] = await this.reportRepository.sequelize!.query(
+      `SELECT
+        COALESCE((SELECT SUM(total_letter) FROM tbl_reports), 0) -
+        COALESCE((SELECT SUM(total_count) FROM tbl_report_share), 0) AS total`,
+      { type: QueryTypes.SELECT },
+    );
+    return Number(result[0]?.total || 0);
   }
 
   async addReport(createReportDto: CreateReportDto, lang: string = 'tk') {
@@ -46,31 +51,45 @@ export class ReportService {
     }
   }
 
+
   async getAllReports(page: number = 1, limit: number = 10, lang: string = 'tk') {
     try {
-      const pageNum = Number(page) || 1;
-      const limitNum = Number(limit) || 10;
+      const pageNum = Math.max(1, Number(page) || 1);
+      const limitNum = Math.max(1, Math.min(100, Number(limit) || 10));
       const offset = (pageNum - 1) * limitNum;
+      const sequelize = this.reportRepository.sequelize!;
 
-      const whereClause: any = {};
+      const [countResult, rows, totalResult]: [any[], any[], any[]] = await Promise.all([
+        sequelize.query(
+          `SELECT COUNT(*)::int AS total FROM tbl_reports`,
+          { type: QueryTypes.SELECT },
+        ),
+        sequelize.query(
+          `SELECT guid, index_number, name, start_yh_number, end_yh_number, total_letter, note, "createdAt", "updatedAt"
+           FROM tbl_reports
+           ORDER BY "createdAt" DESC
+           LIMIT :limit OFFSET :offset`,
+          { replacements: { limit: limitNum, offset }, type: QueryTypes.SELECT },
+        ),
+        sequelize.query(
+          `SELECT
+            COALESCE((SELECT SUM(total_letter) FROM tbl_reports), 0) -
+            COALESCE((SELECT SUM(total_count) FROM tbl_report_share), 0) AS total`,
+          { type: QueryTypes.SELECT },
+        ),
+      ]);
 
-      const { rows, count } = await this.reportRepository.findAndCountAll({
-        where: whereClause,
-        limit: limitNum,
-        offset,
-        order: [['createdAt', 'DESC']],
-      });
-
-      const total_report_count = await this.getTotalReportCount();
+      const total = Number(countResult[0]?.total || 0);
+      const total_report_count = Number(totalResult[0]?.total || 0);
 
       return {
         status: 200,
         data: rows,
         meta: {
-          totalItems: count,
+          totalItems: total,
           itemCount: rows.length,
           itemsPerPage: limitNum,
-          totalPages: Math.ceil(count / limitNum),
+          totalPages: Math.ceil(total / limitNum),
           currentPage: pageNum,
         },
         message: this.i18n.t('report.listFetched', { lang }),
@@ -84,6 +103,8 @@ export class ReportService {
       );
     }
   }
+
+
 
   async updateReport(updateReportDto: UpdateReportDto, lang: string = 'tk') {
     try {

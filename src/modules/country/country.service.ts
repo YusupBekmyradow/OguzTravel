@@ -5,7 +5,7 @@ import { CreateCountryDto } from './dto/create-country.dto';
 import { UpdateCountryDto } from './dto/update-country.dto';
 import { CustomField } from '../custom_field/entities/custom_field.entity';
 import { I18nService } from 'nestjs-i18n';
-import { Op } from 'sequelize';
+import { QueryTypes, Op } from 'sequelize';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 
@@ -120,45 +120,87 @@ export class CountryService {
   }
 
 
+
   async findAll(page: number = 1, limit: number = 10, lang: string = 'tk') {
     try {
-      const offset = (page - 1) * limit;
-      const { rows: countries, count } = await this.countryRepository.findAndCountAll({
-        limit,
-        offset,
-        order: [['createdAt', 'DESC']],
+      const currentPage = Math.max(1, Number(page));
+      const currentLimit = Math.max(1, Math.min(100, Number(limit)));
+      const offset = (currentPage - 1) * currentLimit;
+
+      const sequelize = this.countryRepository.sequelize!;
+      const [countResult, rows]: [any[], any[]] = await Promise.all([
+        sequelize.query(
+          `SELECT COUNT(*)::int AS total FROM tbl_country`,
+          { type: QueryTypes.SELECT },
+        ),
+        sequelize.query(
+          `
+          SELECT
+            co.guid,
+            co.code,
+            co.name,
+            co."createdAt",
+            co."updatedAt",
+            co.custom_field_guids,
+            cf.guid          AS cf_guid,
+            cf.field_label,
+            cf.field_type,
+            cf.options,
+            cf.sort_order,
+            cf.field_key
+          FROM tbl_country co
+          LEFT JOIN tbl_custom_fields cf
+            ON cf.guid::text = ANY(ARRAY(SELECT jsonb_array_elements_text(co.custom_field_guids)))
+          ORDER BY co."createdAt" DESC, cf.sort_order ASC
+          LIMIT :limit OFFSET :offset
+          `,
+          { replacements: { limit: currentLimit, offset }, type: QueryTypes.SELECT },
+        ),
+      ]);
+
+      const total = Number(countResult[0]?.total || 0);
+      const countryMap = new Map<string, any>();
+      for (const row of rows as any[]) {
+        if (!countryMap.has(row.guid)) {
+          countryMap.set(row.guid, {
+            guid: row.guid,
+            code: row.code,
+            name: row.name,
+            custom_fields: [],
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            _guidOrder: row.custom_field_guids || [],
+          });
+        }
+        if (row.cf_guid) {
+          countryMap.get(row.guid).custom_fields.push({
+            guid: row.cf_guid,
+            field_label: row.field_label,
+            field_type: row.field_type,
+            options: row.options,
+            sort_order: row.sort_order,
+            field_key: row.field_key,
+          });
+        }
+      }
+      const data = Array.from(countryMap.values()).map((c) => {
+        const guidOrder: string[] = c._guidOrder;
+        delete c._guidOrder;
+        if (guidOrder.length > 0) {
+          c.custom_fields = guidOrder
+            .map((g: string) => c.custom_fields.find((f: any) => f.guid === g))
+            .filter(Boolean);
+        }
+        return c;
       });
-      const data = await Promise.all(
-        countries.map(async (country) => {
-          let hydratedFields: any[] = [];
-          if (country.custom_field_guids && country.custom_field_guids.length > 0) {
-            const fields = await this.customFieldRepository.findAll({
-              where: {
-                guid: { [Op.in]: country.custom_field_guids },
-              },
-            });
-            hydratedFields = country.custom_field_guids
-              .map((g) => fields.find((f) => f.guid === g))
-              .filter(Boolean) as any[];
-          }
-          return {
-            guid: country.guid,
-            code: country.code,
-            name: country.name,
-            custom_fields: hydratedFields,
-            createdAt: country.createdAt,
-            updatedAt: country.updatedAt,
-          };
-        }),
-      );
 
       return {
         status: 200,
-        data: data,
+        data,
         meta: {
-          totalItems: count,
-          totalPages: Math.ceil(count / limit),
-          currentPage: page,
+          totalItems: total,
+          totalPages: Math.ceil(total / currentLimit),
+          currentPage: currentPage,
         },
         message: this.i18n.t('general_translation.listFetched', { lang }),
       };

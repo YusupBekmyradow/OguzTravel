@@ -8,6 +8,8 @@ import { LoggerInterceptor } from './common/interceptors/logger.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { join } from 'path';
 import * as express from 'express';
+import helmet from 'helmet';
+import compression from 'compression';
 
 async function zero() {
   const logger = new Logger('monster');
@@ -19,9 +21,10 @@ async function zero() {
 
   app.enableCors();
 
-  app.getHttpAdapter().getInstance().set('trust proxy', true);
   const isProd = process.env.NODE_ENV === 'production';
   app.set('trust proxy', isProd ? 1 : true);
+  app.use(helmet());
+  app.use(compression());
 
   app.useGlobalPipes(new I18nValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalInterceptors(new LoggerInterceptor());
@@ -69,3 +72,11 @@ async function zero() {
   console.log(`Swagger Documentation: ${url}/docs`);
 }
 zero();
+
+
+
+// indexing goymali
+// migration yazmaly
+// cors request haysy apilere izin bermeli
+// message responseleri dogry edip duzeltmeli
+// payment uytgedip bolmayar

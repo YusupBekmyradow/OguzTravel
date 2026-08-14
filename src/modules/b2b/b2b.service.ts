@@ -184,6 +184,7 @@ export class B2bService {
         order: [['index_number', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
+        subQuery: false,
       });
       const formattedRows = rows.map(row => this.formatB2bPassport(row));
 
