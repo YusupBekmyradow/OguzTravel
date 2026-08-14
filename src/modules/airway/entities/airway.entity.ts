@@ -32,19 +32,19 @@ export class Airway extends Model<Airway> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare opr_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare client_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare prepared_opr_guid: string;
 
@@ -147,9 +147,9 @@ export class Airway extends Model<Airway> {
     declare preparedOpr: Employee;
 
     @HasMany(() => HarPayment, {
-    sourceKey: 'guid',
-    foreignKey: 'airway_guid'
-  })
+        sourceKey: 'guid',
+        foreignKey: 'airway_guid'
+    })
     declare harPaymentOpr: HarPayment[];
 
     @BeforeSave

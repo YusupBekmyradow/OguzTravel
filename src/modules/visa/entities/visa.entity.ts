@@ -25,28 +25,6 @@ export class Visa extends Model<Visa> {
   })
   declare index_number: string;
 
-  @Column({
-    type: DataType.DATE,
-    allowNull: false
-  })
-  declare datetime: Date;
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: false
-  })
-  declare receiver_opr_guid: string;
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: false
-  })
-  declare client_guid: string;
-
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: true,
-  })
   declare passport_count: number;
 
   @Column({
@@ -63,13 +41,25 @@ export class Visa extends Model<Visa> {
     type: DataType.UUID,
     allowNull: true
   })
+  declare client_guid: string;
+
+  @Column({
+    type: DataType.UUID,
+    allowNull: true
+  })
+  declare receiver_opr_guid: string;
+
+  @Column({
+    type: DataType.UUID,
+    allowNull: true
+  })
   declare package_guid: string;
 
   @Column({
     type: DataType.UUID,
     allowNull: true
   })
-  declare service_guid: string
+  declare service_guid: string;
 
   @Column({
     type: DataType.UUID,

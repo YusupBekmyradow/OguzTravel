@@ -5,6 +5,7 @@
     "updateFailed": "Failed to update receiving record. An error occurred.",
     "deleted": "Receiving record deleted successfully",
     "deleteFailed": "Failed to delete receiving record. An error occurred.",
+    "fetched": "Receiving record fetched successfully",
     "listFetched": "Receiving list fetched successfully",
     "fetchFailed": "Failed to fetch receiving list. An error occurred.",
     "notFound": "Receiving record not found for specified ID",

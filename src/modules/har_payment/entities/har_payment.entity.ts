@@ -57,7 +57,7 @@ export class HarPayment extends Model<HarPayment> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare opr_guid: string;
 

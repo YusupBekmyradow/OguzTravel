@@ -25,7 +25,7 @@ export class TransPayment extends Model<TransPayment> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare translation_guid: string;
 
@@ -43,7 +43,7 @@ export class TransPayment extends Model<TransPayment> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare opr_guid: string;
 

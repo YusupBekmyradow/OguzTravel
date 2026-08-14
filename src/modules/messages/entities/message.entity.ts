@@ -25,7 +25,7 @@ export class Message extends Model<Message> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare adm_user_guid: string;
 

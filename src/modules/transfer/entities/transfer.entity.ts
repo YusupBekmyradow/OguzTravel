@@ -32,19 +32,19 @@ export class Transfer extends Model<Transfer> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare opr_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare client_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare prepared_opr_guid: string;
 
@@ -148,9 +148,9 @@ export class Transfer extends Model<Transfer> {
     declare preparedOpr: Employee;
 
     @HasMany(() => TtpPayment, {
-    sourceKey: 'guid',
-    foreignKey: 'transfer_guid'
-  })
+        sourceKey: 'guid',
+        foreignKey: 'transfer_guid'
+    })
     declare ttpPayment: TtpPayment[];
 
     @BeforeSave

@@ -1,4 +1,4 @@
-import { BelongsTo, Column, DataType, ForeignKey, HasMany, Model, Table } from "sequelize-typescript";
+import { BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
 import { Office } from "../../office/entities/office.entity";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Client } from "../../client/entities/client.entity";
@@ -56,10 +56,9 @@ export class Receiving extends Model<Receiving> {
   })
   declare index_number: number;
 
-  @ForeignKey(() => Country)
   @Column({
     type: DataType.UUID,
-    allowNull: false,
+    allowNull: true,
   })
   declare country_guid: string;
 

@@ -57,7 +57,7 @@ export class VisaPayment extends Model<VisaPayment> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare opr_guid: string;
 

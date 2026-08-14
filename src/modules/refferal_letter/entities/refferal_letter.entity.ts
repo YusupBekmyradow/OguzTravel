@@ -32,13 +32,13 @@ export class RefferalLetter extends Model<RefferalLetter> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare received_opr_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare client_guid: string;
 

@@ -39,13 +39,13 @@ export class Hotel extends Model<Hotel> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare client_guid: string;
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare prepared_opr_guid: string;
 

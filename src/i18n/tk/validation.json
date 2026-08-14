@@ -23,6 +23,14 @@
     "IS_INT": "{property} diňe bütewi san bolmaly.",
     "isEnum": "{property} üçin görkezilen bahalardan biri saýlanmaly.",
     "IS_ENUM": "{property} üçin görkezilen bahalardan biri saýlanmaly.",
+    "isPhoneNumber": "{property} dogry telefon belgisi däl.",
+    "IS_PHONE_NUMBER": "{property} dogry telefon belgisi däl.",
+    "min": "{property} iň az {constraints.0} bolmaly.",
+    "MIN": "{property} iň az {constraints.0} bolmaly.",
+    "max": "{property} iň köp {constraints.0} bolmaly.",
+    "MAX": "{property} iň köp {constraints.0} bolmaly.",
+    "matches": "{property} talap edilýän formata laýyk gelmeýär.",
+    "MATCHES": "{property} talap edilýän formata laýyk gelmeýär.",
     "validationFailed": "Girizilen maglumatlarda ýalňyşlyklar bar. Maglumatlaryňyzy barlap, täzeden synanyşyň.",
     "badRequest": "Nädogry haýyş. Maglumatlaryňyzy gözden geçirip, täzeden synanyşyň."
 }

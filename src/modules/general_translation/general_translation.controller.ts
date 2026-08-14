@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { GeneralTranslationService } from './general_translation.service';
 import { CreateGeneralTranslationDto } from './dto/create-general_translation.dto';
 import { UpdateGeneralTranslationDto } from './dto/update-general_translation.dto';
@@ -35,8 +35,11 @@ export class GeneralTranslationController {
   }
 
   @Get('/get-trans-search-filter')
-  async searchAndFilter(@Query() query: FilterGeneralTranslationDto) {
-    return await this.translationService.searchAndFilterTranslations(query);
+  async searchAndFilter(
+    @Query() query: FilterGeneralTranslationDto,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return await this.translationService.searchAndFilterTranslations(query, lang);
   }
 
   @Patch('/update-translation')

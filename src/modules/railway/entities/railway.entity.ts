@@ -32,19 +32,19 @@ export class Railway extends Model<Railway> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare opr_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare client_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare prepared_opr_guid: string;
 
@@ -154,9 +154,9 @@ export class Railway extends Model<Railway> {
     declare preparedOpr: Employee;
 
     @HasMany(() => HarPayment, {
-    sourceKey: 'guid',
-    foreignKey: 'railway_guid'
-  })
+        sourceKey: 'guid',
+        foreignKey: 'railway_guid'
+    })
     declare harPaymentOpr: HarPayment[];
 
     @BeforeSave

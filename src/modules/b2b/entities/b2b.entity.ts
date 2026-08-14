@@ -27,13 +27,13 @@ export class B2b extends Model<B2b> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare assignment_opr_guid: string;
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare receiver_opr_guid: string;
 
@@ -49,7 +49,7 @@ export class B2b extends Model<B2b> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare client_guid: string;
 
@@ -62,7 +62,7 @@ export class B2b extends Model<B2b> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare status_guid: string;
 
@@ -195,6 +195,7 @@ export class B2b extends Model<B2b> {
     sourceKey: 'guid'
   })
   declare ticketPayment: TicketPayment[];
+
   @BeforeSave
   @BeforeUpdate
   static calculateProfit(instance: B2b) {

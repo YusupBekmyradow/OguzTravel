@@ -1,4 +1,4 @@
-﻿import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -14,8 +14,6 @@ import { UpdateReadStatusDto } from './dto/update-read-status.dto';
 import { Sequelize } from 'sequelize-typescript';
 import { Op, QueryTypes } from 'sequelize';
 import { ImagesService } from '../../common/image-upload/image-upload.module';
-import * as fs from 'fs';
-import * as path from 'path';
 
 @Injectable()
 export class MessagesService {
@@ -58,8 +56,6 @@ export class MessagesService {
     });
   }
 
-
-
   async getAllNotification(
     page: number = 1,
     limit: number = 10,
@@ -67,6 +63,7 @@ export class MessagesService {
     isRead?: string,
     search?: string,
     createdAt?: string,
+    lang: string = 'tk',
   ) {
     try {
       const pageNum = Number(page) || 1;
@@ -138,17 +135,14 @@ export class MessagesService {
           totalPages: Math.ceil(count / limitNum),
           currentPage: pageNum,
         },
-        message: 'Notifications and tasks retrieved successfully',
+        message: this.i18n.t('messages.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to retrieve notifications and tasks. Please try again later.', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.fetchFailed', { lang }), error);
     }
   }
 
-
-
-
-async getAllTasks(
+  async getAllTasks(
     page: number = 1,
     limit: number = 10,
     status?: number,
@@ -157,6 +151,7 @@ async getAllTasks(
     due_date?: string,
     search?: string,
     assignee_guid?: string,
+    lang: string = 'tk',
   ) {
     try {
       const pageNum = Number(page) || 1;
@@ -236,7 +231,7 @@ async getAllTasks(
         return {
           status: 200,
           data: Object.values(statusGroups),
-          message: 'Tasks have been grouped by status successfully',
+          message: this.i18n.t('messages.listFetched', { lang }),
         };
       }
 
@@ -270,140 +265,18 @@ async getAllTasks(
           totalPages: Math.ceil(count / limitNum),
           currentPage: pageNum,
         },
-        message: 'Task list retrieved successfully',
+        message: this.i18n.t('messages.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to retrieve task list. Please try again later.', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.fetchFailed', { lang }), error);
     }
   }
-  // async getAllTasks(
-  //   page: number = 1,
-  //   limit: number = 10,
-  //   status?: number,
-  //   type?: string | boolean,
-  //   priority?: string,
-  //   due_date?: string,
-  //   search?: string,
-  //   assignee_guid?: string,
-  // ) {
-  //   try {
-  //     const pageNum = Number(page) || 1;
-  //     const limitNum = Number(limit) || 10;
-  //     const offset = (pageNum - 1) * limitNum;
-  //     const whereClause: any = { isMessage: false };
-  //     if (priority) whereClause.priority = priority;
-  //     if (status !== undefined) whereClause.status = Number(status);
-  //     if (due_date) {
-  //       whereClause.due_date = {
-  //         [Op.between]: [`${due_date} 00:00:00`, `${due_date} 23:59:59`],
-  //       };
-  //     }
-  //     const taskAssigneeWhere: any = {};
-  //     if (assignee_guid) taskAssigneeWhere.assignee_guid = assignee_guid;
-
-  //     const employeeIncludeWhere: any = {};
-  //     if (search) employeeIncludeWhere.fullName = { [Op.iLike]: `%${search}%` };
-  //     const includeOptions = [
-  //       {
-  //         model: User,
-  //         as: 'admuser',
-  //         attributes: ['guid', 'phone_number', 'role'],
-  //         include: [{ model: Employee, attributes: ['guid', 'fullName'] }],
-  //       },
-  //       {
-  //         model: TaskAssignee,
-  //         as: 'empltaskAssignee',
-  //         where: Object.keys(taskAssigneeWhere).length > 0 ? taskAssigneeWhere : undefined,
-  //         required: !!assignee_guid || !!search,
-  //         include: [
-  //           {
-  //             model: User,
-  //             as: 'user',
-  //             attributes: ['guid', 'phone_number', 'role'],
-  //             include: [
-  //               {
-  //                 model: Employee,
-  //                 as: 'employee',
-  //                 where: Object.keys(employeeIncludeWhere).length > 0 ? employeeIncludeWhere : undefined,
-  //                 required: !!search,
-  //                 attributes: ['guid', 'fullName'],
-  //               },
-  //             ],
-  //           },
-  //         ],
-  //       },
-  //     ];
-  //     const formatTaskData = (tasks: any[]) => {
-  //       return tasks.map((task: any) => {
-  //         const plainTask = task.toJSON ? task.toJSON() : task;
-  //         const assignees = plainTask.empltaskAssignee
-  //           ? plainTask.empltaskAssignee.map((item: any) => item.user || item)
-  //           : [];
-  //         delete plainTask.empltaskAssignee;
-  //         return {
-  //           ...plainTask,
-  //           assignees: Array.isArray(assignees) ? assignees : [],
-  //         };
-  //       });
-  //     };
-
-  //     const isGrouped = type === true || type === 'true';
-  //     if (isGrouped) {
-  //       const allTasks = await this.messageRepository.findAll({
-  //         where: whereClause,
-  //         include: includeOptions,
-  //         order: [['createdAt', 'DESC']],
-  //       });
-  //       const formattedTasks = formatTaskData(allTasks);
-
-  //       const statusGroups: { [key: number]: any[] } = {};
-  //       formattedTasks.forEach((task: any) => {
-  //         const st = task.status !== undefined && task.status !== null ? Number(task.status) : 0;
-  //         if (!statusGroups[st]) statusGroups[st] = [];
-  //         statusGroups[st].push(task);
-  //       });
-
-  //       return {
-  //         status: 200,
-  //         data: Object.values(statusGroups),
-  //         message: 'Tasks grouped by status successfully',
-  //       };
-  //     }
-
-  //     const { rows, count } = await this.messageRepository.findAndCountAll({
-  //       where: whereClause,
-  //       include: includeOptions,
-  //       limit: limitNum,
-  //       offset,
-  //       order: [['createdAt', 'DESC']],
-  //       distinct: true,
-  //       subQuery: false,
-  //     });
-  //     const formattedRows = formatTaskData(rows);
-  //     return {
-  //       status: 200,
-  //       data: rows,
-  //       meta: {
-  //         totalItems: count,
-  //         itemCount: formattedRows.length,
-  //         itemsPerPage: limitNum,
-  //         totalPages: Math.ceil(count / limitNum),
-  //         currentPage: pageNum,
-  //       },
-  //       message: 'Tasks fetched successfully',
-  //     };
-  //   } catch (error: any) {
-  //     return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Tasks fetch failed', error);
-  //   }
-  // }
-
-
-
 
   async getTasksByStatus(
     status?: number,
     page: number = 1,
     limit: number = 10,
+    lang: string = 'tk',
   ) {
     try {
       const pageNum = Number(page) || 1;
@@ -496,20 +369,18 @@ async getAllTasks(
           totalPages: Math.ceil(totalItems / limitNum),
           currentPage: pageNum,
         },
-        message: 'Tasks filtered by status retrieved successfully',
+        message: this.i18n.t('messages.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to retrieve tasks by status. Please try again later.', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.fetchFailed', { lang }), error);
     }
   }
-
-
 
   async addMessage(senderGuid: string, createDto: CreateMessageDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
       const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction, });
-      if (!sender) { await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'No sender account found with the provided ID'); }
+      if (!sender) { await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang })); }
 
       const { assignee_guids, ...messageData } = createDto as any;
       const createdMessage = await this.messageRepository.create({
@@ -534,16 +405,13 @@ async getAllTasks(
     }
   }
 
-
-
-
-  async addTask(senderGuid: string, createDto: CreateTaskDto) {
+  async addTask(senderGuid: string, createDto: CreateTaskDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
       const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction });
       if (!sender) {
         await transaction.rollback();
-        return errorResponse(HttpStatus.NOT_FOUND, 'No sender account found with the provided ID');
+        return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
       }
       let { assignee_guids, ...taskData } = createDto as any;
       if (!assignee_guids) {
@@ -568,23 +436,21 @@ async getAllTasks(
       }
       await transaction.commit();
       const newTask = await this.findMessageByGuid(createdTask.guid);
-      return { status: 201, data: newTask, message: 'Task has been created and assigned successfully' };
+      return { status: 201, data: newTask, message: this.i18n.t('messages.created', { lang }) };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to create the task. Please try again later.', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.createFailed', { lang }), error);
     }
   }
 
-
-
-  async updateMessage(updateDto: UpdateMessageDto) {
+  async updateMessage(updateDto: UpdateMessageDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
       const { guid, assignee_guids, ...updateData } = updateDto as any;
 
       const message = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!message) {
-        await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, 'No record found with the provided ID');
+        await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
       }
       if (!updateData.images || updateData.images.length === 0) {
         delete updateData.images;
@@ -604,16 +470,14 @@ async getAllTasks(
       }
       await transaction.commit();
       const updatedRecord = await this.findMessageByGuid(guid);
-      return { status: 200, data: updatedRecord, message: 'Record has been updated successfully' };
+      return { status: 200, data: updatedRecord, message: this.i18n.t('messages.updated', { lang }) };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to update the record. Please try again later.', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.updateFailed', { lang }), error);
     }
   }
 
-
-
-  async updateTask(updateDto: UpdateTaskDto) {
+  async updateTask(updateDto: UpdateTaskDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
       let { guid, assignee_guids, images, ...updateData } = updateDto as any;
@@ -627,7 +491,7 @@ async getAllTasks(
       const task = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!task) {
         await transaction.rollback();
-        return errorResponse(HttpStatus.NOT_FOUND, 'No task found with the provided ID');
+        return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
       }
 
       if (images && images.length > 0 && task.images && Array.isArray(task.images)) {
@@ -651,29 +515,26 @@ async getAllTasks(
       await transaction.commit();
       const updatedTask = await this.findMessageByGuid(guid);
       if (!updatedTask) {
-        return errorResponse(HttpStatus.NOT_FOUND, 'Task could not be retrieved after update');
+        return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
       }
       return {
         status: 200,
         data: updatedTask.toJSON(),
-        message: 'Task has been updated successfully',
+        message: this.i18n.t('messages.updated', { lang }),
       };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to update the task. Please try again later.', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.updateFailed', { lang }), error);
     }
   }
 
-
-
-
-  async deleteMessageOrTask(guid: string) {
+  async deleteMessageOrTask(guid: string, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
       const record = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!record) {
         await transaction.rollback();
-        return errorResponse(HttpStatus.NOT_FOUND, 'No record found with the provided ID');
+        return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
       }
       await this.messageRepository.destroy({ where: { guid }, transaction });
       await transaction.commit();
@@ -681,15 +542,14 @@ async getAllTasks(
       if (record.images && Array.isArray(record.images) && record.images.length > 0) {
         this.imagesService.deleteFiles(record.images);
       }
-      return { status: 200, message: 'Record has been deleted successfully' };
+      return { status: 200, message: this.i18n.t('messages.deleted', { lang }) };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to delete the record. Please try again later.', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.deleteFailed', { lang }), error);
     }
   }
 
-
-  async markAsRead(updateReadStatusDto: UpdateReadStatusDto) {
+  async markAsRead(updateReadStatusDto: UpdateReadStatusDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
       const { task_guids, assignee_guids } = updateReadStatusDto;
@@ -699,7 +559,7 @@ async getAllTasks(
         await transaction.rollback();
         return errorResponse(
           HttpStatus.BAD_REQUEST,
-          'At least one of task_guids or assignee_guids must be provided',
+          this.i18n.t('messages.notFound', { lang }),
         );
       }
       const whereClause: any = {};
@@ -720,17 +580,11 @@ async getAllTasks(
       return {
         status: 200,
         data: { updatedCount: affectedCount },
-        message: `Successfully marked ${affectedCount} task(s) as read`,
+        message: this.i18n.t('messages.updated', { lang }),
       };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, 'Failed to update read status. Please try again later.', error);
+      return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.updateFailed', { lang }), error);
     }
   }
 }
-
-
-
-
-
-

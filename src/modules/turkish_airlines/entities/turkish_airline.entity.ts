@@ -27,13 +27,13 @@ export class TurkishAirline extends Model<TurkishAirline> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare assignment_opr_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare receiver_opr_guid: string;
 
@@ -49,7 +49,7 @@ export class TurkishAirline extends Model<TurkishAirline> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare client_guid: string;
 
@@ -61,7 +61,7 @@ export class TurkishAirline extends Model<TurkishAirline> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare status_guid: string;
 
@@ -146,7 +146,7 @@ export class TurkishAirline extends Model<TurkishAirline> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare office_guid: string;
 
@@ -213,10 +213,11 @@ export class TurkishAirline extends Model<TurkishAirline> {
     declare office: Office;
 
     @HasMany(() => TurkishPayment, {
-    foreignKey: 'turkish_airline_guid',
-    sourceKey: 'guid'
-  })
+        foreignKey: 'turkish_airline_guid',
+        sourceKey: 'guid'
+    })
     declare turkishPayment: TurkishPayment[];
+
     @BeforeSave
     @BeforeUpdate
     static calculateAndRoundPrices(instance: TurkishAirline) {
@@ -227,4 +228,3 @@ export class TurkishAirline extends Model<TurkishAirline> {
         instance.returned_price = instance.is_paid ? (instance.quoted_price - instance.accepted_price) : 0;
     }
 }
-

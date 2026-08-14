@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -20,10 +20,10 @@ import { ImagesService } from '../../common/image-upload/image-upload.module';
 @RequirePermissions('/notifications', '/tasks')
 @Controller('messages')
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService,
+  constructor(
+    private readonly messagesService: MessagesService,
     private readonly imagesService: ImagesService
   ) { }
-
 
   @Get('/get-all-notification')
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -39,6 +39,7 @@ export class MessagesController {
     @Query('isRead') isRead?: string,
     @Query('search') search?: string,
     @Query('createdAt') createdAt?: string,
+    @I18nLang() lang: string = 'tk',
   ) {
     return this.messagesService.getAllNotification(
       page,
@@ -47,9 +48,9 @@ export class MessagesController {
       isRead,
       search,
       createdAt,
+      lang,
     );
   }
-
 
   @Get('/get-all-tasks')
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -69,6 +70,7 @@ export class MessagesController {
     @Query('due_date') due_date?: string,
     @Query('search') search?: string,
     @Query('assignee_guid') assignee_guid?: string,
+    @I18nLang() lang: string = 'tk',
   ) {
     return this.messagesService.getAllTasks(
       page ? Number(page) : 1,
@@ -79,10 +81,9 @@ export class MessagesController {
       due_date,
       search,
       assignee_guid,
+      lang,
     );
   }
-
-
 
   @Get('/get-tasks-by-status')
   @ApiQuery({ name: 'status', required: true, example: 1 })
@@ -92,54 +93,65 @@ export class MessagesController {
     @Query('status') status: number,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @I18nLang() lang: string = 'tk',
   ) {
     return this.messagesService.getTasksByStatus(
       status ? Number(status) : undefined,
       page ? Number(page) : 1,
       limit ? Number(limit) : 10,
+      lang,
     );
   }
 
-
-
   @Post('/add-notification')
-  async addMessage(@Req() req, @Body() createDto: CreateMessageDto) {
+  async addMessage(
+    @Req() req,
+    @Body() createDto: CreateMessageDto,
+    @I18nLang() lang: string = 'tk',
+  ) {
     const senderGuid = req.user.guid;
-    return this.messagesService.addMessage(senderGuid, createDto);
+    return this.messagesService.addMessage(senderGuid, createDto, lang);
   }
-
 
   @Patch('/update-notification')
-  async updateMessage(@Body() updateDto: UpdateMessageDto) {
-    return this.messagesService.updateMessage(updateDto);
+  async updateMessage(
+    @Body() updateDto: UpdateMessageDto,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.messagesService.updateMessage(updateDto, lang);
   }
-
 
   @Post('/add-task')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FilesInterceptor('images', 10))
-  async addTask(@Req() req, @Body() createDto: CreateTaskDto, @UploadedFiles() files: Express.Multer.File[],) {
+  async addTask(
+    @Req() req,
+    @Body() createDto: CreateTaskDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @I18nLang() lang: string = 'tk',
+  ) {
     const senderGuid = req.user.guid;
     if (files && files.length > 0) {
       const savedImages = await this.imagesService.saveImages(files);
       createDto.images = savedImages;
     }
-    return this.messagesService.addTask(senderGuid, createDto);
+    return this.messagesService.addTask(senderGuid, createDto, lang);
   }
-
 
   @Patch('/update-task')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FilesInterceptor('images', 10))
-  async updateTask(@Body() updateDto: UpdateTaskDto,
-    @UploadedFiles() files: Express.Multer.File[]) {
+  async updateTask(
+    @Body() updateDto: UpdateTaskDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @I18nLang() lang: string = 'tk',
+  ) {
     if (files && files.length > 0) {
       const savedImages = await this.imagesService.saveImages(files);
       updateDto.images = savedImages;
     }
-    return this.messagesService.updateTask(updateDto);
+    return this.messagesService.updateTask(updateDto, lang);
   }
-
 
   @Delete('/delete-notificOrmessage')
   @ApiBody({
@@ -149,13 +161,18 @@ export class MessagesController {
       }
     }
   })
-  async delete(@Body('guid') guid: string) {
-    return this.messagesService.deleteMessageOrTask(guid);
+  async delete(
+    @Body('guid') guid: string,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.messagesService.deleteMessageOrTask(guid, lang);
   }
 
   @Patch('/notification-read')
-  async markAsRead(@Body() updateReadStatusDto: UpdateReadStatusDto) {
-    return this.messagesService.markAsRead(updateReadStatusDto);
+  async markAsRead(
+    @Body() updateReadStatusDto: UpdateReadStatusDto,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.messagesService.markAsRead(updateReadStatusDto, lang);
   }
 }
-

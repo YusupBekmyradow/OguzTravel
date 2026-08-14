@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateGeneralTranslationDto } from './dto/create-general_translation.dto';
 import { UpdateGeneralTranslationDto } from './dto/update-general_translation.dto';
@@ -137,7 +137,7 @@ export class GeneralTranslationService {
     translator_guid?: string;
     page?: number;
     limit?: number;
-  }) {
+  }, lang: string = 'tk') {
     try {
       const page = Math.max(1, Number(filters.page || 1));
       const limit = Math.max(1, Number(filters.limit || 10));
@@ -180,8 +180,25 @@ export class GeneralTranslationService {
         const searchTerm = `%${filters.search.trim()}%`;
         whereConditions[Op.or] = [
           { source_to_target: { [Op.iLike]: searchTerm } },
-          { '$client.fullName$': { [Op.iLike]: searchTerm } },
-          { '$translator.fullName$': { [Op.iLike]: searchTerm } }
+          { note: { [Op.iLike]: searchTerm } },
+          { status: { [Op.iLike]: searchTerm } },
+          { correction_status: { [Op.iLike]: searchTerm } },
+          Sequelize.where(
+            Sequelize.cast(Sequelize.col('GeneralTranslation.index_number'), 'TEXT'),
+            { [Op.iLike]: searchTerm }
+          ),
+          Sequelize.where(
+            Sequelize.col('client.fullName'),
+            { [Op.iLike]: searchTerm }
+          ),
+          Sequelize.where(
+            Sequelize.col('operator.fullName'),
+            { [Op.iLike]: searchTerm }
+          ),
+          Sequelize.where(
+            Sequelize.col('translator.fullName'),
+            { [Op.iLike]: searchTerm }
+          ),
         ];
       }
 
@@ -195,7 +212,6 @@ export class GeneralTranslationService {
         order: [['index_number', 'DESC']],
         limit: limit,
         offset: offset,
-        distinct: true,
       });
 
       return {
@@ -207,10 +223,10 @@ export class GeneralTranslationService {
           currentPage: page,
           itemsPerPage: limit
         },
-        message: 'Translation records filtered and retrieved successfully'
+        message: this.i18n.t('general_translation.listFetched', { lang })
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to filter and retrieve translation records. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('general_translation.fetchFailed', { lang }), error);
     }
   }
 

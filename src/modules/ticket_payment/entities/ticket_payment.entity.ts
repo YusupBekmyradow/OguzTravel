@@ -26,7 +26,7 @@ export class TicketPayment extends Model<TicketPayment> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare b2b_guid: string;
 
@@ -44,7 +44,7 @@ export class TicketPayment extends Model<TicketPayment> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare opr_guid: string;
 

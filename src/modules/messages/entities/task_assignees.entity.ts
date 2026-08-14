@@ -23,7 +23,7 @@ export class TaskAssignee extends Model<TaskAssignee> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false,
+    allowNull: true,
   })
   declare assignee_guid: string;
 

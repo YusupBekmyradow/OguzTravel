@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { InjectModel } from '@nestjs/sequelize';
 import { Report } from './entities/report.entity';
@@ -7,7 +7,6 @@ import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
-import { Op } from 'sequelize';
 
 @Injectable()
 export class ReportService {
@@ -23,7 +22,7 @@ export class ReportService {
     return totalLetterSum - totalCountSum;
   }
 
-  async addReport(createReportDto: CreateReportDto) {
+  async addReport(createReportDto: CreateReportDto, lang: string = 'tk') {
     try {
       const report = await this.reportRepository.create({
         ...createReportDto,
@@ -34,20 +33,20 @@ export class ReportService {
         ...successResponse(
           HttpStatuses.CREATED,
           report,
-          'Report has been created successfully',
+          this.i18n.t('report.created', { lang }),
         ),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Failed to create the report. Please try again later.',
+        this.i18n.t('report.createFailed', { lang }),
         error,
       );
     }
   }
 
-  async getAllReports(page: number = 1, limit: number = 10) {
+  async getAllReports(page: number = 1, limit: number = 10, lang: string = 'tk') {
     try {
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
@@ -74,24 +73,24 @@ export class ReportService {
           totalPages: Math.ceil(count / limitNum),
           currentPage: pageNum,
         },
-        message: 'Report records retrieved successfully',
+        message: this.i18n.t('report.listFetched', { lang }),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Failed to retrieve report records. Please try again later.',
+        this.i18n.t('report.fetchFailed', { lang }),
         error,
       );
     }
   }
 
-  async updateReport(updateReportDto: UpdateReportDto) {
+  async updateReport(updateReportDto: UpdateReportDto, lang: string = 'tk') {
     try {
       const { guid, ...updateData } = updateReportDto;
       const report = await this.reportRepository.findOne({ where: { guid } });
       if (!report) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'No report found with the provided ID');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('report.notFound', { lang }));
       }
 
       await this.reportRepository.update(updateData as any, {
@@ -108,27 +107,27 @@ export class ReportService {
         ...successResponse(
           HttpStatuses.OK,
           updatedReport,
-          'Report has been updated successfully',
+          this.i18n.t('report.updated', { lang }),
         ),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Failed to update the report. Please try again later.',
+        this.i18n.t('report.updateFailed', { lang }),
         error,
       );
     }
   }
 
-  async deleteReport(guid: string) {
+  async deleteReport(guid: string, lang: string = 'tk') {
     try {
       const deletedCount = await this.reportRepository.destroy({
         where: { guid },
       });
 
       if (deletedCount === 0) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'No report found with the provided ID');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('report.notFound', { lang }));
       }
 
       const total_report_count = await this.getTotalReportCount();
@@ -137,20 +136,16 @@ export class ReportService {
         ...successResponse(
           HttpStatuses.OK,
           null,
-          'Report has been deleted successfully',
+          this.i18n.t('report.deleted', { lang }),
         ),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Failed to delete the report. Please try again later.',
+        this.i18n.t('report.deleteFailed', { lang }),
         error,
       );
     }
   }
 }
-
-
-
-

@@ -2,7 +2,6 @@ import { Table, Model, Column, DataType, BelongsTo, HasMany } from "sequelize-ty
 import { VisaCategory } from "../../visa_category/entities/visa_category.entity";
 import { Visa } from "../../visa/entities/visa.entity";
 
-
 @Table({
   tableName: 'tbl_visa_package',
   timestamps: true
@@ -25,7 +24,7 @@ export class VisaPackage extends Model<VisaPackage> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare category_guid: string;
 

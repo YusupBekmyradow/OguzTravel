@@ -23,7 +23,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 @ApiTags('Countries')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/receivings')
+@RequirePermissions('/intake')
 @Controller('countries')
 export class CountryController {
   constructor(private readonly countryService: CountryService) { }

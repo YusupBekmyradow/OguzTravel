@@ -67,20 +67,14 @@ export class Employee extends Model<Employee> {
   declare index_number: number;
 
   @Column({
-    type: DataType.JSONB,
-    allowNull: true
-  })
-  declare address: any;
-
-  @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare office_guid: string;
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare position_guid: string;
 

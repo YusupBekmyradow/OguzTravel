@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateTicketPaymentDto } from './dto/create-ticket_payment.dto';
 import { UpdateTicketPaymentDto } from './dto/update-ticket_payment.dto';
@@ -20,17 +20,16 @@ export class TicketPaymentService {
     private readonly i18n: I18nService,
   ) { }
 
-
-  async addTicketPayment(createTicketPaymentDto: CreateTicketPaymentDto) {
+  async addTicketPayment(createTicketPaymentDto: CreateTicketPaymentDto, lang: string = 'tk') {
     try {
       const ticketPayment = await this.ticketPaymentRepo.create({
         ...createTicketPaymentDto,
-      } as any)
+      } as any);
       const createdPayment = await this.ticketPaymentRepo.findByPk(ticketPayment.guid, {
         include: [{ model: Employee, as: 'operator', attributes: ['guid', 'fullName'] }]
       });
       if (!createdPayment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Payment record could not be retrieved after creation');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('ticket_payment.notFound', { lang }));
       }
       const statsResult = await this.getPaymentStats(createTicketPaymentDto.b2b_guid);
       const stats = statsResult as any;
@@ -44,14 +43,13 @@ export class TicketPaymentService {
         ...createdPayment.toJSON(),
         ...statsResult
       };
-      return successResponse(HttpStatuses.CREATED, combinedData, 'Ticket payment has been created successfully')
+      return successResponse(HttpStatuses.CREATED, combinedData, this.i18n.t('ticket_payment.created', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to create the ticket payment. Please try again later.', error)
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('ticket_payment.createFailed', { lang }), error);
     }
   }
 
-
-  async getAllTicketPayment(page: number = 1, limit: number = 10, b2b_guid: string) {
+  async getAllTicketPayment(page: number = 1, limit: number = 10, b2b_guid: string, lang: string = 'tk') {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
@@ -76,18 +74,17 @@ export class TicketPaymentService {
           totalPages: Math.ceil(count / currentLimit),
           currentPage: currentPage
         },
-        message: 'Ticket payment records retrieved successfully'
+        message: this.i18n.t('ticket_payment.listFetched', { lang })
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve ticket payment records. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('ticket_payment.fetchFailed', { lang }), error);
     }
   }
 
-
-  async updateTicketPayment(updateTicketPaymentDto: UpdateTicketPaymentDto) {
+  async updateTicketPayment(updateTicketPaymentDto: UpdateTicketPaymentDto, lang: string = 'tk') {
     try {
       const ticketPayment = await this.ticketPaymentRepo.findOne({ where: { guid: updateTicketPaymentDto.guid } });
-      if (!ticketPayment) return errorResponse(HttpStatuses.NOT_FOUND, 'No ticket payment record found with the provided ID');
+      if (!ticketPayment) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('ticket_payment.notFound', { lang }));
 
       await this.ticketPaymentRepo.update(updateTicketPaymentDto as any, { where: { guid: updateTicketPaymentDto.guid } });
 
@@ -106,21 +103,21 @@ export class TicketPaymentService {
           ...updatedTicketPayment.toJSON(),
           ...stats
         };
-        return successResponse(HttpStatuses.OK, combinedData, 'Ticket payment has been updated successfully');
+        return successResponse(HttpStatuses.OK, combinedData, this.i18n.t('ticket_payment.updated', { lang }));
       }
+      return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('ticket_payment.notFound', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update the ticket payment. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('ticket_payment.updateFailed', { lang }), error);
     }
   }
 
-
-  async deleteTicketPayment(guid: string) {
+  async deleteTicketPayment(guid: string, lang: string = 'tk') {
     try {
       const payment = await this.ticketPaymentRepo.findOne({
         where: { guid }
       });
       if (!payment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'No ticket payment record found with the provided ID');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('ticket_payment.notFound', { lang }));
       }
       const b2b_guid = payment.b2b_guid;
       await this.ticketPaymentRepo.destroy({
@@ -134,13 +131,11 @@ export class TicketPaymentService {
         { is_paid: statsResult.remaining <= 0 },
         { where: { guid: b2b_guid } }
       );
-      return successResponse(HttpStatuses.OK, stats, 'Ticket payment has been deleted successfully');
-
+      return successResponse(HttpStatuses.OK, stats, this.i18n.t('ticket_payment.deleted', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to delete the ticket payment. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('ticket_payment.deleteFailed', { lang }), error);
     }
   }
-
 
   private async getPaymentStats(b2b_guid: string) {
     const stats = await this.sequelize.query(`
@@ -166,6 +161,3 @@ export class TicketPaymentService {
     };
   }
 }
-
-
-

@@ -31,7 +31,7 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare opr_guid: string;
 
@@ -43,7 +43,7 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare client_guid: string;
 
@@ -80,7 +80,7 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare translator_guid: string;
 

@@ -25,7 +25,7 @@ export class TurkishPayment extends Model<TurkishPayment> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare turkish_airline_guid: string;
 
@@ -43,7 +43,7 @@ export class TurkishPayment extends Model<TurkishPayment> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare opr_guid: string;
 

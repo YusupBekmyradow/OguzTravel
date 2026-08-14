@@ -48,8 +48,6 @@ export class Country extends Model<Country> {
   @HasMany(() => Receiving, {
     sourceKey: 'guid',
     foreignKey: 'country_guid',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE',
   })
   declare receiving: Receiving[];
 }

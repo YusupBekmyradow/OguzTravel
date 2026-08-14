@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateTransPaymentDto } from './dto/create-trans_payment.dto';
 import { UpdateTransPaymentDto } from './dto/update-trans_payment.dto';
@@ -18,7 +18,7 @@ export class TransPaymentService {
     private readonly i18n: I18nService,
   ) { }
 
-  async addTransPayment(createDto: CreateTransPaymentDto) {
+  async addTransPayment(createDto: CreateTransPaymentDto, lang: string = 'tk') {
     try {
       const payment = await this.transPaymentRepo.create({ ...createDto } as any);
 
@@ -26,22 +26,22 @@ export class TransPaymentService {
         include: [{ model: Employee, as: 'transoperator', attributes: ['guid', 'fullName'] }]
       });
       if (!createdPayment) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Payment record could not be retrieved after creation');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('trans_payment.notFound', { lang }));
       }
       const stats = await this.getTransPaymentStats(createDto.translation_guid);
-      return successResponse(HttpStatuses.CREATED, { ...createdPayment.toJSON(), stats }, 'Payment has been created successfully');
+      return successResponse(HttpStatuses.CREATED, { ...createdPayment.toJSON(), stats }, this.i18n.t('trans_payment.created', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to create the payment. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('trans_payment.createFailed', { lang }), error);
     }
   }
 
-  async getAllTransPayments(page: number = 1, limit: number = 10, translation_guid: string) {
+  async getAllTransPayments(page: number = 1, limit: number = 10, translation_guid: string, lang: string = 'tk') {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
       if (!translation_guid) {
-        return errorResponse(HttpStatuses.BAD_REQUEST, 'A valid translation GUID is required to retrieve payment records');
+        return errorResponse(HttpStatuses.BAD_REQUEST, this.i18n.t('trans_payment.notFound', { lang }));
       }
       const { rows, count } = await this.transPaymentRepo.findAndCountAll({
         where: { translation_guid },
@@ -57,16 +57,16 @@ export class TransPaymentService {
         data: rows,
         stats,
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage }
-      }, 'Payment records retrieved successfully');
+      }, this.i18n.t('trans_payment.listFetched', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve payment records. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('trans_payment.fetchFailed', { lang }), error);
     }
   }
 
-  async updateTransPayment(updateDto: UpdateTransPaymentDto) {
+  async updateTransPayment(updateDto: UpdateTransPaymentDto, lang: string = 'tk') {
     try {
       const payment = await this.transPaymentRepo.findOne({ where: { guid: updateDto.guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'No payment record found with the provided ID');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('trans_payment.notFound', { lang }));
 
       await this.transPaymentRepo.update(updateDto as any, { where: { guid: updateDto.guid } });
 
@@ -76,27 +76,27 @@ export class TransPaymentService {
       });
 
       if (!updated) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Updated payment record could not be retrieved');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('trans_payment.notFound', { lang }));
       }
       const stats = await this.getTransPaymentStats(updated.translation_guid);
-      return successResponse(HttpStatuses.OK, { ...updated.toJSON(), stats }, 'Payment has been updated successfully');
+      return successResponse(HttpStatuses.OK, { ...updated.toJSON(), stats }, this.i18n.t('trans_payment.updated', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update the payment. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('trans_payment.updateFailed', { lang }), error);
     }
   }
 
-  async deleteTransPayment(guid: string) {
+  async deleteTransPayment(guid: string, lang: string = 'tk') {
     try {
       const payment = await this.transPaymentRepo.findOne({ where: { guid } });
-      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, 'No payment record found with the provided ID');
+      if (!payment) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('trans_payment.notFound', { lang }));
 
       const translation_guid = payment.translation_guid;
       await this.transPaymentRepo.destroy({ where: { guid } });
 
       const stats = await this.getTransPaymentStats(translation_guid);
-      return successResponse(HttpStatuses.OK, stats, 'Payment has been deleted successfully');
+      return successResponse(HttpStatuses.OK, stats, this.i18n.t('trans_payment.deleted', { lang }));
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to delete the payment. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('trans_payment.deleteFailed', { lang }), error);
     }
   }
 
@@ -126,5 +126,3 @@ export class TransPaymentService {
     };
   }
 }
-
-

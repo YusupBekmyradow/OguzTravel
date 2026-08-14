@@ -18,7 +18,8 @@ export class Tour extends Model<Tour> {
 
     @Column({
         type: DataType.INTEGER,
-        autoIncrement: true, allowNull: false,
+        autoIncrement: true,
+        allowNull: false,
         unique: true
     })
     declare index_number: number;
@@ -29,22 +30,21 @@ export class Tour extends Model<Tour> {
     })
     declare application_date: Date;
 
-
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare opr_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare client_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare prepared_opr_guid: string;
 
@@ -136,9 +136,9 @@ export class Tour extends Model<Tour> {
     declare preparedOpr: Employee;
 
     @HasMany(() => TtpPayment, {
-    sourceKey: 'guid',
-    foreignKey: 'tour_guid'
-  })
+        sourceKey: 'guid',
+        foreignKey: 'tour_guid'
+    })
     declare ttpPayment: TtpPayment[];
 
     @BeforeSave

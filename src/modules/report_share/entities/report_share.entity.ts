@@ -37,13 +37,13 @@ export class ReportShare extends Model<ReportShare> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare assignment_opr_guid: string;
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare receiver_opr_guid: string;
 

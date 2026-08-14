@@ -20,7 +20,7 @@ import { I18nLang } from 'nestjs-i18n';
 @ApiTags('Report Share')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/reports')
+@RequirePermissions('/outbound')
 @Controller('report-share')
 export class ReportShareController {
   constructor(private readonly reportShareService: ReportShareService) { }
@@ -41,7 +41,7 @@ export class ReportShareController {
     @Query('assignment_opr_guid') assignment_opr_guid?: string,
     @Query('receiver_opr_guid') receiver_opr_guid?: string,
   ) {
-    return this.reportShareService.getAllReportShares(lang, 
+    return this.reportShareService.getAllReportShares(lang,
       page,
       limit,
       assignment_opr_guid,

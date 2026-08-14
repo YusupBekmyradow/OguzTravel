@@ -57,7 +57,7 @@ export class TtpPayment extends Model<TtpPayment> {
 
   @Column({
     type: DataType.UUID,
-    allowNull: false
+    allowNull: true
   })
   declare opr_guid: string;
 

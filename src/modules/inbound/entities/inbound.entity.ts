@@ -39,13 +39,13 @@ export class Inbound extends Model<Inbound> {
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare receiver_opr_guid: string;
 
     @Column({
         type: DataType.UUID,
-        allowNull: false
+        allowNull: true
     })
     declare client_guid: string;
 
@@ -113,8 +113,8 @@ export class Inbound extends Model<Inbound> {
     declare client: Client;
 
     @HasMany(() => VisaPayment, {
-    foreignKey: 'inbound_guid',
-    sourceKey: 'guid'
-  })
+        foreignKey: 'inbound_guid',
+        sourceKey: 'guid'
+    })
     declare visaPayment: VisaPayment[];
 }
