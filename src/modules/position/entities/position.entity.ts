@@ -27,10 +27,5 @@ export class Position extends Model<Position> {
     en: string;
   };
 
-  @HasMany(() => Employee, {
-    foreignKey: 'position_guid',
-    sourceKey: 'guid'
-  })
-  declare employees: Employee[];
 }
 

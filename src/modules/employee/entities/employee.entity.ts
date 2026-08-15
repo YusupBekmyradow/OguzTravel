@@ -73,10 +73,10 @@ export class Employee extends Model<Employee> {
   declare office_guid: string;
 
   @Column({
-    type: DataType.UUID,
+    type: DataType.ARRAY(DataType.UUID),
     allowNull: true
   })
-  declare position_guid: string;
+  declare position_guids: string[];
 
   @Column({
     type: DataType.UUID,
@@ -91,14 +91,6 @@ export class Employee extends Model<Employee> {
     onUpdate: 'SET NULL'
   })
   declare office: Office;
-
-  @BelongsTo(() => Position, {
-    targetKey: 'guid',
-    foreignKey: 'position_guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare position: Position;
 
   @BelongsTo(() => Department, {
     targetKey: 'guid',
