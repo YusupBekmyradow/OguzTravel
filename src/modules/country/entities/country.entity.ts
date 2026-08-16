@@ -45,6 +45,14 @@ export class Country extends Model<Country> {
   })
   declare custom_field_guids: string[];
 
+  @Column({
+    type: DataType.INTEGER,
+    autoIncrement: true,
+    allowNull: false,
+    unique: true
+  })
+  declare index_number: number;
+
   @HasMany(() => Receiving, {
     sourceKey: 'guid',
     foreignKey: 'country_guid',

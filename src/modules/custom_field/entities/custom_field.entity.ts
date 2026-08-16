@@ -51,4 +51,12 @@ export class CustomField extends Model<CustomField> {
     defaultValue: 0,
   })
   declare field_key: string;
+
+  @Column({
+    type: DataType.INTEGER,
+    autoIncrement: true,
+    allowNull: false,
+    unique: true
+  })
+  declare index_number: number;
 }
