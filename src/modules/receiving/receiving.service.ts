@@ -105,6 +105,7 @@ export class ReceivingService {
       note: jsonItem.note,
       custom_field_values: jsonItem.custom_field_values || {},
       passport_count: jsonItem.passport_count,
+      index_number: jsonItem.index_number,
       createdAt: jsonItem.createdAt,
       updatedAt: jsonItem.updatedAt,
 
@@ -215,6 +216,7 @@ export class ReceivingService {
           r.note,
           r.custom_field_values,
           r.passport_count,
+          r.index_number,
           r."createdAt",
           r."updatedAt",
           r.office_guid,

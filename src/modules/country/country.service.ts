@@ -46,6 +46,7 @@ export class CountryService {
         custom_fields: hydratedFields,
         createdAt: country.createdAt,
         updatedAt: country.updatedAt,
+        index_number: country.index_number,
       };
       return successResponse(
         HttpStatuses.CREATED,
@@ -104,6 +105,7 @@ export class CountryService {
         custom_fields: hydratedFields,
         createdAt: updated.createdAt,
         updatedAt: updated.updatedAt,
+        index_number: updated.index_number,
       };
       return successResponse(
         HttpStatuses.OK,
@@ -141,6 +143,7 @@ export class CountryService {
             co.name,
             co."createdAt",
             co."updatedAt",
+            co."index_number",
             co.custom_field_guids,
             cf.guid          AS cf_guid,
             cf.field_label,
@@ -169,6 +172,7 @@ export class CountryService {
             custom_fields: [],
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
+            index_number: row.index_number,
             _guidOrder: row.custom_field_guids || [],
           });
         }
@@ -180,6 +184,7 @@ export class CountryService {
             options: row.options,
             sort_order: row.sort_order,
             field_key: row.field_key,
+            index_number: row.index_number,
           });
         }
       }

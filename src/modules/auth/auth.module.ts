@@ -6,11 +6,12 @@ import { User } from '../user/entities/user.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
+import { Position } from '../position/entities/position.entity';
 
 @Module({
   imports: [
     ConfigModule,
-    SequelizeModule.forFeature([User]),
+    SequelizeModule.forFeature([User, Position]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

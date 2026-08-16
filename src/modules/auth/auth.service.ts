@@ -10,15 +10,29 @@ import * as bcrypt from 'bcrypt';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { Employee } from '../employee/entities/employee.entity';
 import { I18nService } from 'nestjs-i18n';
+import { Position } from '../position/entities/position.entity';
+import { Op } from 'sequelize';
+import { Office } from '../office/entities/office.entity';
 
 @Injectable()
 export class AuthService {
 
   constructor(
     @InjectModel(User) private userModel: typeof User,
+    @InjectModel(Position) private positionModel: typeof Position,
     private jwtService: JwtService,
     private readonly i18n: I18nService,
   ) { }
+
+  private async getPositions(position_guids?: string[]) {
+    if (!position_guids || position_guids.length === 0) return [];
+    const positions = await this.positionModel.findAll({
+      where: { guid: { [Op.in]: position_guids } },
+      attributes: ['guid', 'name'],
+    });
+    return positions;
+  }
+
 
   async signIn(signInAuthDto: signInAuthDto, lang: string) {
     try {
@@ -28,7 +42,13 @@ export class AuthService {
         include: [
           {
             model: Employee,
-            attributes: ['fullName', 'position_guids']
+            attributes: ['fullName', 'position_guids'],
+            include: [
+              {
+                model: Office,
+                attributes: ['fullName', 'shortName']
+              }
+            ]
           }
         ]
       });
@@ -49,6 +69,7 @@ export class AuthService {
       const refresh_token = await this.jwtService.signAsync(payload, { expiresIn: '30d' });
 
       await existUser.update({ refresh_token });
+      const positions = await this.getPositions(existUser.employee?.position_guids);
 
       return successResponse(HttpStatuses.OK, {
         guid: existUser.guid,
@@ -56,12 +77,14 @@ export class AuthService {
         role: existUser.role,
         permissions: existUser.permissions || [],
         employee_name: existUser.employee ? existUser.employee.fullName : null,
-        position_guids: existUser.employee ? existUser.employee.position_guids : null,
+        office: existUser.employee?.office ?? null,
+        positions,
         access_token,
         refresh_token,
       }, this.i18n.t('auth.loginSuccess', { lang }));
 
     } catch (error: any) {
+      console.log(error)
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('auth.loginFailed', { lang }));
     }
   }
@@ -129,12 +152,18 @@ export class AuthService {
         include: [
           {
             model: Employee,
-            attributes: ['fullName', 'position_guids']
+            attributes: ['fullName', 'position_guids'],
+            include: [
+              {
+                model: Office,
+                attributes: ['fullName', 'shortName']
+              }
+            ]
           }
         ]
       });
-
       if (!existUser) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('auth.userNotFound', { lang }));
+      const positions = await this.getPositions(existUser.employee?.position_guids);
 
       return successResponse(HttpStatuses.OK, {
         guid: existUser.guid,
@@ -142,7 +171,8 @@ export class AuthService {
         role: existUser.role,
         permissions: existUser.permissions || [],
         employee_name: existUser.employee ? existUser.employee.fullName : null,
-        position_guids: existUser.employee ? existUser.employee.position_guids : null,
+        office: existUser.employee?.office ?? null,
+        positions,
       }, this.i18n.t('auth.loginSuccess', { lang }));
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('auth.loginFailed', { lang }));
