@@ -129,7 +129,7 @@ export class AuthService {
         include: [
           {
             model: Employee,
-            attributes: ['fullName', 'position_guid']
+            attributes: ['fullName', 'position_guids']
           }
         ]
       });
@@ -142,7 +142,7 @@ export class AuthService {
         role: existUser.role,
         permissions: existUser.permissions || [],
         employee_name: existUser.employee ? existUser.employee.fullName : null,
-        position_guid: existUser.employee ? existUser.employee.position_guids : null,
+        position_guids: existUser.employee ? existUser.employee.position_guids : null,
       }, this.i18n.t('auth.loginSuccess', { lang }));
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('auth.loginFailed', { lang }));
