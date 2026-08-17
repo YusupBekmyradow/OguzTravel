@@ -379,24 +379,42 @@ export class MessagesService {
   async addMessage(senderGuid: string, createDto: CreateMessageDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
-      const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction, });
-      if (!sender) { await transaction.rollback(); return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang })); }
-
+      const sender = await this.userRepository.findOne({ where: { guid: senderGuid }, transaction });
+      if (!sender) {
+        await transaction.rollback();
+        return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
+      }
       const { assignee_guids, ...messageData } = createDto as any;
+      let targetGuids: string[] = [];
+      if (assignee_guids === true || assignee_guids === 'true') {
+        const allUsers = await this.userRepository.findAll({
+          attributes: ['guid'],
+          raw: true,
+          transaction,
+        });
+
+        targetGuids = allUsers
+          .map((user: any) => user.guid)
+          .filter((guid: string) => !!guid);
+
+      }
+      else if (Array.isArray(assignee_guids)) {
+        targetGuids = assignee_guids;
+      }
       const createdMessage = await this.messageRepository.create({
         ...messageData,
         isMessage: true,
         adm_user_guid: sender.guid,
-      }, { transaction, });
-
-      if (assignee_guids && assignee_guids.length > 0) {
-        const assigneeRecords = assignee_guids.map((user_guid: string) => ({
+      }, { transaction });
+      if (targetGuids.length > 0) {
+        const assigneeRecords = targetGuids.map((user_guid: string) => ({
           task_guid: createdMessage.guid,
           assignee_guid: user_guid,
           isRead: false,
         }));
-        await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction, });
-      } await transaction.commit();
+        await this.taskAssigneeRepository.bulkCreate(assigneeRecords as any, { transaction });
+      }
+      await transaction.commit();
       const newMessage = await this.findMessageByGuid(createdMessage.guid);
       return { status: 201, data: newMessage, message: this.i18n.t('messages.created', { lang }) };
     } catch (error: any) {
@@ -405,6 +423,7 @@ export class MessagesService {
     }
   }
 
+  
   async addTask(senderGuid: string, createDto: CreateTaskDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
