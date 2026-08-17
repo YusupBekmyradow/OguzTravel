@@ -23,7 +23,7 @@ async function zero() {
 
   const isProd = process.env.NODE_ENV === 'production';
   app.set('trust proxy', isProd ? 1 : true);
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(compression());
 
   app.useGlobalPipes(new I18nValidationPipe({ whitelist: true, transform: true }));
