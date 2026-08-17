@@ -82,9 +82,11 @@ export class MessagesService {
           [Op.between]: [`${createdAt} 00:00:00`, `${createdAt} 23:59:59`],
         };
       }
-      const employeeIncludeWhere: any = {};
       if (search) {
-        employeeIncludeWhere.fullName = { [Op.iLike]: `%${search}%` };
+        whereClause[Op.or] = [
+          { title: { [Op.iLike]: `%${search}%` } },
+          { description: { [Op.iLike]: `%${search}%` } },
+        ];
       }
       const { rows, count } = await this.messageRepository.findAndCountAll({
         where: whereClause,
@@ -109,8 +111,6 @@ export class MessagesService {
                   {
                     model: Employee,
                     as: 'employee',
-                    where: Object.keys(employeeIncludeWhere).length > 0 ? employeeIncludeWhere : undefined,
-                    required: !!search,
                     attributes: ['guid', 'fullName'],
                   },
                 ],
@@ -423,7 +423,7 @@ export class MessagesService {
     }
   }
 
-  
+
   async addTask(senderGuid: string, createDto: CreateTaskDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
