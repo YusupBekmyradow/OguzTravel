@@ -25,7 +25,6 @@ async function zero() {
   app.set('trust proxy', isProd ? 1 : true);
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(compression());
-
   app.useGlobalPipes(new I18nValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalInterceptors(new LoggerInterceptor());
   app.useGlobalInterceptors(new ResponseInterceptor());
