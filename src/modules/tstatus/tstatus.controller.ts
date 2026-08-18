@@ -11,7 +11,6 @@ import { I18nLang } from 'nestjs-i18n';
 @ApiTags('TicketStatus')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/ticket/b2b', '/ticket/turkish-airlines')
 @Controller('tstatus')
 export class TstatusController {
   constructor(private readonly tstatusService: TstatusService) { }

@@ -11,7 +11,7 @@ import { I18nLang } from 'nestjs-i18n';
 @ApiTags('Reports')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/outbound')
+@RequirePermissions('/reports/referral-letter')
 @Controller('report')
 export class ReportController {
   constructor(private readonly reportService: ReportService) { }

@@ -16,46 +16,47 @@ import { Sequelize } from 'sequelize-typescript';
 export class EmployeeService {
   constructor(
     @InjectModel(Employee) private employeeRepository: typeof Employee,
+    @InjectModel(Position) private positionRepository: typeof Position,
     private readonly i18n: I18nService,
     private readonly sequelize: Sequelize
   ) { }
 
   async addEmployee(createEmployeeDto: CreateEmployeeDto, lang: string) {
-  try {
-    const employee = await this.employeeRepository.create({
-      ...createEmployeeDto
-    } as any);
-    const newEmployee = await this.employeeRepository.findOne({
-      where: { guid: employee.guid },
-      include: [
-        { model: Office, attributes: ['guid', 'fullName', 'shortName'] },
-        { model: Department, attributes: ['guid', 'name'] }
-      ]
-    });
-    if (!newEmployee) {
-      return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFoundAfterCreate', { lang }));
-    }
-    let positions: any[] = [];
-    if (newEmployee.position_guids && newEmployee.position_guids.length > 0) {
-      positions = await Position.findAll({
-        where: { guid: { [Op.in]: newEmployee.position_guids } },
-        attributes: ['guid', 'name'],
-        raw: true
+    try {
+      const employee = await this.employeeRepository.create({
+        ...createEmployeeDto
+      } as any);
+      const newEmployee = await this.employeeRepository.findOne({
+        where: { guid: employee.guid },
+        include: [
+          { model: Office, attributes: ['guid', 'fullName', 'shortName'] },
+          { model: Department, attributes: ['guid', 'name'] }
+        ]
       });
+      if (!newEmployee) {
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFoundAfterCreate', { lang }));
+      }
+      let positions: any[] = [];
+      if (newEmployee.position_guids && newEmployee.position_guids.length > 0) {
+        positions = await Position.findAll({
+          where: { guid: { [Op.in]: newEmployee.position_guids } },
+          attributes: ['guid', 'name'],
+          raw: true
+        });
+      }
+      const responseData = {
+        ...newEmployee.toJSON(),
+        positions
+      };
+      return {
+        status: 201,
+        data: responseData,
+        message: this.i18n.t('employee.created', { lang }),
+      };
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.createFailed', { lang }), error);
     }
-    const responseData = {
-      ...newEmployee.toJSON(),
-      positions
-    };
-    return {
-      status: 201,
-      data: responseData,
-      message: this.i18n.t('employee.created', { lang }),
-    };
-  } catch (error) {
-    return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.createFailed', { lang }), error);
   }
-}
 
 
   async getAllEmployee(
@@ -187,20 +188,37 @@ export class EmployeeService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFound', { lang }));
       }
       await employee.update({
-        ...updateEmployeeDto
+        ...updateEmployeeDto,
       } as any);
-
-      const updateEmployee = await this.employeeRepository.findOne({
+      const updatedEmployee = await this.employeeRepository.findOne({
         where: { guid: employee.guid },
         include: [
           { model: Office, attributes: ['guid', 'fullName', 'shortName'] },
-          { model: Position, attributes: ['guid', 'name'] },
-          { model: Department, attributes: ['guid', 'name'] }
-        ]
+          { model: Department, attributes: ['guid', 'name'] },
+        ],
       });
+
+      if (!updatedEmployee) {
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFound', { lang }));
+      }
+      const employeeData = updatedEmployee.toJSON();
+      let positions: any[] = [];
+      if (employeeData.position_guids && employeeData.position_guids.length > 0) {
+        positions = await this.positionRepository.findAll({
+          where: {
+            guid: {
+              [Op.in]: employeeData.position_guids,
+            },
+          },
+          attributes: ['guid', 'name'],
+        });
+      }
       return {
         status: 200,
-        data: updateEmployee,
+        data: {
+          ...employeeData,
+          positions,
+        },
         message: this.i18n.t('employee.updated', { lang }),
       };
     } catch (error) {

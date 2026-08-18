@@ -11,7 +11,6 @@ import { I18nLang } from 'nestjs-i18n';
 @ApiTags('Trans_Payment')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/translation')
 @Controller('trans-payment')
 export class TransPaymentController {
   constructor(private readonly transPaymentService: TransPaymentService) { }

@@ -11,7 +11,6 @@ import { I18nLang } from 'nestjs-i18n';
 @ApiTags('Ticket_Payment')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/ticket/b2b')
 @Controller('ticket-payment')
 export class TicketPaymentController {
   constructor(private readonly ticketPaymentService: TicketPaymentService) { }

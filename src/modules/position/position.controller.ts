@@ -12,7 +12,6 @@ import { I18nLang } from 'nestjs-i18n';
 @ApiTags('Positions')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/employee')
 @Controller('position')
 export class PositionController {
   constructor(private readonly positionService: PositionService) { }

@@ -74,7 +74,8 @@ export class Employee extends Model<Employee> {
 
   @Column({
     type: DataType.ARRAY(DataType.UUID),
-    allowNull: true
+    allowNull: true,
+    defaultValue: [],
   })
   declare position_guids: string[];
 

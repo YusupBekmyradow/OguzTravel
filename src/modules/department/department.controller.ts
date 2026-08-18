@@ -11,7 +11,6 @@ import { I18nLang } from 'nestjs-i18n';
 @ApiTags('Departments')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/employee')
 @Controller('department')
 export class DepartmentController {
   constructor(private readonly departmentService: DepartmentService) { }

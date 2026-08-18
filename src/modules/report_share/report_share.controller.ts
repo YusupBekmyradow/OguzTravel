@@ -20,7 +20,7 @@ import { I18nLang } from 'nestjs-i18n';
 @ApiTags('Report Share')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/outbound')
+@RequirePermissions('/reports/referral-letter')
 @Controller('report-share')
 export class ReportShareController {
   constructor(private readonly reportShareService: ReportShareService) { }

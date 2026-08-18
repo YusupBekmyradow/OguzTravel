@@ -6,10 +6,11 @@ import { OfficeModule } from '../office/office.module';
 import { PositionModule } from '../position/position.module';
 import { DepartmentModule } from '../department/department.module';
 import { SequelizeModule } from '@nestjs/sequelize';
+import { Position } from '../position/entities/position.entity';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([Employee]),
+    SequelizeModule.forFeature([Employee,Position]),
     OfficeModule,
     PositionModule,
     DepartmentModule

@@ -1,5 +1,5 @@
 import { IsString, IsEmail, IsNotEmpty, IsArray, ArrayNotEmpty, IsObject, IsUUID, IsOptional, MinLength, MaxLength } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 
@@ -31,15 +31,24 @@ export class CreateEmployeeDto {
   @IsOptional()
   declare department_guid?: string;
 
-  @ApiProperty({
-    type: [String],
-    example: ['3fa85f64-5717-4562-b3fc-2c963f66afa6']
+  @ApiPropertyOptional({ type: [String], example: ['ed18f34d-beb2-404e-ab9b-8464a9b4fa3a'] })
+  @Transform(({ value }) => {
+    if (!value) return [];
+    if (typeof value === 'string') {
+      return value.split(',').map((item) => item.trim()).filter(Boolean);
+    }
+    if (Array.isArray(value)) {
+      return value
+        .flatMap((item) => (typeof item === 'string' ? item.split(',') : item))
+        .map((item) => (typeof item === 'string' ? item.trim() : item))
+        .filter(Boolean);
+    }
+    return value;
   })
-  @IsOptional()
   @IsArray()
-  @IsUUID('all', { each: true })
+  @IsUUID('4', { each: true })
+  @IsOptional()
   declare position_guids?: string[];
-
 
   @ApiProperty()
   @IsUUID()
