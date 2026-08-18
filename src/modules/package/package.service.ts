@@ -11,6 +11,7 @@ import { errorResponse, successResponse } from '../../helpers/responseFunctions'
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { TtpPayment } from '../ttp_payment/entities/ttp_payment.entity';
 import { Sequelize } from 'sequelize-typescript';
+import { QueryTypes } from 'sequelize';
 
 @Injectable()
 export class PackageService {
@@ -86,39 +87,118 @@ export class PackageService {
         },
         include: this.getIncludes()
       });
-      return { status: 201, data: newPackage, message: 'Package record has been created successfully' };
+      return { status: 201, data: newPackage, message: this.i18n.t('package.created', { lang }) };
     } catch (error: any) {
       await t.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to create the package record. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('package.createFailed', { lang }), error);
     }
   }
 
-  async getAllPackage(page: number = 1, limit: number = 10, lang: string = 'tk') {
+
+
+  async getAllPackage(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    application_date?: string,
+    opr_guid?: string,
+    prepared_opr_guid?: string,
+    is_paid?: boolean,
+    lang: string = 'tk',
+  ) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
 
-      const { rows, count } = await this.packageRepository.findAndCountAll({
-        attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
-          include: this.getAttributes().include as any
-        },
-        include: this.getIncludes(),
-        order: [['index_number', 'DESC']],
+      const replacements: any = {
         limit: currentLimit,
-        offset: offset,
+        offset,
+        search: search ? `%${search}%` : null,
+        application_date: application_date || null,
+        opr_guid: opr_guid || null,
+        prepared_opr_guid: prepared_opr_guid || null,
+        is_paid: is_paid !== undefined && is_paid !== null ? is_paid : null,
+      };
+      const sqlQuery = `
+        SELECT 
+          p.guid, p.index_number, p.application_date, p.destination_country, 
+          p.partner, p.net_fare, p.currency, p.price, p.profit, p.note, 
+          p.is_paid, p."createdAt", p."updatedAt",
+
+          ROUND(COALESCE(SUM(tp.amount), 0)::numeric, 2) AS "totalPaid",
+          CASE 
+            WHEN COALESCE(SUM(tp.amount), 0) = 0 THEN '0%' 
+            WHEN p.price > 0 THEN CONCAT(ROUND(((SUM(tp.amount) / p.price) * 100)::numeric, 2), '%') 
+            ELSE '100%' 
+          END AS "paidPercentage",
+
+          JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
+          JSON_BUILD_OBJECT(
+            'guid', op.guid, 'fullName', op."fullName",
+            'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
+          ) AS operator,
+          JSON_BUILD_OBJECT(
+            'guid', pop.guid, 'fullName', pop."fullName",
+            'office', JSON_BUILD_OBJECT('guid', off2.guid, 'fullName', off2."fullName", 'shortName', off2."shortName")
+          ) AS "preparedOpr",
+
+          COUNT(*) OVER() AS "totalCount"
+
+        FROM tbl_package p
+        LEFT JOIN tbl_clients c ON c.guid = p.client_guid
+        LEFT JOIN tbl_employees op ON op.guid = p.opr_guid
+        LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
+        LEFT JOIN tbl_employees pop ON pop.guid = p.prepared_opr_guid
+        LEFT JOIN tbl_offices off2 ON off2.guid = pop.office_guid
+        LEFT JOIN "tbl_TTP_payments" tp ON tp.package_guid = p.guid
+
+        WHERE 
+          (:search::text IS NULL OR (
+            c."fullName" ILIKE :search OR
+            p.destination_country ILIKE :search OR
+            p.partner ILIKE :search
+          ))
+
+          AND (:application_date::date IS NULL OR p.application_date::date = :application_date::date)
+          AND (:opr_guid::uuid IS NULL OR p.opr_guid = :opr_guid::uuid)
+          AND (:prepared_opr_guid::uuid IS NULL OR p.prepared_opr_guid = :prepared_opr_guid::uuid)
+          AND (:is_paid::boolean IS NULL OR p.is_paid = :is_paid::boolean)
+
+        GROUP BY p.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+        ORDER BY p.index_number DESC
+        LIMIT :limit OFFSET :offset;
+      `;
+
+      const rows: any[] = await this.sequelize.query(sqlQuery, {
+        replacements,
+        type: QueryTypes.SELECT,
       });
+
+      const totalItems = rows.length > 0 ? Number(rows[0].totalCount) : 0;
+      const cleanedRows = rows.map(({ totalCount, ...rest }) => rest);
+
       return {
         status: 200,
-        data: rows,
-        meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
-        message: 'Package records retrieved successfully'
+        data: cleanedRows,
+        meta: {
+          totalItems,
+          totalPages: Math.ceil(totalItems / currentLimit),
+          currentPage,
+        },
+        message: this.i18n.t('package.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve package records. Please try again later.', error);
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('package.fetchFailed', { lang }),
+        error,
+      );
     }
   }
+
+
+
 
   async updatePackage(updateDto: UpdatePackageDto, lang: string) {
     try {
@@ -139,20 +219,21 @@ export class PackageService {
         include: this.getIncludes()
       });
 
-      return { status: 200, data: updatedPackage, message: 'Package record has been updated successfully' };
+      return { status: 200, data: updatedPackage, message: this.i18n.t('package.updated', { lang }) };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update the package record. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('package.updateFailed', { lang }), error);
     }
   }
+
 
   async deletePackage(guid: string, lang: string) {
     try {
       const packageItem = await this.packageRepository.findByPk(guid);
       if (!packageItem) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('package.notFound', { lang }));
       await packageItem.destroy();
-      return successResponse(HttpStatuses.OK, null, 'Package record has been deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('package.deleted', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to delete the package record. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('package.deleteFailed', { lang }), error);
     }
   }
 }

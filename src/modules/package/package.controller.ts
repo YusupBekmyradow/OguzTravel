@@ -21,13 +21,28 @@ export class PackageController {
     return this.packageService.addPackage(createDto, lang);
   }
 
+  
   @Get('/get-packages')
   async findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('application_date') application_date?: string,
+    @Query('opr_guid') opr_guid?: string,
+    @Query('prepared_opr_guid') prepared_opr_guid?: string,
+    @Query('is_paid') is_paid?: boolean,
     @I18nLang() lang: string = 'tk',
   ) {
-    return this.packageService.getAllPackage(Number(page), Number(limit), lang);
+    return this.packageService.getAllPackage(
+      page,
+      limit,
+      search,
+      application_date,
+      opr_guid,
+      prepared_opr_guid,
+      is_paid,
+      lang,
+    );
   }
 
   @Patch('/update-package')
