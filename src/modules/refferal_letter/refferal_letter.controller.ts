@@ -11,7 +11,7 @@ import { I18nLang } from 'nestjs-i18n';
 @ApiTags('Refferal_Letter')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/visa/referal-letters')
+@RequirePermissions('/referal-letters')
 @Controller('refferal-letter')
 export class RefferalLetterController {
   constructor(private readonly refferalLetterService: RefferalLetterService) { }
