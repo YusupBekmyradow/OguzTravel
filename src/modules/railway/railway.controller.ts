@@ -23,11 +23,31 @@ export class RailwayController {
 
   @Get('/get-railways')
   async findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('application_date') application_date?: string,
+    @Query('opr_guid') opr_guid?: string,
+    @Query('prepared_opr_guid') prepared_opr_guid?: string,
+    @Query('is_paid') is_paid?: boolean,
+    @Query('system') system?: string,
+    @Query('train_type') train_type?: string,
+    @Query('ticket_type') ticket_type?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    return this.railwayService.getAllRailway(Number(page), Number(limit), lang);
+    return this.railwayService.getAllRailway(
+      page,
+      limit,
+      search,
+      application_date,
+      opr_guid,
+      prepared_opr_guid,
+      is_paid,
+      system,
+      train_type,
+      ticket_type,
+      lang,
+    );
   }
 
   @Patch('/update-railway')
