@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateAirwayDto } from './dto/create-airway.dto';
 import { UpdateAirwayDto } from './dto/update-airway.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -43,11 +43,20 @@ export class AirwayService {
     const t = await this.sequelize.transaction();
     try {
       const airway = await this.airwayRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
-      if (createDto.is_paid === true) {
-        await this.harPaymentRepo.create({ airway_guid: airway.guid, amount: airway.price || 0, payment_date: new Date(), opr_guid: createDto.opr_guid } as any, { transaction: t });
+      if (createDto.is_paid === true && (Number(airway.price) || 0) > 0) {
+        await this.harPaymentRepo.create({
+          airway_guid: airway.guid,
+          amount: Number(airway.price) || 0,
+          payment_date: new Date(),
+          opr_guid: createDto.opr_guid || airway.opr_guid
+        } as any, { transaction: t });
       }
       await t.commit();
-      const newAirway = await this.airwayRepository.findOne({ where: { guid: airway.guid }, attributes: { exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'], include: this.getAttributes().include as any }, include: this.getIncludes() });
+      const newAirway = await this.airwayRepository.findOne({
+        where: { guid: airway.guid },
+        attributes: { exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'], include: this.getAttributes().include as any },
+        include: this.getIncludes()
+      });
       return { status: 201, data: newAirway, message: this.i18n.t('airway.created', { lang }) };
     } catch (error: any) {
       await t.rollback();
@@ -174,24 +183,107 @@ export class AirwayService {
 
 
   async updateAirway(updateDto: UpdateAirwayDto, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
-      const airway = await this.airwayRepository.findOne({ where: { guid: updateDto.guid } });
-      if (!airway) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('airway.notFound', { lang }));
-      await airway.update(updateDto);
-      const updatedAirway = await this.airwayRepository.findOne({ where: { guid: updateDto.guid }, attributes: { exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'], include: this.getAttributes().include as any }, include: this.getIncludes() });
+      const airway = await this.airwayRepository.findOne({
+        where: { guid: updateDto.guid },
+        transaction: t
+      });
+
+      if (!airway) {
+        await t.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('airway.notFound', { lang }));
+      }
+
+      const willBePaid = updateDto.is_paid === true || (airway.is_paid === true && updateDto.is_paid !== false);
+
+      if (willBePaid) {
+        const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(airway.price);
+        const operatorGuid = updateDto.opr_guid || airway.opr_guid;
+        const payments = await this.harPaymentRepo.findAll({
+          where: { airway_guid: airway.guid },
+          order: [['index_number', 'ASC']],
+          transaction: t
+        });
+
+        const currentTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+        const diff = Number((targetPrice - currentTotalPaid).toFixed(2));
+
+        if (diff !== 0) {
+          if (payments.length === 0) {
+            if (targetPrice > 0) {
+              await this.harPaymentRepo.create({
+                airway_guid: airway.guid,
+                amount: targetPrice,
+                payment_date: new Date(),
+                opr_guid: operatorGuid
+              } as any, { transaction: t });
+            }
+          } else if (payments.length === 1) {
+            await payments[0].update({
+              amount: targetPrice,
+              opr_guid: operatorGuid || payments[0].opr_guid
+            }, { transaction: t });
+          } else if (diff > 0) {
+            const lastPayment = payments[payments.length - 1];
+            await lastPayment.update({
+              amount: Number((Number(lastPayment.amount) + diff).toFixed(2)),
+              opr_guid: operatorGuid || lastPayment.opr_guid
+            }, { transaction: t });
+          } else {
+            let amountToReduce = Math.abs(diff);
+            for (let i = payments.length - 1; i >= 0 && amountToReduce > 0; i--) {
+              const p = payments[i];
+              const pAmount = Number(p.amount);
+              if (pAmount <= amountToReduce && i > 0) {
+                await p.destroy({ transaction: t });
+                amountToReduce = Number((amountToReduce - pAmount).toFixed(2));
+              } else {
+                const newAmount = Math.max(0, Number((pAmount - amountToReduce).toFixed(2)));
+                await p.update({
+                  amount: newAmount,
+                  opr_guid: operatorGuid || p.opr_guid
+                }, { transaction: t });
+                amountToReduce = 0;
+              }
+            }
+          }
+        }
+      }
+
+      await airway.update(updateDto, { transaction: t });
+      await t.commit();
+
+      const updatedAirway = await this.airwayRepository.findOne({
+        where: { guid: updateDto.guid },
+        attributes: {
+          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          include: this.getAttributes().include as any
+        },
+        include: this.getIncludes()
+      });
+
       return { status: 200, data: updatedAirway, message: this.i18n.t('airway.updated', { lang }) };
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('airway.updateFailed', { lang }), error);
     }
   }
 
   async deleteAirway(guid: string, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
-      const airway = await this.airwayRepository.findByPk(guid);
-      if (!airway) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('airway.notFound', { lang }));
-      await airway.destroy();
+      const airway = await this.airwayRepository.findByPk(guid, { transaction: t });
+      if (!airway) {
+        await t.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('airway.notFound', { lang }));
+      }
+      await this.harPaymentRepo.destroy({ where: { airway_guid: guid }, transaction: t });
+      await airway.destroy({ transaction: t });
+      await t.commit();
       return successResponse(HttpStatuses.OK, null, this.i18n.t('airway.deleted', { lang }));
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('airway.deleteFailed', { lang }), error);
     }
   }

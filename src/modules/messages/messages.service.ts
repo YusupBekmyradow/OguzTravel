@@ -142,6 +142,7 @@ export class MessagesService {
     }
   }
 
+
   async getAllTasks(
     page: number = 1,
     limit: number = 10,
@@ -154,107 +155,99 @@ export class MessagesService {
     lang: string = 'tk',
   ) {
     try {
-      const pageNum = Number(page) || 1;
-      const limitNum = Number(limit) || 10;
+      const pageNum = Math.max(1, Number(page) || 1);
+      const limitNum = Math.max(1, Number(limit) || 10);
       const offset = (pageNum - 1) * limitNum;
       const isGrouped = type === true || type === 'true';
 
-      let whereConditions = `WHERE t."isMessage" = false`;
       const replacements: any = { limit: limitNum, offset };
+      const conditions: string[] = ['t."isMessage" = false'];
 
       if (priority) {
-        whereConditions += ` AND t.priority = :priority`;
+        conditions.push('t.priority = :priority');
         replacements.priority = priority;
       }
-      if (status !== undefined) {
-        whereConditions += ` AND t.status = :status`;
+      if (status !== undefined && status !== null) {
+        conditions.push('t.status = :status');
         replacements.status = Number(status);
       }
       if (due_date) {
-        whereConditions += ` AND t.due_date BETWEEN :startDate AND :endDate`;
+        conditions.push('t.due_date BETWEEN :startDate AND :endDate');
         replacements.startDate = `${due_date} 00:00:00`;
         replacements.endDate = `${due_date} 23:59:59`;
       }
-      if (search) {
-        whereConditions += ` AND emp."fullName" ILIKE :search`;
-        replacements.search = `%${search}%`;
-      }
       if (assignee_guid) {
-        whereConditions += ` AND ta.assignee_guid = :assignee_guid`;
+        conditions.push('ta.assignee_guid = :assignee_guid');
         replacements.assignee_guid = assignee_guid;
       }
-
+      if (search) {
+        conditions.push(`(
+        t.title ILIKE :search OR 
+        t.description ILIKE :search OR 
+        emp."fullName" ILIKE :search
+      )`);
+        replacements.search = `%${search}%`;
+      }
+      const whereClause = `WHERE ${conditions.join(' AND ')}`;
       const baseQuery = `
-        SELECT 
-          t.*,
-          COALESCE(
-            JSON_AGG(
-              DISTINCT JSONB_BUILD_OBJECT(
-                'guid', u.guid,
-                'phone_number', u.phone_number,
-                'fullName', emp."fullName"
-              )
-            ) FILTER (WHERE ta.task_guid IS NOT NULL), '[]'
-          ) AS assignees,
-          COALESCE(
-            JSON_BUILD_OBJECT(
-              'guid', adm.guid,
-              'phone_number', adm.phone_number,
-              'role', adm.role,
-              'fullName', adm_emp."fullName"
-            ), NULL
-          ) AS admuser
-        FROM tbl_messages t
-        LEFT JOIN tbl_task_assignees ta ON t.guid = ta.task_guid
-        LEFT JOIN tbl_users u ON ta.assignee_guid = u.guid
-        LEFT JOIN tbl_employees emp ON u.employee_guid = emp.guid
-        LEFT JOIN tbl_users adm ON t.adm_user_guid = adm.guid
-        LEFT JOIN tbl_employees adm_emp ON adm.employee_guid = adm_emp.guid
-        ${whereConditions}
-        GROUP BY t.guid, adm.guid, adm_emp.guid
-        ORDER BY t."createdAt" DESC
-      `;
-
+      SELECT 
+        t.*,
+        COALESCE(
+          JSON_AGG(
+            DISTINCT JSONB_BUILD_OBJECT(
+              'guid', u.guid,
+              'phone_number', u.phone_number,
+              'fullName', emp."fullName"
+            )
+          ) FILTER (WHERE ta.task_guid IS NOT NULL), '[]'
+        ) AS assignees,
+        CASE WHEN adm.guid IS NOT NULL THEN
+          JSON_BUILD_OBJECT(
+            'guid', adm.guid,
+            'phone_number', adm.phone_number,
+            'role', adm.role,
+            'fullName', adm_emp."fullName"
+          )
+        ELSE NULL END AS admuser
+      FROM tbl_messages t
+      LEFT JOIN tbl_task_assignees ta ON t.guid = ta.task_guid
+      LEFT JOIN tbl_users u ON ta.assignee_guid = u.guid
+      LEFT JOIN tbl_employees emp ON u.employee_guid = emp.guid
+      LEFT JOIN tbl_users adm ON t.adm_user_guid = adm.guid
+      LEFT JOIN tbl_employees adm_emp ON adm.employee_guid = adm_emp.guid
+      ${whereClause}
+      GROUP BY t.guid, adm.guid, adm_emp.guid
+      ORDER BY t."createdAt" DESC
+    `;
       if (isGrouped) {
-        const allTasks = await this.sequelize.query(baseQuery, {
+        const allTasks: any[] = await this.sequelize.query(baseQuery, {
           replacements,
           type: QueryTypes.SELECT,
         });
-
-        const statusGroups: { [key: number]: any[] } = {};
-        allTasks.forEach((task: any) => {
-          const st = task.status !== undefined && task.status !== null ? Number(task.status) : 0;
-          if (!statusGroups[st]) statusGroups[st] = [];
-          statusGroups[st].push(task);
-        });
-
+        const statusGroups: Record<number, any[]> = {};
+        for (const task of allTasks) {
+          const st = task.status ?? 0;
+          (statusGroups[st] = statusGroups[st] || []).push(task);
+        }
         return {
           status: 200,
           data: Object.values(statusGroups),
           message: this.i18n.t('messages.listFetched', { lang }),
         };
       }
-
       const countQuery = `
-        SELECT COUNT(DISTINCT t.guid) as total
-        FROM tbl_messages t
-        LEFT JOIN tbl_task_assignees ta ON t.guid = ta.task_guid
-        LEFT JOIN tbl_users u ON ta.assignee_guid = u.guid
-        LEFT JOIN tbl_employees emp ON u.employee_guid = emp.guid
-        ${whereConditions}
-      `;
-      const countResult: any = await this.sequelize.query(countQuery, {
-        replacements,
-        type: QueryTypes.SELECT,
-      });
-      const count = Number(countResult[0]?.total || 0);
-
-      const paginatedQuery = `${baseQuery} LIMIT :limit OFFSET :offset`;
-      const rows = await this.sequelize.query(paginatedQuery, {
-        replacements,
-        type: QueryTypes.SELECT,
-      });
-
+      SELECT COUNT(DISTINCT t.guid)::integer AS total
+      FROM tbl_messages t
+      LEFT JOIN tbl_task_assignees ta ON t.guid = ta.task_guid
+      LEFT JOIN tbl_users u ON ta.assignee_guid = u.guid
+      LEFT JOIN tbl_employees emp ON u.employee_guid = emp.guid
+      ${whereClause}
+    `;
+      const [rows, countResult]: [any[], any[]] = await Promise.all([
+        this.sequelize.query(`${baseQuery} LIMIT :limit OFFSET :offset`, { replacements, type: QueryTypes.SELECT }),
+        this.sequelize.query(countQuery, { replacements, type: QueryTypes.SELECT }),
+      ]);
+      const count = countResult[0]?.total || 0;
       return {
         status: 200,
         data: rows,
@@ -271,6 +264,8 @@ export class MessagesService {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.fetchFailed', { lang }), error);
     }
   }
+
+
 
   async getTasksByStatus(
     status?: number,
@@ -433,25 +428,19 @@ export class MessagesService {
         return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
       }
       let { assignee_guids, ...taskData } = createDto as any;
-      if (!assignee_guids) {
-        assignee_guids = [];
-      } else if (typeof assignee_guids === 'string') {
-        assignee_guids = [assignee_guids];
-      } else if (!Array.isArray(assignee_guids)) {
-        assignee_guids = Object.values(assignee_guids);
-      }
+
       const createdTask = await this.messageRepository.create({
         ...taskData,
         isMessage: false,
         adm_user_guid: sender.guid,
       }, { transaction });
-      if (assignee_guids.length > 0) {
+      if (Array.isArray(assignee_guids) && assignee_guids.length > 0) {
         const assigneeRecords = assignee_guids.map((user_guid: string) => ({
           task_guid: createdTask.guid,
           assignee_guid: user_guid,
           isRead: false,
         }));
-        await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
+        await this.taskAssigneeRepository.bulkCreate(assigneeRecords as any, { transaction });
       }
       await transaction.commit();
       const newTask = await this.findMessageByGuid(createdTask.guid);
@@ -461,6 +450,8 @@ export class MessagesService {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.createFailed', { lang }), error);
     }
   }
+
+
 
   async updateMessage(updateDto: UpdateMessageDto, lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();

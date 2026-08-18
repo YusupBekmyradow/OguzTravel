@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
@@ -70,12 +70,12 @@ export class PackageService {
     const t = await this.sequelize.transaction();
     try {
       const packageItem = await this.packageRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
-      if (createDto.is_paid === true) {
+      if (createDto.is_paid === true && (Number(packageItem.price) || 0) > 0) {
         await this.ttpPaymentRepo.create({
           package_guid: packageItem.guid,
-          amount: packageItem.price || 0,
+          amount: Number(packageItem.price) || 0,
           payment_date: new Date(),
-          opr_guid: createDto.opr_guid
+          opr_guid: createDto.opr_guid || packageItem.opr_guid
         } as any, { transaction: t });
       }
       await t.commit();
@@ -201,15 +201,77 @@ export class PackageService {
 
 
   async updatePackage(updateDto: UpdatePackageDto, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
       const packageItem = await this.packageRepository.findOne({
-        where: { guid: updateDto.guid }
+        where: { guid: updateDto.guid },
+        transaction: t
       });
 
       if (!packageItem) {
+        await t.rollback();
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('package.notFound', { lang }));
       }
-      await packageItem.update(updateDto, { hooks: true });
+
+      const willBePaid = updateDto.is_paid === true || (packageItem.is_paid === true && updateDto.is_paid !== false);
+
+      if (willBePaid) {
+        const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(packageItem.price);
+        const operatorGuid = updateDto.opr_guid || packageItem.opr_guid;
+        const payments = await this.ttpPaymentRepo.findAll({
+          where: { package_guid: packageItem.guid },
+          order: [['index_number', 'ASC']],
+          transaction: t
+        });
+
+        const currentTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+        const diff = Number((targetPrice - currentTotalPaid).toFixed(2));
+
+        if (diff !== 0) {
+          if (payments.length === 0) {
+            if (targetPrice > 0) {
+              await this.ttpPaymentRepo.create({
+                package_guid: packageItem.guid,
+                amount: targetPrice,
+                payment_date: new Date(),
+                opr_guid: operatorGuid
+              } as any, { transaction: t });
+            }
+          } else if (payments.length === 1) {
+            await payments[0].update({
+              amount: targetPrice,
+              opr_guid: operatorGuid || payments[0].opr_guid
+            }, { transaction: t });
+          } else if (diff > 0) {
+            const lastPayment = payments[payments.length - 1];
+            await lastPayment.update({
+              amount: Number((Number(lastPayment.amount) + diff).toFixed(2)),
+              opr_guid: operatorGuid || lastPayment.opr_guid
+            }, { transaction: t });
+          } else {
+            let amountToReduce = Math.abs(diff);
+            for (let i = payments.length - 1; i >= 0 && amountToReduce > 0; i--) {
+              const p = payments[i];
+              const pAmount = Number(p.amount);
+              if (pAmount <= amountToReduce && i > 0) {
+                await p.destroy({ transaction: t });
+                amountToReduce = Number((amountToReduce - pAmount).toFixed(2));
+              } else {
+                const newAmount = Math.max(0, Number((pAmount - amountToReduce).toFixed(2)));
+                await p.update({
+                  amount: newAmount,
+                  opr_guid: operatorGuid || p.opr_guid
+                }, { transaction: t });
+                amountToReduce = 0;
+              }
+            }
+          }
+        }
+      }
+
+      await packageItem.update(updateDto, { hooks: true, transaction: t });
+      await t.commit();
+
       const updatedPackage = await this.packageRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
@@ -221,18 +283,26 @@ export class PackageService {
 
       return { status: 200, data: updatedPackage, message: this.i18n.t('package.updated', { lang }) };
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('package.updateFailed', { lang }), error);
     }
   }
 
 
   async deletePackage(guid: string, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
-      const packageItem = await this.packageRepository.findByPk(guid);
-      if (!packageItem) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('package.notFound', { lang }));
-      await packageItem.destroy();
+      const packageItem = await this.packageRepository.findByPk(guid, { transaction: t });
+      if (!packageItem) {
+        await t.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('package.notFound', { lang }));
+      }
+      await this.ttpPaymentRepo.destroy({ where: { package_guid: guid }, transaction: t });
+      await packageItem.destroy({ transaction: t });
+      await t.commit();
       return successResponse(HttpStatuses.OK, null, this.i18n.t('package.deleted', { lang }));
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('package.deleteFailed', { lang }), error);
     }
   }

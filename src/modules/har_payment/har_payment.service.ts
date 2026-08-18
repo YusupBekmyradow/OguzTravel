@@ -145,8 +145,8 @@ export class HarPaymentService {
     });
 
     const row = (stats[0] as any) || { total_price: 0, paid_amount: 0 };
-    const total = Number(row.total_price);
-    const paid = Number(row.paid_amount);
+    const total = Number(row.total_price) || 0;
+    const paid = Number(row.paid_amount) || 0;
 
     return {
       total_sales: total,

@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
@@ -69,12 +69,12 @@ export class TourService {
     const t = await this.sequelize.transaction();
     try {
       const tour = await this.tourRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
-      if (createDto.is_paid === true) {
+      if (createDto.is_paid === true && (Number(tour.price) || 0) > 0) {
         await this.ttpPaymentRepo.create({
           tour_guid: tour.guid,
-          amount: tour.price || 0,
+          amount: Number(tour.price) || 0,
           payment_date: new Date(),
-          opr_guid: createDto.opr_guid
+          opr_guid: createDto.opr_guid || tour.opr_guid
         } as any, { transaction: t });
       }
 
@@ -203,15 +203,77 @@ export class TourService {
 
 
   async updateTour(updateDto: UpdateTourDto, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
       const tour = await this.tourRepository.findOne({
-        where: { guid: updateDto.guid }
+        where: { guid: updateDto.guid },
+        transaction: t
       });
 
       if (!tour) {
+        await t.rollback();
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('tour.notFound', { lang }));
       }
-      await tour.update(updateDto);
+
+      const willBePaid = updateDto.is_paid === true || (tour.is_paid === true && updateDto.is_paid !== false);
+
+      if (willBePaid) {
+        const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(tour.price);
+        const operatorGuid = updateDto.opr_guid || tour.opr_guid;
+        const payments = await this.ttpPaymentRepo.findAll({
+          where: { tour_guid: tour.guid },
+          order: [['index_number', 'ASC']],
+          transaction: t
+        });
+
+        const currentTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+        const diff = Number((targetPrice - currentTotalPaid).toFixed(2));
+
+        if (diff !== 0) {
+          if (payments.length === 0) {
+            if (targetPrice > 0) {
+              await this.ttpPaymentRepo.create({
+                tour_guid: tour.guid,
+                amount: targetPrice,
+                payment_date: new Date(),
+                opr_guid: operatorGuid
+              } as any, { transaction: t });
+            }
+          } else if (payments.length === 1) {
+            await payments[0].update({
+              amount: targetPrice,
+              opr_guid: operatorGuid || payments[0].opr_guid
+            }, { transaction: t });
+          } else if (diff > 0) {
+            const lastPayment = payments[payments.length - 1];
+            await lastPayment.update({
+              amount: Number((Number(lastPayment.amount) + diff).toFixed(2)),
+              opr_guid: operatorGuid || lastPayment.opr_guid
+            }, { transaction: t });
+          } else {
+            let amountToReduce = Math.abs(diff);
+            for (let i = payments.length - 1; i >= 0 && amountToReduce > 0; i--) {
+              const p = payments[i];
+              const pAmount = Number(p.amount);
+              if (pAmount <= amountToReduce && i > 0) {
+                await p.destroy({ transaction: t });
+                amountToReduce = Number((amountToReduce - pAmount).toFixed(2));
+              } else {
+                const newAmount = Math.max(0, Number((pAmount - amountToReduce).toFixed(2)));
+                await p.update({
+                  amount: newAmount,
+                  opr_guid: operatorGuid || p.opr_guid
+                }, { transaction: t });
+                amountToReduce = 0;
+              }
+            }
+          }
+        }
+      }
+
+      await tour.update(updateDto, { transaction: t });
+      await t.commit();
+
       const updatedTour = await this.tourRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
@@ -223,17 +285,25 @@ export class TourService {
 
       return { status: 200, data: updatedTour, message: this.i18n.t('tour.updated', { lang }) };
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('tour.updateFailed', { lang }), error);
     }
   }
 
   async deleteTour(guid: string, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
-      const tour = await this.tourRepository.findByPk(guid);
-      if (!tour) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('tour.notFound', { lang }));
-      await tour.destroy();
+      const tour = await this.tourRepository.findByPk(guid, { transaction: t });
+      if (!tour) {
+        await t.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('tour.notFound', { lang }));
+      }
+      await this.ttpPaymentRepo.destroy({ where: { tour_guid: guid }, transaction: t });
+      await tour.destroy({ transaction: t });
+      await t.commit();
       return successResponse(HttpStatuses.OK, null, this.i18n.t('tour.deleted', { lang }));
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('tour.deleteFailed', { lang }), error);
     }
   }
