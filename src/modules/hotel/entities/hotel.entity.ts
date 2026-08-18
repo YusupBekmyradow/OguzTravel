@@ -120,11 +120,11 @@ export class Hotel extends Model<Hotel> {
   declare note?: string;
 
   @Column({
-    type: DataType.BOOLEAN,
+    type: DataType.INTEGER,
     allowNull: false,
-    defaultValue: false
+    defaultValue: 1
   })
-  declare is_paid: boolean;
+  declare is_paid: number;
 
   @BelongsTo(() => Employee, {
     foreignKey: 'opr_guid',

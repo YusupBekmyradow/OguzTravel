@@ -43,7 +43,7 @@ export class HotelService {
     const t = await this.sequelize.transaction();
     try {
       const hotel = await this.hotelRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
-      if (createDto.is_paid === true && (Number(hotel.price) || 0) > 0) {
+      if (createDto.is_paid === 1 && (Number(hotel.price) || 0) > 0) {
         await this.harPaymentRepo.create({
           hotel_guid: hotel.guid,
           amount: Number(hotel.price) || 0,
@@ -73,7 +73,7 @@ export class HotelService {
     application_date?: string,
     opr_guid?: string,
     prepared_opr_guid?: string,
-    is_paid?: boolean,
+    is_paid?: number,
     system?: string,
     meal_plan?: string,
     lang: string = 'tk',
@@ -96,58 +96,58 @@ export class HotelService {
       };
 
       const sqlQuery = `
-      SELECT 
-        h.guid, h.index_number, h.application_date, h.destination_country, 
-        h.hotel_name, h.room_type, h.meal_plan, h.guests_count, h.net_fare, 
-        h.currency, h.price, h.profit, h.system, h.note, h.is_paid, h."createdAt", h."updatedAt",
+  SELECT 
+    h.guid, h.index_number, h.application_date, h.destination_country, 
+    h.hotel_name, h.room_type, h.meal_plan, h.guests_count, h.net_fare, 
+    h.currency, h.price, h.profit, h.system, h.note, h.is_paid, h."createdAt", h."updatedAt",
 
-        ROUND(COALESCE(SUM(hp.amount), 0)::numeric, 2) AS "totalPaid",
-        CASE 
-          WHEN COALESCE(SUM(hp.amount), 0) = 0 THEN '0%' 
-          WHEN h.price > 0 THEN CONCAT(ROUND(((SUM(hp.amount) / h.price) * 100)::numeric, 2), '%') 
-          ELSE '100%' 
-        END AS "paidPercentage",
+    ROUND(COALESCE(SUM(hp.amount), 0)::numeric, 2) AS "totalPaid",
+    CASE 
+      WHEN COALESCE(SUM(hp.amount), 0) = 0 THEN '0%' 
+      WHEN h.price > 0 THEN CONCAT(ROUND(((SUM(hp.amount) / h.price) * 100)::numeric, 2), '%') 
+      ELSE '100%' 
+    END AS "paidPercentage",
 
-        JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
-        JSON_BUILD_OBJECT(
-          'guid', op.guid, 'fullName', op."fullName",
-          'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
-        ) AS operator,
-        JSON_BUILD_OBJECT(
-          'guid', pop.guid, 'fullName', pop."fullName",
-          'office', JSON_BUILD_OBJECT('guid', off2.guid, 'fullName', off2."fullName", 'shortName', off2."shortName")
-        ) AS "preparedOpr",
+    JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
+    JSON_BUILD_OBJECT(
+      'guid', op.guid, 'fullName', op."fullName",
+      'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
+    ) AS operator,
+    JSON_BUILD_OBJECT(
+      'guid', pop.guid, 'fullName', pop."fullName",
+      'office', JSON_BUILD_OBJECT('guid', off2.guid, 'fullName', off2."fullName", 'shortName', off2."shortName")
+    ) AS "preparedOpr",
 
-        COUNT(*) OVER() AS "totalCount"
+    COUNT(*) OVER() AS "totalCount"
 
-      FROM tbl_hotel h
-      LEFT JOIN tbl_clients c ON c.guid = h.client_guid
-      LEFT JOIN tbl_employees op ON op.guid = h.opr_guid
-      LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
-      LEFT JOIN tbl_employees pop ON pop.guid = h.prepared_opr_guid
-      LEFT JOIN tbl_offices off2 ON off2.guid = pop.office_guid
-      LEFT JOIN "tbl_HAR_payments" hp ON hp.hotel_guid = h.guid
+  FROM tbl_hotel h
+  LEFT JOIN tbl_clients c ON c.guid = h.client_guid
+  LEFT JOIN tbl_employees op ON op.guid = h.opr_guid
+  LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
+  LEFT JOIN tbl_employees pop ON pop.guid = h.prepared_opr_guid
+  LEFT JOIN tbl_offices off2 ON off2.guid = pop.office_guid
+  LEFT JOIN "tbl_HAR_payments" hp ON hp.hotel_guid = h.guid
 
-      WHERE 
-        (:search::text IS NULL OR (
-          c."fullName" ILIKE :search OR
-          h.destination_country ILIKE :search OR
-          h.hotel_name ILIKE :search OR
-          h.room_type ILIKE :search OR
-          h.guests_count::text ILIKE :search
-        ))
+  WHERE 
+    (:search::text IS NULL OR (
+      c."fullName" ILIKE :search OR
+      h.destination_country ILIKE :search OR
+      h.hotel_name ILIKE :search OR
+      h.room_type ILIKE :search OR
+      h.guests_count::text ILIKE :search
+    ))
 
-        AND (:application_date::date IS NULL OR h.application_date::date = :application_date::date)
-        AND (:opr_guid::uuid IS NULL OR h.opr_guid = :opr_guid::uuid)
-        AND (:prepared_opr_guid::uuid IS NULL OR h.prepared_opr_guid = :prepared_opr_guid::uuid)
-        AND (:is_paid::boolean IS NULL OR h.is_paid = :is_paid::boolean)
-        AND (:system::text IS NULL OR h.system = :system::text)
-        AND (:meal_plan::text IS NULL OR h.meal_plan = :meal_plan::text)
+    AND (:application_date::date IS NULL OR h.application_date::date = :application_date::date)
+    AND (:opr_guid::uuid IS NULL OR h.opr_guid = :opr_guid::uuid)
+    AND (:prepared_opr_guid::uuid IS NULL OR h.prepared_opr_guid = :prepared_opr_guid::uuid)
+    AND (:is_paid::integer IS NULL OR h.is_paid = :is_paid::integer)
+    AND (:system::text IS NULL OR h.system = :system::text)
+    AND (:meal_plan::text IS NULL OR h.meal_plan = :meal_plan::text)
 
-      GROUP BY h.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
-      ORDER BY h.index_number DESC
-      LIMIT :limit OFFSET :offset;
-    `;
+  GROUP BY h.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+  ORDER BY h.index_number DESC
+  LIMIT :limit OFFSET :offset;
+`;
 
       const rows: any[] = await this.sequelize.query(sqlQuery, {
         replacements,
@@ -191,7 +191,7 @@ export class HotelService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('hotel.notFound', { lang }));
       }
 
-      const willBePaid = updateDto.is_paid === true || (hotel.is_paid === true && updateDto.is_paid !== false);
+      const willBePaid = updateDto.is_paid === 1 || (hotel.is_paid === 1 && updateDto.is_paid !== 2);
 
       if (willBePaid) {
         const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(hotel.price);

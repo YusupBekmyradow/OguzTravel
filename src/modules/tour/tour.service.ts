@@ -69,7 +69,7 @@ export class TourService {
     const t = await this.sequelize.transaction();
     try {
       const tour = await this.tourRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
-      if (createDto.is_paid === true && (Number(tour.price) || 0) > 0) {
+      if (createDto.is_paid === 1 && (Number(tour.price) || 0) > 0) {
         await this.ttpPaymentRepo.create({
           tour_guid: tour.guid,
           amount: Number(tour.price) || 0,
@@ -102,7 +102,7 @@ export class TourService {
     application_date?: string,
     opr_guid?: string,
     prepared_opr_guid?: string,
-    is_paid?: boolean,
+    is_paid?: number,
     system?: string,
     lang: string = 'tk',
   ) {
@@ -165,7 +165,7 @@ export class TourService {
           AND (:application_date::date IS NULL OR t.application_date::date = :application_date::date)
           AND (:opr_guid::uuid IS NULL OR t.opr_guid = :opr_guid::uuid)
           AND (:prepared_opr_guid::uuid IS NULL OR t.prepared_opr_guid = :prepared_opr_guid::uuid)
-          AND (:is_paid::boolean IS NULL OR t.is_paid = :is_paid::boolean)
+          AND (:is_paid::integer IS NULL OR t.is_paid = :is_paid::integer)
           AND (:system::text IS NULL OR t.system = :system::text)
 
         GROUP BY t.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
@@ -215,7 +215,7 @@ export class TourService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('tour.notFound', { lang }));
       }
 
-      const willBePaid = updateDto.is_paid === true || (tour.is_paid === true && updateDto.is_paid !== false);
+      const willBePaid = updateDto.is_paid === 1 || (tour.is_paid === 1 && updateDto.is_paid !== 2);
 
       if (willBePaid) {
         const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(tour.price);

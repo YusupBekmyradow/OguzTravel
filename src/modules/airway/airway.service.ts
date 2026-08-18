@@ -43,7 +43,7 @@ export class AirwayService {
     const t = await this.sequelize.transaction();
     try {
       const airway = await this.airwayRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
-      if (createDto.is_paid === true && (Number(airway.price) || 0) > 0) {
+      if (createDto.is_paid === 1 && (Number(airway.price) || 0) > 0) {
         await this.harPaymentRepo.create({
           airway_guid: airway.guid,
           amount: Number(airway.price) || 0,
@@ -73,7 +73,7 @@ export class AirwayService {
     application_date?: string,
     opr_guid?: string,
     prepared_opr_guid?: string,
-    is_paid?: boolean,
+    is_paid?: number,
     system?: string,
     ticket_type?: string,
     lang: string = 'tk',
@@ -143,7 +143,7 @@ export class AirwayService {
         AND (:application_date::date IS NULL OR a.application_date::date = :application_date::date)
         AND (:opr_guid::uuid IS NULL OR a.opr_guid = :opr_guid::uuid)
         AND (:prepared_opr_guid::uuid IS NULL OR a.prepared_opr_guid = :prepared_opr_guid::uuid)
-        AND (:is_paid::boolean IS NULL OR a.is_paid = :is_paid::boolean)
+        AND (:is_paid::integer IS NULL OR a.is_paid = :is_paid::integer)
         AND (:system::text IS NULL OR a.system = :system::text)
         AND (:ticket_type::text IS NULL OR a.ticket_type = :ticket_type::text)
 
@@ -195,7 +195,7 @@ export class AirwayService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('airway.notFound', { lang }));
       }
 
-      const willBePaid = updateDto.is_paid === true || (airway.is_paid === true && updateDto.is_paid !== false);
+      const willBePaid = updateDto.is_paid === 1 || (airway.is_paid === 1 && updateDto.is_paid !== 2);
 
       if (willBePaid) {
         const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(airway.price);

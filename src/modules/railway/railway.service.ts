@@ -69,7 +69,7 @@ export class RailwayService {
     const t = await this.sequelize.transaction();
     try {
       const railway = await this.railwayRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
-      if (createDto.is_paid === true && (Number(railway.price) || 0) > 0) {
+      if (createDto.is_paid === 1 && (Number(railway.price) || 0) > 0) {
         await this.harPaymentRepo.create({
           railway_guid: railway.guid,
           amount: Number(railway.price) || 0,
@@ -104,7 +104,7 @@ export class RailwayService {
     application_date?: string,
     opr_guid?: string,
     prepared_opr_guid?: string,
-    is_paid?: boolean,
+    is_paid?: number,
     system?: string,
     train_type?: string,
     ticket_type?: string,
@@ -175,7 +175,7 @@ export class RailwayService {
         AND (:application_date::date IS NULL OR r.application_date::date = :application_date::date)
         AND (:opr_guid::uuid IS NULL OR r.opr_guid = :opr_guid::uuid)
         AND (:prepared_opr_guid::uuid IS NULL OR r.prepared_opr_guid = :prepared_opr_guid::uuid)
-        AND (:is_paid::boolean IS NULL OR r.is_paid = :is_paid::boolean)
+        AND (:is_paid::integer IS NULL OR r.is_paid = :is_paid::integer)
         AND (:system::text IS NULL OR r.system = :system::text)
         AND (:train_type::text IS NULL OR r.train_type = :train_type::text)
         AND (:ticket_type::text IS NULL OR r.ticket_type = :ticket_type::text)
@@ -227,7 +227,7 @@ export class RailwayService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('railway.notFound', { lang }));
       }
 
-      const willBePaid = updateDto.is_paid === true || (railway.is_paid === true && updateDto.is_paid !== false);
+      const willBePaid = updateDto.is_paid === 1 || (railway.is_paid === 1&& updateDto.is_paid !== 2);
 
       if (willBePaid) {
         const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(railway.price);

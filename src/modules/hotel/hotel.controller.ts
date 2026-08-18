@@ -29,7 +29,7 @@ export class HotelController {
     @Query('application_date') application_date?: string,
     @Query('opr_guid') opr_guid?: string,
     @Query('prepared_opr_guid') prepared_opr_guid?: string,
-    @Query('is_paid') is_paid?: boolean,
+    @Query('is_paid') is_paid?: number,
     @Query('system') system?: string,
     @Query('meal_plan') meal_plan?: string,
     @I18nLang() lang: string = 'tk',

@@ -74,8 +74,8 @@ export class CreateHotelDto {
     @IsOptional()
     declare note?: string;
 
-    @ApiPropertyOptional({ example: false })
-    @IsBoolean()
+    @ApiPropertyOptional()
+    @IsNumber()
     @IsOptional()
-    declare is_paid: boolean;
+    declare is_paid: number;
 }

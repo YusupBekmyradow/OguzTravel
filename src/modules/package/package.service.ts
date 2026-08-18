@@ -70,7 +70,7 @@ export class PackageService {
     const t = await this.sequelize.transaction();
     try {
       const packageItem = await this.packageRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
-      if (createDto.is_paid === true && (Number(packageItem.price) || 0) > 0) {
+      if (createDto.is_paid === 1 && (Number(packageItem.price) || 0) > 0) {
         await this.ttpPaymentRepo.create({
           package_guid: packageItem.guid,
           amount: Number(packageItem.price) || 0,
@@ -103,7 +103,7 @@ export class PackageService {
     application_date?: string,
     opr_guid?: string,
     prepared_opr_guid?: string,
-    is_paid?: boolean,
+    is_paid?: number,
     lang: string = 'tk',
   ) {
     try {
@@ -163,7 +163,7 @@ export class PackageService {
           AND (:application_date::date IS NULL OR p.application_date::date = :application_date::date)
           AND (:opr_guid::uuid IS NULL OR p.opr_guid = :opr_guid::uuid)
           AND (:prepared_opr_guid::uuid IS NULL OR p.prepared_opr_guid = :prepared_opr_guid::uuid)
-          AND (:is_paid::boolean IS NULL OR p.is_paid = :is_paid::boolean)
+          AND (:is_paid::integer IS NULL OR p.is_paid = :is_paid::integer)
 
         GROUP BY p.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
         ORDER BY p.index_number DESC
@@ -213,7 +213,7 @@ export class PackageService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('package.notFound', { lang }));
       }
 
-      const willBePaid = updateDto.is_paid === true || (packageItem.is_paid === true && updateDto.is_paid !== false);
+      const willBePaid = updateDto.is_paid === 1 || (packageItem.is_paid === 1 && updateDto.is_paid !== 2);
 
       if (willBePaid) {
         const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(packageItem.price);

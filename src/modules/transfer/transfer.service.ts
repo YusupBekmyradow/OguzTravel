@@ -70,7 +70,7 @@ export class TransferService {
     try {
       const transfer = await this.transferRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
 
-      if (createDto.is_paid === true && (Number(transfer.price) || 0) > 0) {
+      if (createDto.is_paid === 1 && (Number(transfer.price) || 0) > 0) {
         await this.ttpPaymentRepo.create({
           transfer_guid: transfer.guid,
           amount: Number(transfer.price) || 0,
@@ -105,7 +105,7 @@ export class TransferService {
     prepared_opr_guid?: string,
     transfer_type?: string,
     machine_type?: string,
-    is_paid?: boolean,
+    is_paid?: number,
     system?: string,
     lang: string = 'tk',
   ) {
@@ -172,7 +172,7 @@ export class TransferService {
           AND (:prepared_opr_guid::uuid IS NULL OR tr.prepared_opr_guid = :prepared_opr_guid::uuid)
           AND (:transfer_type::text IS NULL OR tr.transfer_type = :transfer_type::text)
           AND (:machine_type::text IS NULL OR tr.machine_type = :machine_type::text)
-          AND (:is_paid::boolean IS NULL OR tr.is_paid = :is_paid::boolean)
+          AND (:is_paid::integer IS NULL OR tr.is_paid = :is_paid::integer)
           AND (:system::text IS NULL OR tr.system = :system::text)
 
         GROUP BY tr.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
@@ -222,7 +222,7 @@ export class TransferService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('transfer.notFound', { lang }));
       }
 
-      const willBePaid = updateDto.is_paid === true || (transfer.is_paid === true && updateDto.is_paid !== false);
+      const willBePaid = updateDto.is_paid === 1 || (transfer.is_paid === 1 && updateDto.is_paid !== 2);
 
       if (willBePaid) {
         const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(transfer.price);

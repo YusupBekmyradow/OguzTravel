@@ -34,7 +34,7 @@ export class TransferController {
     @Query('prepared_opr_guid') prepared_opr_guid?: string,
     @Query('transfer_type') transfer_type?: string,
     @Query('machine_type') machine_type?: string,
-    @Query('is_paid') is_paid?: boolean,
+    @Query('is_paid') is_paid?: number,
     @Query('system') system?: string,
     @I18nLang() lang: string = 'tk',
   ) {
