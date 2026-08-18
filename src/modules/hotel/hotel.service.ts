@@ -11,6 +11,7 @@ import { Office } from '../office/entities/office.entity';
 import { Sequelize } from 'sequelize-typescript';
 import { HarPayment } from '../har_payment/entities/har_payment.entity';
 import { I18nService } from 'nestjs-i18n';
+import { Op, QueryTypes } from 'sequelize';
 
 @Injectable()
 export class HotelService {
@@ -54,17 +55,112 @@ export class HotelService {
     }
   }
 
-  async getAllHotel(page: number = 1, limit: number = 10, lang: string = 'tk') {
+
+
+  async getAllHotel(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    start_date?: string,
+    end_date?: string,
+    office_guid?: string,
+    opr_guid?: string,
+    lang: string = 'tk'
+  ) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
-      const { rows, count } = await this.hotelRepository.findAndCountAll({ attributes: { exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'], include: this.getAttributes().include as any }, include: this.getIncludes(), order: [['index_number', 'DESC']], limit: currentLimit, offset: offset });
-      return { status: 200, data: rows, meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage }, message: this.i18n.t('hotel.listFetched', { lang }) };
+
+      const replacements: any = {
+        limit: currentLimit,
+        offset,
+        search: search ? `%${search}%` : null,
+        start_date: start_date || null,
+        end_date: end_date || null,
+        office_guid: office_guid || null,
+        opr_guid: opr_guid || null,
+      };
+
+      const sqlQuery = `
+      SELECT 
+        h.guid, h.index_number, h.application_date, h.destination_country, 
+        h.hotel_name, h.room_type, h.meal_plan, h.guests_count, h.net_fare, 
+        h.currency, h.price, h.profit, h.system, h.note, h.is_paid, h."createdAt", h."updatedAt",
+
+        ROUND(COALESCE(SUM(hp.amount), 0)::numeric, 2) AS "totalPaid",
+        CASE 
+          WHEN COALESCE(SUM(hp.amount), 0) = 0 THEN '0%' 
+          WHEN h.price > 0 THEN CONCAT(ROUND(((SUM(hp.amount) / h.price) * 100)::numeric, 2), '%') 
+          ELSE '100%' 
+        END AS "paidPercentage",
+
+        JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
+        JSON_BUILD_OBJECT(
+          'guid', op.guid, 'fullName', op."fullName",
+          'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
+        ) AS operator,
+        JSON_BUILD_OBJECT(
+          'guid', pop.guid, 'fullName', pop."fullName",
+          'office', JSON_BUILD_OBJECT('guid', off2.guid, 'fullName', off2."fullName", 'shortName', off2."shortName")
+        ) AS "preparedOpr",
+
+        COUNT(*) OVER() AS "totalCount"
+
+      FROM tbl_hotel h
+      LEFT JOIN tbl_clients c ON c.guid = h.client_guid
+      LEFT JOIN tbl_employees op ON op.guid = h.opr_guid
+      LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
+      LEFT JOIN tbl_employees pop ON pop.guid = h.prepared_opr_guid
+      LEFT JOIN tbl_offices off2 ON off2.guid = pop.office_guid
+      LEFT JOIN "tbl_HAR_payments" hp ON hp.hotel_guid = h.guid
+
+      WHERE 
+        (:start_date::date IS NULL OR h.application_date >= :start_date::date)
+        AND (:end_date::date IS NULL OR h.application_date <= :end_date::date)
+        AND (:office_guid::uuid IS NULL OR off1.guid = :office_guid::uuid OR off2.guid = :office_guid::uuid)
+        AND (:opr_guid::uuid IS NULL OR h.opr_guid = :opr_guid::uuid OR h.prepared_opr_guid = :opr_guid::uuid)
+        AND (:search::text IS NULL OR (
+          h.hotel_name ILIKE :search OR 
+          h.destination_country ILIKE :search OR 
+          h.room_type ILIKE :search OR 
+          h.system ILIKE :search OR 
+          c."fullName" ILIKE :search OR 
+          c.passport_number ILIKE :search
+        ))
+
+      GROUP BY h.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+      ORDER BY h.index_number DESC
+      LIMIT :limit OFFSET :offset;
+    `;
+      const rows: any[] = await this.sequelize.query(sqlQuery, {
+        replacements,
+        type: QueryTypes.SELECT,
+      });
+
+      const totalItems = rows.length > 0 ? Number(rows[0].totalCount) : 0;
+      const cleanedRows = rows.map(({ totalCount, ...rest }) => rest);
+
+      return {
+        status: 200,
+        data: cleanedRows,
+        meta: {
+          totalItems,
+          totalPages: Math.ceil(totalItems / currentLimit),
+          currentPage,
+        },
+        message: this.i18n.t('hotel.listFetched', { lang }),
+      };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('hotel.fetchFailed', { lang }), error);
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('hotel.fetchFailed', { lang }),
+        error
+      );
     }
   }
+
+
 
   async updateHotel(updateDto: UpdateHotelDto, lang: string) {
     try {

@@ -22,8 +22,24 @@ export class HotelController {
   }
 
   @Get('/get-hotels')
-  async findAll(@Query('page') page: number = 1, @Query('limit') limit: number = 10, @I18nLang() lang: string = 'tk') {
-    return this.hotelService.getAllHotel(Number(page), Number(limit), lang);
+  async findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('start_date') start_date?: string,
+    @Query('end_date') end_date?: string,
+    @Query('office_guid') office_guid?: string,
+    @Query('opr_guid') opr_guid?: string,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.hotelService.getAllHotel(page,
+      limit,
+      search,
+      start_date,
+      end_date,
+      office_guid,
+      opr_guid,
+      lang);
   }
 
   @Patch('/update-hotel')
