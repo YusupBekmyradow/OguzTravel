@@ -26,11 +26,31 @@ export class TransferController {
 
   @Get('/get-transfers')
   async findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('application_date') application_date?: string,
+    @Query('opr_guid') opr_guid?: string,
+    @Query('prepared_opr_guid') prepared_opr_guid?: string,
+    @Query('transfer_type') transfer_type?: string,
+    @Query('machine_type') machine_type?: string,
+    @Query('is_paid') is_paid?: boolean,
+    @Query('system') system?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    return this.transferService.getAllTransfer(Number(page), Number(limit), lang);
+    return this.transferService.getAllTransfer(
+      page,
+      limit,
+      search,
+      application_date,
+      opr_guid,
+      prepared_opr_guid,
+      transfer_type,
+      machine_type,
+      is_paid,
+      system,
+      lang,
+    );
   }
 
   @Patch('/update-transfer')
