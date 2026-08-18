@@ -28,13 +28,14 @@ export class RefferalLetterController {
   async getAllRefferalLetter(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
     @Query('received_opr_guid') received_opr_guid?: string,
     @Query('departure_date') departure_date?: string,
     @Query('return_date') return_date?: string,
     @Query('contract_date') contract_date?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    const filters = { received_opr_guid, departure_date, return_date, contract_date };
+    const filters = { search, received_opr_guid, departure_date, return_date, contract_date };
     return await this.refferalLetterService.getAllRefferalLetter(Number(page), Number(limit), filters, lang);
   }
 

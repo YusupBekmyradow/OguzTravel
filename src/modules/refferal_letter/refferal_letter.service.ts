@@ -102,6 +102,7 @@ export class RefferalLetterService {
     page: number = 1,
     limit: number = 10,
     filters?: {
+      search?: string;
       received_opr_guid?: string;
       departure_date?: string | Date;
       return_date?: string | Date;
@@ -115,6 +116,27 @@ export class RefferalLetterService {
       const offset = (currentPage - 1) * currentLimit;
       const whereConditions: any = {};
       if (filters) {
+
+
+        if (filters.search && filters.search.trim() !== '') {
+          const searchPattern = `%${filters.search.trim()}%`;
+
+          whereConditions[Op.or] = [
+            // 1. RefferalLetter tablosundaki alanlar
+            { destination_country: { [Op.iLike]: searchPattern } },
+            { tranzit: { [Op.iLike]: searchPattern } },
+            { travel_document_number: { [Op.iLike]: searchPattern } },
+            { contract_number: { [Op.iLike]: searchPattern } },
+
+            // 2. JSONB agent.name (TypeScript hatası vermez)
+            { '$agent.name$': { [Op.iLike]: searchPattern } },
+
+            // 3. Client tablosundaki fullName alanı
+            { '$tbl_clients.fullName$': { [Op.iLike]: searchPattern } },
+          ];
+
+        }
+
         if (filters.received_opr_guid) {
           whereConditions.received_opr_guid = filters.received_opr_guid;
         }
@@ -151,6 +173,7 @@ export class RefferalLetterService {
         order: [['index_number', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
+        distinct: true
       });
       const formattedRows = rows.map(row => this.formatRefferalLetterPassport(row));
       return {
@@ -169,7 +192,7 @@ export class RefferalLetterService {
   }
 
 
-  
+
   async updateRefferalLetter(updateDto: UpdateRefferalLetterDto, lang: string) {
     const transaction = await this.sequelize.transaction();
     try {

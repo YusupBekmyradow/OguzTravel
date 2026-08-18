@@ -43,7 +43,7 @@ export class AirwayService {
     const t = await this.sequelize.transaction();
     try {
       const airway = await this.airwayRepository.create({ ...createDto } as any, { hooks: true, transaction: t });
-      if (createDto.is_paid === 1 && (Number(airway.price) || 0) > 0) {
+      if ((createDto.is_paid === 1 || createDto.is_paid === 3) && (Number(airway.price) || 0) > 0) {
         await this.harPaymentRepo.create({
           airway_guid: airway.guid,
           amount: Number(airway.price) || 0,
@@ -195,56 +195,73 @@ export class AirwayService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('airway.notFound', { lang }));
       }
 
-      const willBePaid = updateDto.is_paid === 1 || (airway.is_paid === 1 && updateDto.is_paid !== 2);
+      const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(airway.price);
+      const operatorGuid = updateDto.opr_guid || airway.opr_guid;
 
-      if (willBePaid) {
-        const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(airway.price);
-        const operatorGuid = updateDto.opr_guid || airway.opr_guid;
-        const payments = await this.harPaymentRepo.findAll({
+      if (updateDto.is_paid === 3) {
+        await this.harPaymentRepo.destroy({
           where: { airway_guid: airway.guid },
-          order: [['index_number', 'ASC']],
           transaction: t
         });
 
-        const currentTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-        const diff = Number((targetPrice - currentTotalPaid).toFixed(2));
+        if (targetPrice > 0) {
+          await this.harPaymentRepo.create({
+            airway_guid: airway.guid,
+            amount: targetPrice,
+            payment_date: new Date(),
+            opr_guid: operatorGuid
+          } as any, { transaction: t });
+        }
+      } else {
+        const willBePaid = updateDto.is_paid === 1 || (airway.is_paid === 1 && updateDto.is_paid !== 2);
 
-        if (diff !== 0) {
-          if (payments.length === 0) {
-            if (targetPrice > 0) {
-              await this.harPaymentRepo.create({
-                airway_guid: airway.guid,
+        if (willBePaid) {
+          const payments = await this.harPaymentRepo.findAll({
+            where: { airway_guid: airway.guid },
+            order: [['index_number', 'ASC']],
+            transaction: t
+          });
+
+          const currentTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+          const diff = Number((targetPrice - currentTotalPaid).toFixed(2));
+
+          if (diff !== 0) {
+            if (payments.length === 0) {
+              if (targetPrice > 0) {
+                await this.harPaymentRepo.create({
+                  airway_guid: airway.guid,
+                  amount: targetPrice,
+                  payment_date: new Date(),
+                  opr_guid: operatorGuid
+                } as any, { transaction: t });
+              }
+            } else if (payments.length === 1) {
+              await payments[0].update({
                 amount: targetPrice,
-                payment_date: new Date(),
-                opr_guid: operatorGuid
-              } as any, { transaction: t });
-            }
-          } else if (payments.length === 1) {
-            await payments[0].update({
-              amount: targetPrice,
-              opr_guid: operatorGuid || payments[0].opr_guid
-            }, { transaction: t });
-          } else if (diff > 0) {
-            const lastPayment = payments[payments.length - 1];
-            await lastPayment.update({
-              amount: Number((Number(lastPayment.amount) + diff).toFixed(2)),
-              opr_guid: operatorGuid || lastPayment.opr_guid
-            }, { transaction: t });
-          } else {
-            let amountToReduce = Math.abs(diff);
-            for (let i = payments.length - 1; i >= 0 && amountToReduce > 0; i--) {
-              const p = payments[i];
-              const pAmount = Number(p.amount);
-              if (pAmount <= amountToReduce && i > 0) {
-                await p.destroy({ transaction: t });
-                amountToReduce = Number((amountToReduce - pAmount).toFixed(2));
-              } else {
-                const newAmount = Math.max(0, Number((pAmount - amountToReduce).toFixed(2)));
-                await p.update({
-                  amount: newAmount,
-                  opr_guid: operatorGuid || p.opr_guid
-                }, { transaction: t });
-                amountToReduce = 0;
+                opr_guid: operatorGuid || payments[0].opr_guid
+              }, { transaction: t });
+            } else if (diff > 0) {
+              const lastPayment = payments[payments.length - 1];
+              await lastPayment.update({
+                amount: Number((Number(lastPayment.amount) + diff).toFixed(2)),
+                opr_guid: operatorGuid || lastPayment.opr_guid
+              }, { transaction: t });
+            } else {
+              let amountToReduce = Math.abs(diff);
+              for (let i = payments.length - 1; i >= 0 && amountToReduce > 0; i--) {
+                const p = payments[i];
+                const pAmount = Number(p.amount);
+                if (pAmount <= amountToReduce && i > 0) {
+                  await p.destroy({ transaction: t });
+                  amountToReduce = Number((amountToReduce - pAmount).toFixed(2));
+                } else {
+                  const newAmount = Math.max(0, Number((pAmount - amountToReduce).toFixed(2)));
+                  await p.update({
+                    amount: newAmount,
+                    opr_guid: operatorGuid || p.opr_guid
+                  }, { transaction: t });
+                  amountToReduce = 0;
+                }
               }
             }
           }
