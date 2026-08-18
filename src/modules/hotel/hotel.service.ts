@@ -61,11 +61,14 @@ export class HotelService {
     page: number = 1,
     limit: number = 10,
     search?: string,
-    start_date?: string,
-    end_date?: string,
-    office_guid?: string,
+    application_date?: string,
     opr_guid?: string,
-    lang: string = 'tk'
+    prepared_opr_guid?: string,
+    office_guid?: string,
+    is_paid?: boolean,
+    system?: string,
+    meal_plan?: string,
+    lang: string = 'tk',
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
@@ -76,63 +79,70 @@ export class HotelService {
         limit: currentLimit,
         offset,
         search: search ? `%${search}%` : null,
-        start_date: start_date || null,
-        end_date: end_date || null,
-        office_guid: office_guid || null,
+        application_date: application_date || null,
         opr_guid: opr_guid || null,
+        prepared_opr_guid: prepared_opr_guid || null,
+        office_guid: office_guid || null,
+        is_paid: is_paid !== undefined && is_paid !== null ? is_paid : null,
+        system: system || null,
+        meal_plan: meal_plan || null,
       };
 
       const sqlQuery = `
-      SELECT 
-        h.guid, h.index_number, h.application_date, h.destination_country, 
-        h.hotel_name, h.room_type, h.meal_plan, h.guests_count, h.net_fare, 
-        h.currency, h.price, h.profit, h.system, h.note, h.is_paid, h."createdAt", h."updatedAt",
+        SELECT 
+          h.guid, h.index_number, h.application_date, h.destination_country, 
+          h.hotel_name, h.room_type, h.meal_plan, h.guests_count, h.net_fare, 
+          h.currency, h.price, h.profit, h.system, h.note, h.is_paid, h."createdAt", h."updatedAt",
 
-        ROUND(COALESCE(SUM(hp.amount), 0)::numeric, 2) AS "totalPaid",
-        CASE 
-          WHEN COALESCE(SUM(hp.amount), 0) = 0 THEN '0%' 
-          WHEN h.price > 0 THEN CONCAT(ROUND(((SUM(hp.amount) / h.price) * 100)::numeric, 2), '%') 
-          ELSE '100%' 
-        END AS "paidPercentage",
+          ROUND(COALESCE(SUM(hp.amount), 0)::numeric, 2) AS "totalPaid",
+          CASE 
+            WHEN COALESCE(SUM(hp.amount), 0) = 0 THEN '0%' 
+            WHEN h.price > 0 THEN CONCAT(ROUND(((SUM(hp.amount) / h.price) * 100)::numeric, 2), '%') 
+            ELSE '100%' 
+          END AS "paidPercentage",
 
-        JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
-        JSON_BUILD_OBJECT(
-          'guid', op.guid, 'fullName', op."fullName",
-          'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
-        ) AS operator,
-        JSON_BUILD_OBJECT(
-          'guid', pop.guid, 'fullName', pop."fullName",
-          'office', JSON_BUILD_OBJECT('guid', off2.guid, 'fullName', off2."fullName", 'shortName', off2."shortName")
-        ) AS "preparedOpr",
+          JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
+          JSON_BUILD_OBJECT(
+            'guid', op.guid, 'fullName', op."fullName",
+            'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
+          ) AS operator,
+          JSON_BUILD_OBJECT(
+            'guid', pop.guid, 'fullName', pop."fullName",
+            'office', JSON_BUILD_OBJECT('guid', off2.guid, 'fullName', off2."fullName", 'shortName', off2."shortName")
+          ) AS "preparedOpr",
 
-        COUNT(*) OVER() AS "totalCount"
+          COUNT(*) OVER() AS "totalCount"
 
-      FROM tbl_hotel h
-      LEFT JOIN tbl_clients c ON c.guid = h.client_guid
-      LEFT JOIN tbl_employees op ON op.guid = h.opr_guid
-      LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
-      LEFT JOIN tbl_employees pop ON pop.guid = h.prepared_opr_guid
-      LEFT JOIN tbl_offices off2 ON off2.guid = pop.office_guid
-      LEFT JOIN "tbl_HAR_payments" hp ON hp.hotel_guid = h.guid
+        FROM tbl_hotel h
+        LEFT JOIN tbl_clients c ON c.guid = h.client_guid
+        LEFT JOIN tbl_employees op ON op.guid = h.opr_guid
+        LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
+        LEFT JOIN tbl_employees pop ON pop.guid = h.prepared_opr_guid
+        LEFT JOIN tbl_offices off2 ON off2.guid = pop.office_guid
+        LEFT JOIN "tbl_HAR_payments" hp ON hp.hotel_guid = h.guid
 
-      WHERE 
-        (:start_date::date IS NULL OR h.application_date >= :start_date::date)
-        AND (:end_date::date IS NULL OR h.application_date <= :end_date::date)
-        AND (:office_guid::uuid IS NULL OR off1.guid = :office_guid::uuid OR off2.guid = :office_guid::uuid)
-        AND (:opr_guid::uuid IS NULL OR h.opr_guid = :opr_guid::uuid OR h.prepared_opr_guid = :opr_guid::uuid)
-        AND (:search::text IS NULL OR (
-          h.hotel_name ILIKE :search OR 
-          h.destination_country ILIKE :search OR 
-          h.room_type ILIKE :search OR 
-          h.system ILIKE :search OR 
-          c."fullName" ILIKE :search OR 
-          c.passport_number ILIKE :search
-        ))
+        WHERE 
+          (:search::text IS NULL OR (
+            c."fullName" ILIKE :search OR
+            h.destination_country ILIKE :search OR
+            h.hotel_name ILIKE :search OR
+            h.room_type ILIKE :search OR
+            h.guests_count::text ILIKE :search
+          ))
+        AND (:application_date::date IS NULL OR h.application_date::date = :application_date::date)
+          
+          AND (:opr_guid::uuid IS NULL OR h.opr_guid = :opr_guid::uuid)
+          AND (:prepared_opr_guid::uuid IS NULL OR h.prepared_opr_guid = :prepared_opr_guid::uuid)
+          AND (:office_guid::uuid IS NULL OR off1.guid = :office_guid::uuid OR off2.guid = :office_guid::uuid)
+          AND (:is_paid::boolean IS NULL OR h.is_paid = :is_paid::boolean)
+          AND (:system::text IS NULL OR h.system = :system::text)
+          AND (:meal_plan::text IS NULL OR h.meal_plan = :meal_plan::text)
 
-      GROUP BY h.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
-      ORDER BY h.index_number DESC
-      LIMIT :limit OFFSET :offset;
-    `;
+        GROUP BY h.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+        ORDER BY h.index_number DESC
+        LIMIT :limit OFFSET :offset;
+      `;
+
       const rows: any[] = await this.sequelize.query(sqlQuery, {
         replacements,
         type: QueryTypes.SELECT,
@@ -155,7 +165,7 @@ export class HotelService {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
         this.i18n.t('hotel.fetchFailed', { lang }),
-        error
+        error,
       );
     }
   }

@@ -22,8 +22,29 @@ export class AirwayController {
   }
 
   @Get('/get-airways')
-  async findAll(@Query('page') page: number = 1, @Query('limit') limit: number = 10, @I18nLang() lang: string = 'tk') {
-    return this.airwayService.getAllAirway(Number(page), Number(limit), lang);
+  async findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('application_date') application_date?: string,
+    @Query('opr_guid') opr_guid?: string,
+    @Query('prepared_opr_guid') prepared_opr_guid?: string,
+    @Query('office_guid') office_guid?: string,
+    @Query('is_paid') is_paid?: boolean,
+    @Query('system') system?: string,
+    @Query('ticket_type') ticket_type?: string,
+    @I18nLang() lang: string = 'tk',) {
+    return this.airwayService.getAllAirway(page,
+      limit,
+      search,
+      application_date,
+      opr_guid,
+      prepared_opr_guid,
+      office_guid,
+      is_paid,
+      system,
+      ticket_type,
+      lang,);
   }
 
   @Patch('/update-airway')

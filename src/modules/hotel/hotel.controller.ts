@@ -26,20 +26,28 @@ export class HotelController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
-    @Query('start_date') start_date?: string,
-    @Query('end_date') end_date?: string,
-    @Query('office_guid') office_guid?: string,
+    @Query('application_date') application_date?: string,
     @Query('opr_guid') opr_guid?: string,
+    @Query('prepared_opr_guid') prepared_opr_guid?: string,
+    @Query('office_guid') office_guid?: string,
+    @Query('is_paid') is_paid?: boolean,
+    @Query('system') system?: string,
+    @Query('meal_plan') meal_plan?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    return this.hotelService.getAllHotel(page,
+    return this.hotelService.getAllHotel(
+      page,
       limit,
       search,
-      start_date,
-      end_date,
-      office_guid,
+      application_date,
       opr_guid,
-      lang);
+      prepared_opr_guid,
+      office_guid,
+      is_paid,
+      system,
+      meal_plan,
+      lang
+    );
   }
 
   @Patch('/update-hotel')
