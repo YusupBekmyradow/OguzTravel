@@ -11,6 +11,7 @@ import { errorResponse, successResponse } from '../../helpers/responseFunctions'
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Sequelize } from 'sequelize-typescript';
 import { TtpPayment } from '../ttp_payment/entities/ttp_payment.entity';
+import { QueryTypes } from 'sequelize';
 
 @Injectable()
 export class TourService {
@@ -94,32 +95,112 @@ export class TourService {
     }
   }
 
-  async getAllTour(page: number = 1, limit: number = 10, lang: string = 'tk') {
+  async getAllTour(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    application_date?: string,
+    opr_guid?: string,
+    prepared_opr_guid?: string,
+    is_paid?: boolean,
+    system?: string,
+    lang: string = 'tk',
+  ) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
-
-      const { rows, count } = await this.tourRepository.findAndCountAll({
-        attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
-          include: this.getAttributes().include as any
-        },
-        include: this.getIncludes(),
-        order: [['index_number', 'DESC']],
+      const replacements: any = {
         limit: currentLimit,
-        offset: offset,
+        offset,
+        search: search ? `%${search}%` : null,
+        application_date: application_date || null,
+        opr_guid: opr_guid || null,
+        prepared_opr_guid: prepared_opr_guid || null,
+        is_paid: is_paid !== undefined && is_paid !== null ? is_paid : null,
+        system: system || null,
+      };
+
+      const sqlQuery = `
+        SELECT 
+          t.guid, t.index_number, t.application_date, t.destination_country, 
+          t.tour_name, t.guests_count, t.net_fare, t.currency, t.price, 
+          t.profit, t.system, t.note, t.is_paid, t."createdAt", t."updatedAt",
+
+          ROUND(COALESCE(SUM(tp.amount), 0)::numeric, 2) AS "totalPaid",
+          CASE 
+            WHEN COALESCE(SUM(tp.amount), 0) = 0 THEN '0%' 
+            WHEN t.price > 0 THEN CONCAT(ROUND(((SUM(tp.amount) / t.price) * 100)::numeric, 2), '%') 
+            ELSE '100%' 
+          END AS "paidPercentage",
+
+          JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
+          JSON_BUILD_OBJECT(
+            'guid', op.guid, 'fullName', op."fullName",
+            'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
+          ) AS operator,
+          JSON_BUILD_OBJECT(
+            'guid', pop.guid, 'fullName', pop."fullName",
+            'office', JSON_BUILD_OBJECT('guid', off2.guid, 'fullName', off2."fullName", 'shortName', off2."shortName")
+          ) AS "preparedOpr",
+
+          COUNT(*) OVER() AS "totalCount"
+
+        FROM tbl_tour t
+        LEFT JOIN tbl_clients c ON c.guid = t.client_guid
+        LEFT JOIN tbl_employees op ON op.guid = t.opr_guid
+        LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
+        LEFT JOIN tbl_employees pop ON pop.guid = t.prepared_opr_guid
+        LEFT JOIN tbl_offices off2 ON off2.guid = pop.office_guid
+        LEFT JOIN "tbl_TTP_payments" tp ON tp.tour_guid = t.guid
+
+        WHERE 
+          (:search::text IS NULL OR (
+            c."fullName" ILIKE :search OR
+            t.destination_country ILIKE :search OR
+            t.tour_name ILIKE :search OR
+            t.guests_count::text ILIKE :search
+          ))
+
+          AND (:application_date::date IS NULL OR t.application_date::date = :application_date::date)
+          AND (:opr_guid::uuid IS NULL OR t.opr_guid = :opr_guid::uuid)
+          AND (:prepared_opr_guid::uuid IS NULL OR t.prepared_opr_guid = :prepared_opr_guid::uuid)
+          AND (:is_paid::boolean IS NULL OR t.is_paid = :is_paid::boolean)
+          AND (:system::text IS NULL OR t.system = :system::text)
+
+        GROUP BY t.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+        ORDER BY t.index_number DESC
+        LIMIT :limit OFFSET :offset;
+      `;
+
+      const rows: any[] = await this.sequelize.query(sqlQuery, {
+        replacements,
+        type: QueryTypes.SELECT,
       });
+
+      const totalItems = rows.length > 0 ? Number(rows[0].totalCount) : 0;
+      const cleanedRows = rows.map(({ totalCount, ...rest }) => rest);
+
       return {
         status: 200,
-        data: rows,
-        meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
-        message: this.i18n.t('tour.listFetched', { lang })
+        data: cleanedRows,
+        meta: {
+          totalItems,
+          totalPages: Math.ceil(totalItems / currentLimit),
+          currentPage,
+        },
+        message: this.i18n.t('tour.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('tour.fetchFailed', { lang }), error);
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('tour.fetchFailed', { lang }),
+        error,
+      );
     }
   }
+
+
 
   async updateTour(updateDto: UpdateTourDto, lang: string) {
     try {

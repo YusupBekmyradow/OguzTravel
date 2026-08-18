@@ -22,11 +22,29 @@ export class TourController {
   }
 
   @Get('/get-tours')
-  async findAll(@I18nLang() lang: string = 'tk', @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ) {
-    return this.tourService.getAllTour(Number(page), Number(limit), lang);
+  async findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('application_date') application_date?: string,
+    @Query('opr_guid') opr_guid?: string,
+    @Query('prepared_opr_guid') prepared_opr_guid?: string,
+    @Query('is_paid') is_paid?: boolean,
+    @Query('system') system?: string,
+    @I18nLang() lang: string = 'tk',) {
+    return this.tourService.getAllTour(
+      page,
+      limit,
+      search,
+      application_date,
+      opr_guid,
+      prepared_opr_guid,
+      is_paid,
+      system,
+      lang,
+    );
   }
+
 
   @Patch('/update-tour')
   async update(@Body() updateDto: UpdateTourDto, @I18nLang() lang: string) {
