@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -33,20 +33,30 @@ export class ReportShareController {
   @Get('/get-all-report-shares')
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'datetime', required: false })
+  @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'assignment_opr_guid', required: false })
   @ApiQuery({ name: 'receiver_opr_guid', required: false })
-  async findAll(@I18nLang() lang: string = 'tk',
+  async findAll(
+    @I18nLang() lang: string = 'tk',
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('datetime') datetime?: string,
+    @Query('status') status?: number,
     @Query('assignment_opr_guid') assignment_opr_guid?: string,
     @Query('receiver_opr_guid') receiver_opr_guid?: string,
   ) {
-    return this.reportShareService.getAllReportShares(lang,
+    return this.reportShareService.getAllReportShares(lang, {
       page,
       limit,
+      search,
+      datetime,
+      status,
       assignment_opr_guid,
       receiver_opr_guid,
-    );
+    });
   }
 
   @Patch('/update-report-share')

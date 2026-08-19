@@ -17,14 +17,15 @@ export class ReportService {
     private readonly i18n: I18nService,
   ) { }
 
-  async getTotalReportCount() {
-    const result: any[] = await this.reportRepository.sequelize!.query(
-      `SELECT
+  async getTotalReportCount(): Promise<number> {
+    const [result]: any[] = await this.reportRepository.sequelize!.query(
+      `SELECT (
         COALESCE((SELECT SUM(total_letter) FROM tbl_reports), 0) -
-        COALESCE((SELECT SUM(total_count) FROM tbl_report_share), 0) AS total`,
+        COALESCE((SELECT SUM(total_count) FROM tbl_report_share), 0)
+      )::int AS total`,
       { type: QueryTypes.SELECT },
     );
-    return Number(result[0]?.total || 0);
+    return Number(result?.total || 0);
   }
 
   async addReport(createReportDto: CreateReportDto, lang: string = 'tk') {
@@ -51,45 +52,67 @@ export class ReportService {
     }
   }
 
-
-  async getAllReports(page: number = 1, limit: number = 10, lang: string = 'tk') {
+  async getAllReports(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    lang: string = 'tk',
+  ) {
     try {
       const pageNum = Math.max(1, Number(page) || 1);
       const limitNum = Math.max(1, Math.min(100, Number(limit) || 10));
       const offset = (pageNum - 1) * limitNum;
-      const sequelize = this.reportRepository.sequelize!;
 
-      const [countResult, rows, totalResult]: [any[], any[], any[]] = await Promise.all([
-        sequelize.query(
-          `SELECT COUNT(*)::int AS total FROM tbl_reports`,
-          { type: QueryTypes.SELECT },
-        ),
-        sequelize.query(
-          `SELECT guid, index_number, name, start_yh_number, end_yh_number, total_letter, note, "createdAt", "updatedAt"
-           FROM tbl_reports
-           ORDER BY "createdAt" DESC
-           LIMIT :limit OFFSET :offset`,
-          { replacements: { limit: limitNum, offset }, type: QueryTypes.SELECT },
-        ),
-        sequelize.query(
-          `SELECT
-            COALESCE((SELECT SUM(total_letter) FROM tbl_reports), 0) -
-            COALESCE((SELECT SUM(total_count) FROM tbl_report_share), 0) AS total`,
-          { type: QueryTypes.SELECT },
-        ),
+      const replacements: any = {
+        limit: limitNum,
+        offset,
+        search: search?.trim() ? `%${search.trim()}%` : null,
+      };
+
+      const sqlQuery = `
+        SELECT 
+          guid,
+          index_number,
+          name,
+          start_yh_number,
+          end_yh_number,
+          total_letter,
+          note,
+          "createdAt",
+          "updatedAt",
+          COUNT(*) OVER() AS "totalCount"
+        FROM tbl_reports
+        WHERE (:search::text IS NULL OR (
+          name ILIKE :search
+          OR start_yh_number::text ILIKE :search
+          OR end_yh_number::text ILIKE :search
+          OR total_letter::text ILIKE :search
+          OR note ILIKE :search
+          OR "createdAt"::text ILIKE :search
+        ))
+        ORDER BY "createdAt" DESC
+        LIMIT :limit OFFSET :offset
+      `;
+
+      const [rows, total_report_count]: [any[], number] = await Promise.all([
+        this.reportRepository.sequelize!.query(sqlQuery, {
+          replacements,
+          type: QueryTypes.SELECT,
+        }),
+        this.getTotalReportCount(),
       ]);
 
-      const total = Number(countResult[0]?.total || 0);
-      const total_report_count = Number(totalResult[0]?.total || 0);
+      const totalItems = rows.length > 0 ? Number(rows[0].totalCount) : 0;
+      const data = rows.map(({ totalCount, ...rest }) => rest);
 
       return {
         status: 200,
-        data: rows,
+        data,
         meta: {
-          totalItems: total,
-          itemCount: rows.length,
+          totalItems,
+          itemCount: data.length,
           itemsPerPage: limitNum,
-          totalPages: Math.ceil(total / limitNum),
+          totalPages: Math.ceil(totalItems / limitNum),
           currentPage: pageNum,
         },
         message: this.i18n.t('report.listFetched', { lang }),
@@ -104,8 +127,6 @@ export class ReportService {
     }
   }
 
-
-
   async updateReport(updateReportDto: UpdateReportDto, lang: string = 'tk') {
     try {
       const { guid, ...updateData } = updateReportDto;
@@ -118,11 +139,10 @@ export class ReportService {
         where: { guid },
       });
 
-      const updatedReport = await this.reportRepository.findOne({
-        where: { guid },
-      });
-
-      const total_report_count = await this.getTotalReportCount();
+      const [updatedReport, total_report_count] = await Promise.all([
+        this.reportRepository.findOne({ where: { guid } }),
+        this.getTotalReportCount(),
+      ]);
 
       return {
         ...successResponse(

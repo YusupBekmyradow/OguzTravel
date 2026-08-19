@@ -28,9 +28,10 @@ export class ReportController {
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    return this.reportService.getAllReports(Number(page), Number(limit), lang);
+    return this.reportService.getAllReports(Number(page), Number(limit), search, lang);
   }
 
   @Patch('/update-report')
