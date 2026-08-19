@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { B2bService } from './b2b.service';
 import { CreateB2bDto } from './dto/create-b2b.dto';
 import { UpdateB2bDto } from './dto/update-b2b.dto';
@@ -25,6 +25,7 @@ export class B2bController {
   async getAllB2b(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
     @Query('datetime') datetime?: string,
     @Query('assignment_opr_guid') assignment_opr_guid?: string,
     @Query('receiver_opr_guid') receiver_opr_guid?: string,
@@ -34,7 +35,16 @@ export class B2bController {
     @Query('is_paid') is_paid?: boolean,
     @I18nLang() lang: string = 'tk',
   ) {
-    const filters = { datetime, assignment_opr_guid, receiver_opr_guid, status_guid, travel_type: travel_type !== undefined ? Number(travel_type) : undefined, flight_date, is_paid: is_paid !== undefined ? String(is_paid) === 'true' : undefined };
+    const filters = {
+      search,
+      datetime,
+      assignment_opr_guid,
+      receiver_opr_guid,
+      status_guid,
+      travel_type: travel_type !== undefined ? Number(travel_type) : undefined,
+      flight_date,
+      is_paid: is_paid !== undefined ? String(is_paid) === 'true' : undefined,
+    };
     return await this.b2bService.getAllB2b(Number(page), Number(limit), filters, lang);
   }
 

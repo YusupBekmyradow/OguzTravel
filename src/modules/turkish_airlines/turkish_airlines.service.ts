@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateTurkishAirlineDto } from './dto/create-turkish_airline.dto';
 import { UpdateTurkishAirlineDto } from './dto/update-turkish_airline.dto';
@@ -13,6 +13,8 @@ import { Tstatus } from '../tstatus/entities/tstatus.entity';
 import { Sequelize } from 'sequelize-typescript';
 import { Op, QueryTypes } from 'sequelize';
 
+import { TurkishPayment } from '../turkish_payment/entities/turkish_payment.entity';
+
 interface FooterRow {
   office: string;
   total_base: number | string;
@@ -26,6 +28,7 @@ interface FooterRow {
 export class TurkishAirlinesService {
   constructor(
     @InjectModel(TurkishAirline) private turkishAirlineRepo: typeof TurkishAirline,
+    @InjectModel(TurkishPayment) private turkishPaymentRepo: typeof TurkishPayment,
     @InjectModel(Client) private clientRepository: typeof Client,
     private sequelize: Sequelize,
     private readonly i18n: I18nService,
@@ -150,16 +153,35 @@ export class TurkishAirlinesService {
 
 
   async addTurkishAirline(createTurkishAirlineDto: CreateTurkishAirlineDto, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
-      const client = await this.clientRepository.findByPk(createTurkishAirlineDto.client_guid);
+      const client = await this.clientRepository.findByPk(createTurkishAirlineDto.client_guid, { transaction: t });
 
       const turkishAirline = await this.turkishAirlineRepo.create(
         {
           ...createTurkishAirlineDto,
           passport_count: client ? (client.passport_count || 1) : 1
         } as any,
-        { hooks: true }
+        { hooks: true, transaction: t }
       );
+
+      const isResetStatus = createTurkishAirlineDto.status_guid === '22f0d634-5798-4e5b-9d2b-34b94ec36fbf';
+      const isPaidTrue = createTurkishAirlineDto.is_paid === true || (createTurkishAirlineDto.is_paid as any) === 'true';
+      const targetPrice = createTurkishAirlineDto.total_price !== undefined
+        ? Math.round(Number(createTurkishAirlineDto.total_price))
+        : (Number(turkishAirline.quoted_price) || Math.round(Number(turkishAirline.total_price)) || 0);
+
+      if ((isPaidTrue || isResetStatus) && targetPrice > 0) {
+        await this.turkishPaymentRepo.create({
+          turkish_airline_guid: turkishAirline.guid,
+          amount: targetPrice,
+          payment_date: new Date(),
+          opr_guid: createTurkishAirlineDto.receiver_opr_guid || createTurkishAirlineDto.assignment_opr_guid
+        } as any, { transaction: t });
+      }
+
+      await t.commit();
+
       const newTurkishAirline = await this.turkishAirlineRepo.findOne({
         where: { guid: turkishAirline.guid },
         include: this.getTurkishAirlineIncludes(),
@@ -175,6 +197,7 @@ export class TurkishAirlinesService {
         message: this.i18n.t('turkish_airlines.created', { lang })
       };
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.createFailed', { lang }), error);
     }
   }
@@ -202,7 +225,7 @@ export class TurkishAirlinesService {
 
 
   async getAllTurkishAirline(page: number = 1, limit: number = 10,
-    filters: { datetime?: string; assignment_opr_guid?: string; receiver_opr_guid?: string; status_guid?: string; flight_date?: string; is_paid?: boolean | string; office_guid?: string; } = {},
+    filters: { search?: string; datetime?: string; assignment_opr_guid?: string; receiver_opr_guid?: string; status_guid?: string; flight_date?: string; is_paid?: boolean | string; office_guid?: string; } = {},
     lang: string = 'tk',
   ) {
     try {
@@ -211,6 +234,22 @@ export class TurkishAirlinesService {
       const offset = (currentPage - 1) * currentLimit;
 
       const whereCondition: any = {};
+      if (filters.search && filters.search.trim() !== '') {
+        const searchPattern = `%${filters.search.trim()}%`;
+        const searchLower = filters.search.trim().toLowerCase();
+        whereCondition[Op.or] = [
+          { milesSmiles: { [Op.iLike]: searchPattern } },
+          { pnr: { [Op.iLike]: searchPattern } },
+          { ticket_number: { [Op.iLike]: searchPattern } },
+          { route: { [Op.iLike]: searchPattern } },
+          { class: { [Op.iLike]: searchPattern } },
+          this.sequelize.where(
+            this.sequelize.fn('LOWER', this.sequelize.literal(`"TurkishAirline"."agent"->>'name'`)),
+            { [Op.like]: `%${searchLower}%` }
+          ),
+          { '$client.fullName$': { [Op.iLike]: searchPattern } },
+        ];
+      }
       if (filters.datetime) {
         const dateOnly = filters.datetime.includes('T')
           ? filters.datetime.split('T')[0]
@@ -369,19 +408,106 @@ export class TurkishAirlinesService {
 
 
   async updateTurkishAirline(updateDto: UpdateTurkishAirlineDto, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
-      const turkishAirline = await this.turkishAirlineRepo.findByPk(updateDto.guid);
-      if (!turkishAirline) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('turkish_airlines.notFound', { lang }));
+      const turkishAirline = await this.turkishAirlineRepo.findByPk(updateDto.guid, { transaction: t });
+      if (!turkishAirline) {
+        await t.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('turkish_airlines.notFound', { lang }));
+      }
       let updateData: any = { ...updateDto };
       if (updateDto.client_guid && updateDto.client_guid !== turkishAirline.client_guid) {
-        const client = await this.clientRepository.findByPk(updateDto.client_guid);
+        const client = await this.clientRepository.findByPk(updateDto.client_guid, { transaction: t });
         if (client) {
           updateData.passport_count = client.passport_count || 1;
         }
       } else if (!updateDto.client_guid) {
         updateData.passport_count = turkishAirline.passport_count;
       }
-      await turkishAirline.update(updateData);
+
+      const targetPrice = updateDto.total_price !== undefined
+        ? Math.round(Number(updateDto.total_price))
+        : (Number(turkishAirline.quoted_price) || Math.round(Number(turkishAirline.total_price)) || 0);
+
+      const operatorGuid = updateDto.receiver_opr_guid || updateDto.assignment_opr_guid || turkishAirline.receiver_opr_guid || turkishAirline.assignment_opr_guid;
+
+      const isResetStatus = updateDto.status_guid === '22f0d634-5798-4e5b-9d2b-34b94ec36fbf';
+
+      if (isResetStatus) {
+        await this.turkishPaymentRepo.destroy({
+          where: { turkish_airline_guid: turkishAirline.guid },
+          transaction: t
+        });
+
+        if (targetPrice > 0) {
+          await this.turkishPaymentRepo.create({
+            turkish_airline_guid: turkishAirline.guid,
+            amount: targetPrice,
+            payment_date: new Date(),
+            opr_guid: operatorGuid
+          } as any, { transaction: t });
+        }
+      } else {
+        const isPaidTrue = updateDto.is_paid === true || (updateDto.is_paid as any) === 'true';
+        const isPaidFalse = updateDto.is_paid === false || (updateDto.is_paid as any) === 'false';
+        const willBePaid = isPaidTrue || (turkishAirline.is_paid === true && !isPaidFalse);
+
+        if (willBePaid) {
+          const payments = await this.turkishPaymentRepo.findAll({
+            where: { turkish_airline_guid: turkishAirline.guid },
+            order: [['index_number', 'ASC']],
+            transaction: t
+          });
+
+          const currentTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+          const diff = Number((targetPrice - currentTotalPaid).toFixed(2));
+
+          if (diff !== 0) {
+            if (payments.length === 0) {
+              if (targetPrice > 0) {
+                await this.turkishPaymentRepo.create({
+                  turkish_airline_guid: turkishAirline.guid,
+                  amount: targetPrice,
+                  payment_date: new Date(),
+                  opr_guid: operatorGuid
+                } as any, { transaction: t });
+              }
+            } else if (payments.length === 1) {
+              await payments[0].update({
+                amount: targetPrice,
+                opr_guid: operatorGuid || payments[0].opr_guid
+              }, { transaction: t });
+            } else if (diff > 0) {
+              const lastPayment = payments[payments.length - 1];
+              await lastPayment.update({
+                amount: Number((Number(lastPayment.amount) + diff).toFixed(2)),
+                opr_guid: operatorGuid || lastPayment.opr_guid
+              }, { transaction: t });
+            } else {
+              let amountToReduce = Math.abs(diff);
+              for (let i = payments.length - 1; i >= 0 && amountToReduce > 0; i--) {
+                const p = payments[i];
+                const pAmount = Number(p.amount);
+                if (pAmount <= amountToReduce && i > 0) {
+                  await p.destroy({ transaction: t });
+                  amountToReduce = Number((amountToReduce - pAmount).toFixed(2));
+                } else {
+                  const newAmount = Math.max(0, Number((pAmount - amountToReduce).toFixed(2)));
+                  await p.update({
+                    amount: newAmount,
+                    opr_guid: operatorGuid || p.opr_guid
+                  }, { transaction: t });
+                  amountToReduce = 0;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      await turkishAirline.update(updateData, { transaction: t });
+      await t.commit();
+
       const updatedTurkishAirline = await this.turkishAirlineRepo.findOne({
         where: { guid: updateDto.guid },
         include: this.getTurkishAirlineIncludes(),
@@ -390,24 +516,28 @@ export class TurkishAirlinesService {
       const formattedData = this.formatTurkishAirlinePassport(updatedTurkishAirline);
       return { status: 200, data: formattedData, message: this.i18n.t('turkish_airlines.updated', { lang }) };
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.updateFailed', { lang }), error);
     }
   }
 
 
   async deleteTurkishAirline(guid: string, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
-      const turkishAirline = await this.turkishAirlineRepo.findByPk(guid);
+      const turkishAirline = await this.turkishAirlineRepo.findByPk(guid, { transaction: t });
       if (!turkishAirline) {
+        await t.rollback();
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('turkish_airlines.notFound', { lang }));
       }
-      await turkishAirline.destroy();
+      await this.turkishPaymentRepo.destroy({ where: { turkish_airline_guid: guid }, transaction: t });
+      await turkishAirline.destroy({ transaction: t });
+      await t.commit();
 
       return successResponse(HttpStatuses.OK, null, this.i18n.t('turkish_airlines.deleted', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.deleteFailed', { lang }), error)
+      await t.rollback();
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('turkish_airlines.deleteFailed', { lang }), error);
     }
   }
 }
-
-

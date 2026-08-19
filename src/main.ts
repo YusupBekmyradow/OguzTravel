@@ -78,4 +78,4 @@ zero();
 // migration yazmaly
 // cors request haysy apilere izin bermeli
 // message responseleri dogry edip duzeltmeli catylmadyklary hem bar
-// payment uytgedip bolmayar
+// inbound visa payment 

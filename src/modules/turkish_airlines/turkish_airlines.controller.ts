@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { TurkishAirlinesService } from './turkish_airlines.service';
 import { CreateTurkishAirlineDto } from './dto/create-turkish_airline.dto';
 import { UpdateTurkishAirlineDto } from './dto/update-turkish_airline.dto';
@@ -30,6 +30,7 @@ export class TurkishAirlinesController {
   async getAllTurkishAirline(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
     @Query('datetime') datetime?: string,
     @Query('assignment_opr_guid') assignment_opr_guid?: string,
     @Query('receiver_opr_guid') receiver_opr_guid?: string,
@@ -39,7 +40,7 @@ export class TurkishAirlinesController {
     @Query('office_guid') office_guid?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    const filters = { datetime, assignment_opr_guid, receiver_opr_guid, status_guid, flight_date, is_paid, office_guid };
+    const filters = { search, datetime, assignment_opr_guid, receiver_opr_guid, status_guid, flight_date, is_paid, office_guid };
     return await this.turkishAirlinesService.getAllTurkishAirline(Number(page), Number(limit), filters, lang);
   }
 

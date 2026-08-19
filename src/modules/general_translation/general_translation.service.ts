@@ -70,12 +70,12 @@ export class GeneralTranslationService {
         ...createDto
       } as any, { hooks: true, transaction: t });
 
-      if (createDto.is_paid === true) {
+      if ((createDto.is_paid === true || createDto.is_paid === 'true' || createDto.status === '0' || createDto.status === 0) && (Number(translation.price) || 0) > 0) {
         await this.transPaymentRepo.create({
           translation_guid: translation.guid,
-          amount: translation.price || 0,
+          amount: Number(translation.price) || 0,
           payment_date: new Date(),
-          opr_guid: createDto.opr_guid
+          opr_guid: createDto.opr_guid || translation.opr_guid
         } as any, { transaction: t });
       }
 
@@ -92,6 +92,7 @@ export class GeneralTranslationService {
 
       return { status: 201, data: newTranslation, message: this.i18n.t('general_translation.created', { lang }) };
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('general_translation.createFailed', { lang }), error);
     }
   }
@@ -244,6 +245,81 @@ export class GeneralTranslationService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('general_translation.notFound', { lang }));
       }
 
+      const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(translation.price);
+      const operatorGuid = updateDto.opr_guid || translation.opr_guid;
+
+      if (updateDto.status === '0' || updateDto.status === 0) {
+        await this.transPaymentRepo.destroy({
+          where: { translation_guid: translation.guid },
+          transaction: t
+        });
+
+        if (targetPrice > 0) {
+          await this.transPaymentRepo.create({
+            translation_guid: translation.guid,
+            amount: targetPrice,
+            payment_date: new Date(),
+            opr_guid: operatorGuid
+          } as any, { transaction: t });
+        }
+      } else {
+        const isPaidTrue = updateDto.is_paid === true || updateDto.is_paid === 'true';
+        const isPaidFalse = updateDto.is_paid === false || updateDto.is_paid === 'false';
+        const willBePaid = isPaidTrue || (translation.is_paid === true && !isPaidFalse);
+
+        if (willBePaid) {
+          const payments = await this.transPaymentRepo.findAll({
+            where: { translation_guid: translation.guid },
+            order: [['index_number', 'ASC']],
+            transaction: t
+          });
+
+          const currentTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+          const diff = Number((targetPrice - currentTotalPaid).toFixed(2));
+
+          if (diff !== 0) {
+            if (payments.length === 0) {
+              if (targetPrice > 0) {
+                await this.transPaymentRepo.create({
+                  translation_guid: translation.guid,
+                  amount: targetPrice,
+                  payment_date: new Date(),
+                  opr_guid: operatorGuid
+                } as any, { transaction: t });
+              }
+            } else if (payments.length === 1) {
+              await payments[0].update({
+                amount: targetPrice,
+                opr_guid: operatorGuid || payments[0].opr_guid
+              }, { transaction: t });
+            } else if (diff > 0) {
+              const lastPayment = payments[payments.length - 1];
+              await lastPayment.update({
+                amount: Number((Number(lastPayment.amount) + diff).toFixed(2)),
+                opr_guid: operatorGuid || lastPayment.opr_guid
+              }, { transaction: t });
+            } else {
+              let amountToReduce = Math.abs(diff);
+              for (let i = payments.length - 1; i >= 0 && amountToReduce > 0; i--) {
+                const p = payments[i];
+                const pAmount = Number(p.amount);
+                if (pAmount <= amountToReduce && i > 0) {
+                  await p.destroy({ transaction: t });
+                  amountToReduce = Number((amountToReduce - pAmount).toFixed(2));
+                } else {
+                  const newAmount = Math.max(0, Number((pAmount - amountToReduce).toFixed(2)));
+                  await p.update({
+                    amount: newAmount,
+                    opr_guid: operatorGuid || p.opr_guid
+                  }, { transaction: t });
+                  amountToReduce = 0;
+                }
+              }
+            }
+          }
+        }
+      }
+
       await translation.update(updateDto as any, { transaction: t });
 
       await t.commit();
@@ -266,13 +342,20 @@ export class GeneralTranslationService {
 
 
   async deleteGeneralTranslation(guid: string, lang: string) {
+    const t = await this.sequelize.transaction();
     try {
-      const translation = await this.translationRepository.findByPk(guid);
-      if (!translation) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('general_translation.notFound', { lang }));
+      const translation = await this.translationRepository.findByPk(guid, { transaction: t });
+      if (!translation) {
+        await t.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('general_translation.notFound', { lang }));
+      }
 
-      await translation.destroy();
+      await this.transPaymentRepo.destroy({ where: { translation_guid: guid }, transaction: t });
+      await translation.destroy({ transaction: t });
+      await t.commit();
       return successResponse(HttpStatuses.OK, null, this.i18n.t('general_translation.deleted', { lang }));
     } catch (error: any) {
+      await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('general_translation.deleteFailed', { lang }), error);
     }
   }

@@ -171,7 +171,16 @@ export class ReceivingService {
 
 
   async findAllReceiving(
-    query: { page?: number; limit?: number; search?: string; country_guid?: string; office_guid?: string },
+    query: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      country_guid?: string;
+      office_guid?: string;
+      operator_guid?: string;
+      application_date?: string;
+      visa_type?: string;
+    },
     lang: string = 'tk',
   ) {
     try {
@@ -189,6 +198,18 @@ export class ReceivingService {
       if (query.office_guid) {
         conditions.push(`r.office_guid = :office_guid`);
         replacements.office_guid = query.office_guid;
+      }
+      if (query.operator_guid) {
+        conditions.push(`r.operator_guid = :operator_guid`);
+        replacements.operator_guid = query.operator_guid;
+      }
+      if (query.application_date) {
+        conditions.push(`r.application_date::date = :application_date::date`);
+        replacements.application_date = query.application_date;
+      }
+      if (query.visa_type?.trim()) {
+        conditions.push(`r.visa_type ILIKE :visa_type`);
+        replacements.visa_type = `%${query.visa_type.trim()}%`;
       }
       if (query.search?.trim()) {
         conditions.push(`(

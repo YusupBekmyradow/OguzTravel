@@ -8,10 +8,11 @@ import { ClientModule } from '../client/client.module';
 import { OfficeModule } from '../office/office.module';
 import { TstatusModule } from '../tstatus/tstatus.module';
 import { Client } from '../client/entities/client.entity';
+import { TurkishPayment } from '../turkish_payment/entities/turkish_payment.entity';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([TurkishAirline, Client]),
+    SequelizeModule.forFeature([TurkishAirline, Client, TurkishPayment]),
     EmployeeModule,
     ClientModule,
     TstatusModule,
