@@ -33,7 +33,11 @@ export class RefferalLetterService {
             attributes: ['guid', 'fullName', 'shortName']
           }
         ]
-      }, { model: Client, attributes: ['guid', 'fullName', 'passport_number', 'dateOfBirth', 'gender', 'passport_count', 'passportHistory'] }
+      }, {
+        model: Client,
+        as: 'client',
+        attributes: ['guid', 'fullName', 'passport_number', 'dateOfBirth', 'gender', 'passport_count', 'passportHistory']
+      }
     ];
   }
 
@@ -116,25 +120,20 @@ export class RefferalLetterService {
       const offset = (currentPage - 1) * currentLimit;
       const whereConditions: any = {};
       if (filters) {
-
-
         if (filters.search && filters.search.trim() !== '') {
           const searchPattern = `%${filters.search.trim()}%`;
-
+          const searchLower = filters.search.trim().toLowerCase();
           whereConditions[Op.or] = [
-            // 1. RefferalLetter tablosundaki alanlar
             { destination_country: { [Op.iLike]: searchPattern } },
             { tranzit: { [Op.iLike]: searchPattern } },
             { travel_document_number: { [Op.iLike]: searchPattern } },
             { contract_number: { [Op.iLike]: searchPattern } },
-
-            // 2. JSONB agent.name (TypeScript hatası vermez)
-            { '$agent.name$': { [Op.iLike]: searchPattern } },
-
-            // 3. Client tablosundaki fullName alanı
-            { '$tbl_clients.fullName$': { [Op.iLike]: searchPattern } },
+            this.sequelize.where(
+              this.sequelize.fn('LOWER', this.sequelize.literal(`"RefferalLetter"."agent"->>'name'`)),
+              { [Op.like]: `%${searchLower}%` }
+            ),
+            { '$client.fullName$': { [Op.iLike]: searchPattern } },
           ];
-
         }
 
         if (filters.received_opr_guid) {
@@ -183,11 +182,12 @@ export class RefferalLetterService {
           totalItems: count,
           totalPages: Math.ceil(count / limit),
           currentPage: currentPage,
+          subQuery: false
         },
-        message: 'Referral letter list retrieved successfully',
+        message: this.i18n.t('refferal_letter.listFetched', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to retrieve referral letter list. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.fetchFailed', { lang }), error);
     }
   }
 

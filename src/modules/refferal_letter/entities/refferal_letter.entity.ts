@@ -132,6 +132,7 @@ export class RefferalLetter extends Model<RefferalLetter> {
     @BelongsTo(() => Client, {
         targetKey: 'guid',
         foreignKey: 'client_guid',
+        as: 'client',
         onDelete: 'SET NULL',
         onUpdate: 'SET NULL'
     })
