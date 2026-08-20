@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsObject, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsObject, ValidateNested, ValidateIf } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -18,7 +18,11 @@ const transformJson = ({ value }: { value: any }) => {
 };
 
 export class ContactDto {
-  @ApiPropertyOptional() @IsOptional() @IsString() declare email?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((o, value) => value !== '' && value !== null)
+  @IsString() declare email?: string;
+
   @ApiPropertyOptional() @IsOptional() @IsString() declare phone?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() declare location?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() declare website?: string;
