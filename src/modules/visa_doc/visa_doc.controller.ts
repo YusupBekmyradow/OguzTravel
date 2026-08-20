@@ -9,9 +9,9 @@ import { UpdateVisaDocDto } from './dto/update-visa_doc.dto';
 import { CreateVisaDocDto } from './dto/create-visa_doc.dto';
 
 @ApiTags('VisaDocs')
-// @ApiBearerAuth('bearerAuth')
-// @UseGuards(JwtAuthGuard, PermissionsGuard)
-// @RequirePermissions('/visa-docs')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('visa/package')
 @Controller('visa-docs')
 export class VisaDocsController {
   constructor(private readonly visaDocsService: VisaDocsService) { }
