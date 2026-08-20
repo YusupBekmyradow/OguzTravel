@@ -11,7 +11,7 @@ import { CreateVisaDocDto } from './dto/create-visa_doc.dto';
 @ApiTags('VisaDocs')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('visa/package')
+@RequirePermissions('/visa/package')
 @Controller('visa-docs')
 export class VisaDocsController {
   constructor(private readonly visaDocsService: VisaDocsService) { }
