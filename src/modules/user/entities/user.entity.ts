@@ -1,10 +1,11 @@
-import { Table, Model, Column, DataType, BeforeCreate, BeforeUpdate, BelongsTo, Index, HasMany } from "sequelize-typescript";
+import { Table, Model, Column, DataType, BeforeCreate, BeforeUpdate, BelongsTo, Index, HasMany, HasOne } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { IsNotEmpty, ValidateIf, IsUUID } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Message } from "../../messages/entities/message.entity";
 import { TaskAssignee } from "../../messages/entities/task_assignees.entity";
 import { Op } from "sequelize";
+import { UserDetail } from "../../user_datails/entities/user_datail.entity";
 
 @Table({
   tableName: 'tbl_users',
@@ -109,6 +110,12 @@ export class User extends Model<User> {
     sourceKey: 'guid'
   })
   declare admmessage: Message[];
+
+  @HasOne(() => UserDetail, {
+    foreignKey: 'user_guid',
+    sourceKey: 'guid',
+  })
+  declare userDetail: UserDetail;
 
   @BeforeCreate
   @BeforeUpdate

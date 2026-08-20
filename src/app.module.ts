@@ -45,6 +45,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { CustomFieldModule } from './modules/custom_field/custom_field.module';
 import { ReceivingModule } from './modules/receiving/receiving.module';
 import { VisaDocsModule } from './modules/visa_doc/visa_doc.module';
+import { UserDatailsModule } from './modules/user_datails/user_datails.module';
 dotenv.config();
 
 @Module({
@@ -106,7 +107,8 @@ dotenv.config();
     CustomFieldModule,
     CountryModule,
     ReceivingModule,
-    VisaDocsModule
+    VisaDocsModule,
+    UserDatailsModule
   ],
   controllers: [AppController],
   providers: [

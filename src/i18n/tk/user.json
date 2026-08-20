@@ -1,12 +1,16 @@
 {
     "updated": "Ulanyjy maglumatlary üstünlikli täzelendi",
+    "profileUpdated": "Profil maglumatlary üstünlikli täzelendi",
     "notFound": "Görkezilen ID boýunça ulanyjy tapylmady",
     "listFetched": "Ulanyjylaryň sanawy üstünlikli alyndy",
+    "fetched": "Ulanyjy maglumatlary üstünlikli alyndy",
     "deleteFailed": "Ulanyjy pozulmady. Ýalňyşlyk ýüze çykdy.",
     "updateFailed": "Ulanyjy maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
     "createFailed": "Ulanyjy döredilmedi. Ýalňyşlyk ýüze çykdy.",
     "deleted": "Ulanyjy maglumaty üstünlikli pozuldy",
     "created": "Ulanyjy hasaby üstünlikli döredildi",
     "fetchFailed": "Ulanyjylaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
-    "employeeNotFound": "Görkezilen ID boýunça işgär tapylmady"
+    "employeeNotFound": "Görkezilen ID boýunça işgär tapylmady",
+    "meFetched": "Sessiýa maglumatlary üstünlikli alyndy",
+    "meFailed": "Sessiýa maglumatlaryny alyp bolmady. Ýalňyşlyk ýüze çykdy."
 }
