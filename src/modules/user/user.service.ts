@@ -1,41 +1,98 @@
 ﻿import { Injectable } from '@nestjs/common';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
-import { InjectModel } from '@nestjs/sequelize';
+import { InjectConnection, InjectModel } from '@nestjs/sequelize';
 import { User } from './entities/user.entity';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import { Employee } from '../employee/entities/employee.entity';
 import { I18nService } from 'nestjs-i18n';
+import { UserDetail } from '../user_datails/entities/user_datail.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User) private userRepository: typeof User,
     @InjectModel(Employee) private employeeRepository: typeof Employee,
+    @InjectModel(UserDetail) private userDetailRepository: typeof UserDetail,
+    @InjectConnection() private readonly sequelize: Sequelize,
     private readonly i18n: I18nService,
   ) { }
 
+
   async addUser(createUserDto: CreateUserDto, lang: string) {
+    const transaction = await this.sequelize.transaction();
     try {
       let finalPhoneNumber = createUserDto.phone_number;
+      let employee: Employee | null = null;
       if (createUserDto.isExternalUser === false && createUserDto.employee_guid) {
-        const employee = await this.employeeRepository.findOne({ where: { guid: createUserDto.employee_guid } });
-        if (!employee) return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('user.employeeNotFound', { lang }));
+        employee = await this.employeeRepository.findOne({
+          where: { guid: createUserDto.employee_guid },
+          transaction,
+        });
+        if (!employee) {
+          await transaction.rollback();
+          return errorResponse(
+            HttpStatuses.NOT_FOUND,
+            this.i18n.t('user.employeeNotFound', { lang }),
+          );
+        }
         finalPhoneNumber = employee.phone_number;
       }
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-      const user = await this.userRepository.create({ ...createUserDto, password: hashedPassword, phone_number: finalPhoneNumber } as any);
-      await user.reload({ include: [Employee] });
-      const plainUser = user.get({ plain: true });
+
+      const user = await this.userRepository.create(
+        { ...createUserDto, password: hashedPassword, phone_number: finalPhoneNumber } as any,
+        { transaction },
+      );
+      const fullName = employee ? employee.fullName : 'External User';
+      const email = employee ? employee.gmail : null;
+      await this.userDetailRepository.create(
+        {
+          user_guid: user.guid,
+          full_name: fullName,
+          role: user.role,
+          contact: {
+            email: email,
+            phone: user.phone_number || null,
+          },
+        } as any,
+        { transaction },
+      );
+      await transaction.commit();
+
+      const createdUser = await this.userRepository.findOne({
+        where: { guid: user.guid },
+        include: [Employee, UserDetail],
+      });
+
+      if (!createdUser) {
+        return errorResponse(
+          HttpStatuses.INTERNAL_SERVER_ERROR,
+          this.i18n.t('user.createFailed', { lang }),
+        );
+      }
+
+      const plainUser = createdUser.get({ plain: true });
       const { password, refresh_token, ...userResponse } = plainUser;
-      return successResponse(HttpStatuses.CREATED, userResponse, this.i18n.t('user.created', { lang }));
+      return successResponse(
+        HttpStatuses.CREATED,
+        userResponse,
+        this.i18n.t('user.created', { lang }),
+      );
     } catch (error) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('user.createFailed', { lang }), error);
+      await transaction.rollback();
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('user.createFailed', { lang }),
+        error,
+      );
     }
   }
+
+
 
   async getAllUser(page: number = 1, limit: number = 10, search?: string, filters?: { isActive?: boolean; isExternalUser?: boolean }, lang: string = 'tk') {
     try {
