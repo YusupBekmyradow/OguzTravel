@@ -6,7 +6,6 @@ import { Visa } from './entities/visa.entity';
 import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
-import { VisaPackage } from '../visa_package/entities/visa_package.entity';
 import { Employee } from '../employee/entities/employee.entity';
 import { Office } from '../office/entities/office.entity';
 import { I18nService } from 'nestjs-i18n';
@@ -23,11 +22,6 @@ export class VisaService {
     return [
       { model: Employee, as: 'receiveroperator', attributes: ['guid', 'fullName'], include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }] },
       { model: Client, attributes: ['guid', 'fullName', 'phone_number', 'passport_number', 'dateOfBirth', 'passport_count', 'passportHistory'] },
-      { model: VisaPackage, as: 'package', attributes: ['guid', 'name', 'price', 'sale_price'] },
-      { model: VisaPackage, as: 'service', attributes: ['guid', 'name', 'price', 'sale_price'] },
-      { model: VisaPackage, as: 'hotel_booking', attributes: ['guid', 'name', 'price', 'sale_price'] },
-      { model: VisaPackage, as: 'translation', attributes: ['guid', 'name', 'price', 'sale_price'] },
-      { model: VisaPackage, as: 'courier', attributes: ['guid', 'name', 'price', 'sale_price'] },
     ];
   }
 

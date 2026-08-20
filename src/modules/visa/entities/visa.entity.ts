@@ -1,7 +1,5 @@
 import { Table, Model, Column, DataType, BelongsTo, HasMany } from "sequelize-typescript";
 import { Client } from "../../client/entities/client.entity";
-import { VisaPackage } from "../../visa_package/entities/visa_package.entity";
-import { VisaPayment } from "../../visa_payment/entities/visa_payment.entity";
 import { Employee } from "../../employee/entities/employee.entity";
 
 @Table({
@@ -50,36 +48,6 @@ export class Visa extends Model<Visa> {
   declare receiver_opr_guid: string;
 
   @Column({
-    type: DataType.UUID,
-    allowNull: true
-  })
-  declare package_guid: string;
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: true
-  })
-  declare service_guid: string;
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: true
-  })
-  declare hotel_booking_guid: string;
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: true
-  })
-  declare translation_guid: string;
-
-  @Column({
-    type: DataType.UUID,
-    allowNull: true
-  })
-  declare courier_guid: string;
-
-  @Column({
     type: DataType.DECIMAL(12, 2),
     defaultValue: 0
   })
@@ -107,56 +75,6 @@ export class Visa extends Model<Visa> {
   })
   declare client: Client;
 
-  @BelongsTo(() => VisaPackage, {
-    targetKey: 'guid',
-    foreignKey: 'package_guid',
-    as: 'package',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare package: VisaPackage;
-
-  @BelongsTo(() => VisaPackage, {
-    targetKey: 'guid',
-    foreignKey: 'service_guid',
-    as: 'service',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare service: VisaPackage;
-
-  @BelongsTo(() => VisaPackage, {
-    targetKey: 'guid',
-    foreignKey: 'hotel_booking_guid',
-    as: 'hotel_booking',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare hotel_booking: VisaPackage;
-
-  @BelongsTo(() => VisaPackage, {
-    targetKey: 'guid',
-    foreignKey: 'translation_guid',
-    as: 'translation',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare translation: VisaPackage;
-
-  @BelongsTo(() => VisaPackage, {
-    targetKey: 'guid',
-    foreignKey: 'courier_guid',
-    as: 'courier',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare courier: VisaPackage;
-
-  @HasMany(() => VisaPayment, {
-    foreignKey: 'visa_guid',
-    sourceKey: 'guid'
-  })
-  declare visaPayment: VisaPayment[];
 
   @BelongsTo(() => Employee, {
     targetKey: 'guid',

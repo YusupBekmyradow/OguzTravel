@@ -20,8 +20,6 @@ import { TurkishAirlinesModule } from './modules/turkish_airlines/turkish_airlin
 import { TicketPaymentModule } from './modules/ticket_payment/ticket_payment.module';
 import { VisaModule } from './modules/visa/visa.module';
 import { TurkishPaymentModule } from './modules/turkish_payment/turkish_payment.module';
-import { VisaCategoryModule } from './modules/visa_category/visa_category.module';
-import { VisaPackageModule } from './modules/visa_package/visa_package.module';
 import { VisaPaymentModule } from './modules/visa_payment/visa_payment.module';
 import { RefferalLetterModule } from './modules/refferal_letter/refferal_letter.module';
 import { GeneralTranslationModule } from './modules/general_translation/general_translation.module';
@@ -86,8 +84,6 @@ dotenv.config();
     TicketPaymentModule,
     VisaModule,
     TurkishPaymentModule,
-    VisaCategoryModule,
-    VisaPackageModule,
     VisaPaymentModule,
     RefferalLetterModule,
     TranslatorModule,

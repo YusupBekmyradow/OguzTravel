@@ -12,8 +12,6 @@ import { TurkishAirline } from '../modules/turkish_airlines/entities/turkish_air
 import { TicketPayment } from '../modules/ticket_payment/entities/ticket_payment.entity';
 import { Visa } from '../modules/visa/entities/visa.entity';
 import { TurkishPayment } from '../modules/turkish_payment/entities/turkish_payment.entity';
-import { VisaCategory } from '../modules/visa_category/entities/visa_category.entity';
-import { VisaPackage } from '../modules/visa_package/entities/visa_package.entity';
 import { VisaPayment } from '../modules/visa_payment/entities/visa_payment.entity';
 import { RefferalLetter } from '../modules/refferal_letter/entities/refferal_letter.entity';
 import { GeneralTranslation } from '../modules/general_translation/entities/general_translation.entity';
@@ -51,8 +49,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     autoLoadModels: true,
     synchronize: true,
     logging: false,
-    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaCategory,
-      VisaPackage, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
+    models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
       Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, ReportShare, CustomField, Country, Receiving]
   };
 };

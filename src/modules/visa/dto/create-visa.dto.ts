@@ -31,31 +31,6 @@ export class CreateVisaDto {
   };
 
   @ApiPropertyOptional()
-  @IsUUID()
-  @IsOptional()
-  declare package_guid?: string;
-
-  @ApiPropertyOptional()
-  @IsUUID()
-  @IsOptional()
-  declare service_guid?: string;
-
-  @ApiPropertyOptional()
-  @IsUUID()
-  @IsOptional()
-  declare hotel_booking_guid?: string;
-
-  @ApiPropertyOptional()
-  @IsUUID()
-  @IsOptional()
-  declare translation_guid?: string;
-
-  @ApiPropertyOptional()
-  @IsUUID()
-  @IsOptional()
-  declare courier_guid?: string;
-
-  @ApiPropertyOptional()
   @IsNumber()
   @IsOptional()
   declare price_tmt?: number
