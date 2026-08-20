@@ -1,0 +1,12 @@
+{
+  "created": "Wiza resminamasy üstünlikli döredildi.",
+  "createFailed": "Wiza resminamasını döretmek amala aşyrylmady.",
+  "listFetched": "Wiza resminamalarynyň sanawy alyndy.",
+  "fetched": "Wiza resminamasy alyndy.",
+  "notFound": "Wiza resminamasy tapylmady.",
+  "fetchFailed": "Wiza resminamalaryny almak amala aşyrylmady.",
+  "updated": "Wiza resminamasy üstünlikli täzelendi.",
+  "updateFailed": "Wiza resminamasını täzelemek amala aşyrylmady.",
+  "deleted": "Wiza resminamasy üstünlikli pozuldy.",
+  "deleteFailed": "Wiza resminamasını pozmak amala aşyrylmady."
+}

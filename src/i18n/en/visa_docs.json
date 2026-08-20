@@ -1,0 +1,11 @@
+{
+  "created": "Visa document created successfully.",
+  "createFailed": "Failed to create visa document.",
+  "listFetched": "Visa documents list fetched successfully.",
+  "notFound": "Visa document not found.",
+  "fetchFailed": "Failed to fetch visa document.",
+  "updated": "Visa document updated successfully.",
+  "updateFailed": "Failed to update visa document.",
+  "deleted": "Visa document deleted successfully.",
+  "deleteFailed": "Failed to delete visa document."
+}
