@@ -13,6 +13,7 @@ import { I18nService } from 'nestjs-i18n';
 import { Position } from '../position/entities/position.entity';
 import { Op } from 'sequelize';
 import { Office } from '../office/entities/office.entity';
+import { UserDetail } from '../user_datails/entities/user_datail.entity';
 
 @Injectable()
 export class AuthService {
@@ -158,7 +159,11 @@ export class AuthService {
                 model: Office,
                 attributes: ['fullName', 'shortName']
               }
-            ]
+            ],
+          },
+          {
+            model: UserDetail,
+            required: false,
           }
         ]
       });
@@ -173,6 +178,7 @@ export class AuthService {
         employee_name: existUser.employee ? existUser.employee.fullName : null,
         office: existUser.employee?.office ?? null,
         positions,
+        userDetail: existUser.userDetail ?? null,
       }, this.i18n.t('auth.loginSuccess', { lang }));
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('auth.loginFailed', { lang }));
