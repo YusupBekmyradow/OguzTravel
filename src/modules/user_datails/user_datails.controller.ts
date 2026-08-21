@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, Req, UseGuards, Headers, UseInterceptors, UploadedFile, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Req, UseGuards, Headers, UseInterceptors, UploadedFile, Query, Param } from '@nestjs/common';
 import { UserProfileService } from './user_datails.service';
 import { I18nLang } from 'nestjs-i18n';
 import { UpdateUserProfileDto } from './dto/update-user_datail.dto';
@@ -14,20 +14,15 @@ import { FileInterceptor } from '@nestjs/platform-express';
 export class UserProfileController {
   constructor(private readonly userProfileService: UserProfileService) { }
 
-  @Get('get-all-user-profile')
-  async getAllProfiles(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-    @Query('search') search?: string,
+  @Get('getOne-profile/:guid')
+  async getProfileByGuid(
+    @Param('guid') guid: string,
     @I18nLang() lang: string = 'tk'
   ) {
-    return this.userProfileService.getAllProfiles(
-      { page, limit, search },
-      lang,
-    );
+    return this.userProfileService.getProfileByGuid(guid, lang);
   }
 
-  
+
   @Get('get-user-profile')
   async getUserProfile(
     @Req() req: any,

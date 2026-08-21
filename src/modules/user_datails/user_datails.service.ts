@@ -19,63 +19,35 @@ export class UserProfileService {
   ) { }
 
 
-  async getAllProfiles(
-    query: { page?: number; limit?: number; search?: string },
-    lang: string = 'tk',
-  ) {
+  async getProfileByGuid(guid: string, lang: string = 'tk') {
     try {
-      const page = Number(query.page) || 1;
-      const limit = Number(query.limit) || 10;
-      const offset = (page - 1) * limit;
-      const search = query.search?.trim() || '';
+      const profile = await this.userDetailRepo.findOne({
+        where: { guid },
+        attributes: [
+          'guid',
+          'full_name',
+          'role',
+          'status',
+          'avatar_url',
+          'contact',
+          'skills',
+          'personal_summary',
+          'work_experience',
+          'education',
+          'languages',
+        ],
+      });
 
-      const tableName = this.userDetailRepo.tableName;
-      const whereClause = search
-        ? `WHERE full_name ILIKE :searchPattern 
-           OR role ILIKE :searchPattern 
-           OR contact->>'email' ILIKE :searchPattern 
-           OR contact->>'phone' ILIKE :searchPattern`
-        : '';
-      const dataSql = `
-        SELECT guid, full_name, role, status, avatar_url, contact, skills, personal_summary, work_experience, education, languages
-        FROM "${tableName}"
-        ${whereClause}
-        ORDER BY "createdAt" DESC
-        LIMIT :limit OFFSET :offset;
-      `;
-      const countSql = `
-        SELECT COUNT(*)::int AS total
-        FROM "${tableName}"
-        ${whereClause};
-      `;
-      const replacements = {
-        searchPattern: `%${search}%`,
-        limit,
-        offset,
-      };
-      const [items, countResult] = await Promise.all([
-        this.sequelize.query(dataSql, {
-          replacements,
-          type: QueryTypes.SELECT,
-        }),
-        this.sequelize.query<{ total: number }>(countSql, {
-          replacements,
-          type: QueryTypes.SELECT,
-        }),
-      ]);
-      const total = countResult[0]?.total || 0;
+      if (!profile) {
+        return errorResponse(
+          HttpStatuses.NOT_FOUND,
+          this.i18n.t('user.notFound', { lang }),
+        );
+      }
+
       return successResponse(
         HttpStatuses.OK,
-        {
-          items,
-          meta: {
-            totalItems: total,
-            itemCount: items.length,
-            itemsPerPage: limit,
-            totalPages: Math.ceil(total / limit),
-            currentPage: page,
-          },
-        },
+        profile,
         this.i18n.t('user.fetched', { lang }),
       );
     } catch (error: any) {
