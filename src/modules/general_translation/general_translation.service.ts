@@ -203,7 +203,9 @@ export class GeneralTranslationService {
         ];
       }
 
-      const { rows, count } = await this.translationRepository.findAndCountAll({
+      const hasSearch = !!(filters.search && filters.search.trim() !== '');
+
+      const [{ rows, count }, totalPriceResult] = await Promise.all([this.translationRepository.findAndCountAll({
         where: whereConditions,
         attributes: {
           exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid'],
@@ -213,7 +215,25 @@ export class GeneralTranslationService {
         order: [['index_number', 'DESC']],
         limit: limit,
         offset: offset,
-      });
+        distinct: true,
+      }),
+      this.translationRepository.findOne({
+        where: whereConditions,
+        include: hasSearch
+          ? [
+            { association: 'client', attributes: [] },
+            { association: 'operator', attributes: [] },
+            { association: 'translator', attributes: [] },
+          ]
+          : [],
+        attributes: [
+          [Sequelize.fn('SUM', Sequelize.col('GeneralTranslation.price')), 'totalPrice']
+        ],
+        raw: true,
+      }),
+      ]);
+
+      const totalPrice = Number((totalPriceResult as any)?.totalPrice || 0);
 
       return {
         status: 200,
@@ -222,7 +242,8 @@ export class GeneralTranslationService {
           totalItems: count,
           totalPages: Math.ceil(count / limit),
           currentPage: page,
-          itemsPerPage: limit
+          itemsPerPage: limit,
+          totalPrice: totalPrice
         },
         message: this.i18n.t('general_translation.listFetched', { lang })
       };
@@ -230,6 +251,7 @@ export class GeneralTranslationService {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('general_translation.fetchFailed', { lang }), error);
     }
   }
+
 
 
   async updateGeneralTranslation(updateDto: any, lang: string) {
