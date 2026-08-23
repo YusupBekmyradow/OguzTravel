@@ -123,6 +123,7 @@ export class CountryService {
 
 
 
+
   async findAll(
     page: number = 1,
     limit: number = 10,
@@ -133,9 +134,7 @@ export class CountryService {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Math.min(100, Number(limit)));
       const offset = (currentPage - 1) * currentLimit;
-
       const sequelize = this.countryRepository.sequelize!;
-
       const searchTerm = search?.trim();
       const whereClause = searchTerm
         ? `WHERE co.code ILIKE :search
@@ -146,33 +145,18 @@ export class CountryService {
 
       const replacements: any = { limit: currentLimit, offset };
       if (searchTerm) replacements.search = `%${searchTerm}%`;
-
-      const [countResult, rows]: [any[], any[]] = await Promise.all([
+      const [countResult, countryRows]: [any[], any[]] = await Promise.all([
         sequelize.query(
           `SELECT COUNT(*)::int AS total FROM tbl_country co ${whereClause}`,
           { replacements, type: QueryTypes.SELECT },
         ),
         sequelize.query(
           `
-        SELECT
-          co.guid,
-          co.code,
-          co.name,
-          co."createdAt",
-          co."updatedAt",
-          co."index_number",
-          co.custom_field_guids,
-          cf.guid          AS cf_guid,
-          cf.field_label,
-          cf.field_type,
-          cf.options,
-          cf.sort_order,
-          cf.field_key
+        SELECT co.guid, co.code, co.name, co."createdAt", co."updatedAt",
+               co."index_number", co.custom_field_guids
         FROM tbl_country co
-        LEFT JOIN tbl_custom_fields cf
-          ON cf.guid::text = ANY(ARRAY(SELECT jsonb_array_elements_text(co.custom_field_guids)))
         ${whereClause}
-        ORDER BY co."createdAt" DESC, cf.sort_order ASC
+        ORDER BY co."createdAt" DESC
         LIMIT :limit OFFSET :offset
         `,
           { replacements, type: QueryTypes.SELECT },
@@ -180,32 +164,55 @@ export class CountryService {
       ]);
 
       const total = Number(countResult[0]?.total || 0);
+      const countryGuids = countryRows.map((c) => c.guid);
+
+      let cfRows: any[] = [];
+      if (countryGuids.length > 0) {
+        cfRows = await sequelize.query(
+          `
+    SELECT
+      co.guid AS country_guid,
+      cf.guid AS cf_guid,
+      cf.field_label,
+      cf.field_type,
+      cf.options,
+      cf.sort_order,
+      cf.field_key
+    FROM tbl_country co
+    LEFT JOIN tbl_custom_fields cf
+      ON cf.guid::text = ANY(ARRAY(SELECT jsonb_array_elements_text(co.custom_field_guids)))
+    WHERE co.guid IN (:guids)
+    ORDER BY cf.sort_order ASC
+    `,
+          { replacements: { guids: countryGuids }, type: QueryTypes.SELECT },
+        );
+      }
       const countryMap = new Map<string, any>();
-      for (const row of rows as any[]) {
-        if (!countryMap.has(row.guid)) {
-          countryMap.set(row.guid, {
-            guid: row.guid,
-            code: row.code,
-            name: row.name,
-            custom_fields: [],
-            createdAt: row.createdAt,
-            updatedAt: row.updatedAt,
-            index_number: row.index_number,
-            _guidOrder: row.custom_field_guids || [],
-          });
-        }
-        if (row.cf_guid) {
-          countryMap.get(row.guid).custom_fields.push({
+      for (const c of countryRows) {
+        countryMap.set(c.guid, {
+          guid: c.guid,
+          code: c.code,
+          name: c.name,
+          custom_fields: [],
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          index_number: c.index_number,
+          _guidOrder: c.custom_field_guids || [],
+        });
+      }
+      for (const row of cfRows) {
+        if (row.cf_guid && countryMap.has(row.country_guid)) {
+          countryMap.get(row.country_guid).custom_fields.push({
             guid: row.cf_guid,
             field_label: row.field_label,
             field_type: row.field_type,
             options: row.options,
             sort_order: row.sort_order,
             field_key: row.field_key,
-            index_number: row.index_number,
           });
         }
       }
+
       const data = Array.from(countryMap.values()).map((c) => {
         const guidOrder: string[] = c._guidOrder;
         delete c._guidOrder;
@@ -228,6 +235,7 @@ export class CountryService {
         message: this.i18n.t('country.listFetched', { lang }),
       };
     } catch (error) {
+      console.log(error)
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
         this.i18n.t('country.fetchFailed', { lang }),
