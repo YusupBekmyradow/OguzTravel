@@ -123,41 +123,59 @@ export class CountryService {
 
 
 
-  async findAll(page: number = 1, limit: number = 10, lang: string = 'tk') {
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+    lang: string = 'tk',
+    search?: string,
+  ) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Math.min(100, Number(limit)));
       const offset = (currentPage - 1) * currentLimit;
 
       const sequelize = this.countryRepository.sequelize!;
+
+      const searchTerm = search?.trim();
+      const whereClause = searchTerm
+        ? `WHERE co.code ILIKE :search
+         OR co.name->>'tk' ILIKE :search
+         OR co.name->>'ru' ILIKE :search
+         OR co.name->>'en' ILIKE :search`
+        : '';
+
+      const replacements: any = { limit: currentLimit, offset };
+      if (searchTerm) replacements.search = `%${searchTerm}%`;
+
       const [countResult, rows]: [any[], any[]] = await Promise.all([
         sequelize.query(
-          `SELECT COUNT(*)::int AS total FROM tbl_country`,
-          { type: QueryTypes.SELECT },
+          `SELECT COUNT(*)::int AS total FROM tbl_country co ${whereClause}`,
+          { replacements, type: QueryTypes.SELECT },
         ),
         sequelize.query(
           `
-          SELECT
-            co.guid,
-            co.code,
-            co.name,
-            co."createdAt",
-            co."updatedAt",
-            co."index_number",
-            co.custom_field_guids,
-            cf.guid          AS cf_guid,
-            cf.field_label,
-            cf.field_type,
-            cf.options,
-            cf.sort_order,
-            cf.field_key
-          FROM tbl_country co
-          LEFT JOIN tbl_custom_fields cf
-            ON cf.guid::text = ANY(ARRAY(SELECT jsonb_array_elements_text(co.custom_field_guids)))
-          ORDER BY co."createdAt" DESC, cf.sort_order ASC
-          LIMIT :limit OFFSET :offset
-          `,
-          { replacements: { limit: currentLimit, offset }, type: QueryTypes.SELECT },
+        SELECT
+          co.guid,
+          co.code,
+          co.name,
+          co."createdAt",
+          co."updatedAt",
+          co."index_number",
+          co.custom_field_guids,
+          cf.guid          AS cf_guid,
+          cf.field_label,
+          cf.field_type,
+          cf.options,
+          cf.sort_order,
+          cf.field_key
+        FROM tbl_country co
+        LEFT JOIN tbl_custom_fields cf
+          ON cf.guid::text = ANY(ARRAY(SELECT jsonb_array_elements_text(co.custom_field_guids)))
+        ${whereClause}
+        ORDER BY co."createdAt" DESC, cf.sort_order ASC
+        LIMIT :limit OFFSET :offset
+        `,
+          { replacements, type: QueryTypes.SELECT },
         ),
       ]);
 
@@ -207,12 +225,12 @@ export class CountryService {
           totalPages: Math.ceil(total / currentLimit),
           currentPage: currentPage,
         },
-        message: this.i18n.t('general_translation.listFetched', { lang }),
+        message: this.i18n.t('country.listFetched', { lang }),
       };
     } catch (error) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        this.i18n.t('custom_field.fetchFailed', { lang }),
+        this.i18n.t('country.fetchFailed', { lang }),
         error,
       );
     }

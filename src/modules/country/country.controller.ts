@@ -39,12 +39,14 @@ export class CountryController {
   @Get('/get-all-country')
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({ name: 'search', required: false, type: String })
   async findAll(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+    @Query('search') search?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    return this.countryService.findAll(page, limit, lang);
+    return this.countryService.findAll(page, limit, lang, search);
   }
 
 
