@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
+import { Sequelize } from 'sequelize-typescript';
 import { I18nService } from 'nestjs-i18n';
 import { CustomField } from './entities/custom_field.entity';
 import { CreateCustomFieldDto } from './dto/create-custom-field.dto';
@@ -47,7 +48,7 @@ export class CustomFieldService {
   }
 
 
-  
+
   async getCustomFieldsByCountry(
     lang: string = 'tk',
     params: FindCustomFieldsParams,
@@ -60,11 +61,33 @@ export class CustomFieldService {
       if (params.field_type) {
         where.field_type = params.field_type;
       }
+
       if (params.option_search) {
-        where.field_type = FieldType.SELECT;
-        where.options = {
-          [Op.contains]: [params.option_search],
-        };
+        const searchKeyword = `%${params.option_search.toLowerCase().trim()}%`;
+
+        where[Op.and] = [
+          where[Op.and] || {},
+          {
+            [Op.or]: [
+              Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.json('field_label.tk')),
+                { [Op.like]: searchKeyword }
+              ),
+              Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.json('field_label.ru')),
+                { [Op.like]: searchKeyword }
+              ),
+              Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.json('field_label.en')),
+                { [Op.like]: searchKeyword }
+              ),
+              Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.cast(Sequelize.col('options'), 'text')),
+                { [Op.like]: searchKeyword }
+              ),
+            ],
+          },
+        ];
       }
       const { rows, count } = await this.customFieldRepository.findAndCountAll({
         where,
@@ -81,7 +104,7 @@ export class CustomFieldService {
           totalPages: Math.ceil(count / limit),
           currentPage: page,
         },
-        message: this.i18n.t('general_translation.listFetched', { lang }),
+        message: this.i18n.t('custom_field.listFetched', { lang }),
       };
     } catch (error) {
       return errorResponse(
