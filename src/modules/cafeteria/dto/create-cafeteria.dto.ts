@@ -1,20 +1,25 @@
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 
 export class CreateCafeteriaDto {
-  @IsNotEmpty({ message: 'Type is required' })
-  @IsBoolean({ message: 'Type must be boolean' })
-  type: boolean;
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsBoolean()
+  declare type: boolean;
 
-  @IsNotEmpty({ message: 'Amount is required' })
-  @IsNumber({}, { message: 'Amount must be a number' })
-  @IsPositive({ message: 'Amount must be greater than 0' })
-  amount: number;
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsNumber()
+  @IsPositive()
+  declare amount: number;
 
-  @IsNotEmpty({ message: 'Date is required' })
-  @IsString({ message: 'Date must be a string' })
-  date: string;
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsDateString()
+  declare date: Date;
 
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  description?: string;
+  declare description?: string;
 }

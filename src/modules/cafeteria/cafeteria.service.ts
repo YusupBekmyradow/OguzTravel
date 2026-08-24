@@ -9,7 +9,6 @@ import { Office } from '../office/entities/office.entity';
 import { errorResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Op } from 'sequelize';
-import { Sequelize } from 'sequelize-typescript';
 import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
@@ -18,9 +17,9 @@ export class CafeteriaService {
     @InjectModel(Cafeteria) private cafeteriaRepo: typeof Cafeteria,
     @InjectModel(User) private userRepo: typeof User,
     @InjectModel(Employee) private employeeRepo: typeof Employee,
-    private sequelize: Sequelize,
     private readonly i18n: I18nService,
-  ) {}
+  ) { }
+
 
   private getIncludes() {
     return [
@@ -32,6 +31,31 @@ export class CafeteriaService {
       },
     ];
   }
+
+
+
+  private buildWhereConditions(filters?: {
+    search?: string; start_date?: string; end_date?: string; type?: boolean | string;
+  }) {
+    const where: any = {};
+    if (!filters) return where;
+    if (filters.search?.trim()) {
+      where.description = { [Op.iLike]: `%${filters.search.trim()}%` };
+    }
+    if (filters.start_date && filters.end_date) {
+      where.date = { [Op.between]: [filters.start_date, filters.end_date] };
+    } else if (filters.start_date) {
+      where.date = { [Op.gte]: filters.start_date };
+    } else if (filters.end_date) {
+      where.date = { [Op.lte]: filters.end_date };
+    }
+    if (filters.type !== undefined && filters.type !== null && filters.type !== '') {
+      where.type = String(filters.type) === 'true';
+    }
+    return where;
+  }
+
+
 
   async addCafeteria(dto: CreateCafeteriaDto, userPayload: any, lang: string = 'tk') {
     try {
@@ -46,13 +70,10 @@ export class CafeteriaService {
           const user = await this.userRepo.findByPk(directGuid);
           if (user?.employee_guid) {
             const userEmp = await this.employeeRepo.findByPk(user.employee_guid);
-            if (userEmp) {
-              validEmployeeGuid = userEmp.guid;
-            }
+            if (userEmp) validEmployeeGuid = userEmp.guid;
           }
         }
       }
-
       const item = await this.cafeteriaRepo.create({
         ...dto,
         created_by_guid: validEmployeeGuid,
@@ -62,63 +83,36 @@ export class CafeteriaService {
         where: { guid: item.guid },
         include: this.getIncludes(),
       });
-
       return {
         status: 201,
         data: createdItem,
-        message: 'Cafeteria transaction created successfully',
+        message: await this.i18n.translate('cafeteria.createSuccess', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Create failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('cafeteria.createFailed', { lang }), error);
     }
   }
+
+
 
   async getAllCafeteria(
     page: number = 1,
     limit: number = 20,
-    filters?: {
-      search?: string;
-      start_date?: string;
-      end_date?: string;
-      type?: boolean | string;
-    },
+    filters?: { search?: string; start_date?: string; end_date?: string; type?: boolean | string },
     lang: string = 'tk',
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
-      const whereConditions: any = {};
-
-      if (filters) {
-        if (filters.search && filters.search.trim() !== '') {
-          whereConditions.description = {
-            [Op.iLike]: `%${filters.search.trim()}%`,
-          };
-        }
-        if (filters.start_date && filters.end_date) {
-          whereConditions.date = {
-            [Op.between]: [filters.start_date, filters.end_date],
-          };
-        } else if (filters.start_date) {
-          whereConditions.date = { [Op.gte]: filters.start_date };
-        } else if (filters.end_date) {
-          whereConditions.date = { [Op.lte]: filters.end_date };
-        }
-
-        if (filters.type !== undefined && filters.type !== null && filters.type !== '') {
-          whereConditions.type = String(filters.type) === 'true';
-        }
-      }
 
       const { rows, count } = await this.cafeteriaRepo.findAndCountAll({
-        where: whereConditions,
+        where: this.buildWhereConditions(filters),
         include: this.getIncludes(),
         order: [['date', 'DESC'], ['index_number', 'DESC']],
         limit: currentLimit,
         offset: offset,
       });
-
       return {
         status: 200,
         data: rows,
@@ -127,51 +121,20 @@ export class CafeteriaService {
           totalPages: Math.ceil(count / currentLimit),
           currentPage: currentPage,
         },
-        message: 'Cafeteria list fetched',
+        message: await this.i18n.translate('cafeteria.fetchSuccess', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Fetch failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('cafeteria.fetchFailed', { lang }), error);
     }
   }
-
   async getSummary(
-    filters?: {
-      search?: string;
-      start_date?: string;
-      end_date?: string;
-      type?: boolean | string;
-    },
+    filters?: { search?: string; start_date?: string; end_date?: string; type?: boolean | string },
+    lang: string = 'tk',
   ) {
     try {
-      const whereConditions: any = {};
-
-      if (filters) {
-        if (filters.search && filters.search.trim() !== '') {
-          whereConditions.description = {
-            [Op.iLike]: `%${filters.search.trim()}%`,
-          };
-        }
-        if (filters.start_date && filters.end_date) {
-          whereConditions.date = {
-            [Op.between]: [filters.start_date, filters.end_date],
-          };
-        } else if (filters.start_date) {
-          whereConditions.date = { [Op.gte]: filters.start_date };
-        } else if (filters.end_date) {
-          whereConditions.date = { [Op.lte]: filters.end_date };
-        }
-
-        if (filters.type !== undefined && filters.type !== null && filters.type !== '') {
-          whereConditions.type = String(filters.type) === 'true';
-        }
-      }
-
-      const incomeRaw = await this.cafeteriaRepo.sum('amount', {
-        where: { ...whereConditions, type: true },
-      });
-      const expenseRaw = await this.cafeteriaRepo.sum('amount', {
-        where: { ...whereConditions, type: false },
-      });
+      const where = this.buildWhereConditions(filters);
+      const incomeRaw = await this.cafeteriaRepo.sum('amount', { where: { ...where, type: true } });
+      const expenseRaw = await this.cafeteriaRepo.sum('amount', { where: { ...where, type: false } });
 
       const totalIncome = Number(Number(incomeRaw || 0).toFixed(2));
       const totalExpense = Number(Number(expenseRaw || 0).toFixed(2));
@@ -179,56 +142,57 @@ export class CafeteriaService {
 
       return {
         status: 200,
-        data: {
-          totalIncome,
-          totalExpense,
-          balance,
-        },
-        message: 'Cafeteria summary fetched',
+        data: { totalIncome, totalExpense, balance },
+        message: await this.i18n.translate('cafeteria.summarySuccess', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Summary fetch failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('cafeteria.summaryFailed', { lang }), error);
     }
   }
+
+
 
   async updateCafeteria(dto: UpdateCafeteriaDto, lang: string = 'tk') {
     try {
       const item = await this.cafeteriaRepo.findOne({ where: { guid: dto.guid } });
       if (!item) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Cafeteria transaction not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, await this.i18n.translate('cafeteria.notFound', { lang }));
       }
+      const { guid, ...updateData } = dto;
+      await item.update(updateData as any);
 
-      await item.update(dto as any);
       const updated = await this.cafeteriaRepo.findOne({
         where: { guid: dto.guid },
         include: this.getIncludes(),
       });
-
       return {
         status: 200,
         data: updated,
-        message: 'Cafeteria transaction updated',
+        message: await this.i18n.translate('cafeteria.updateSuccess', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Update failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('cafeteria.updateFailed', { lang }), error);
     }
   }
+
+
+
 
   async deleteCafeteria(guid: string, lang: string = 'tk') {
     try {
       const item = await this.cafeteriaRepo.findOne({ where: { guid } });
       if (!item) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Cafeteria transaction not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, await this.i18n.translate('cafeteria.notFound', { lang }));
       }
 
       await item.destroy();
       return {
         status: 200,
         data: { guid },
-        message: 'Cafeteria transaction deleted',
+        message: await this.i18n.translate('cafeteria.deleteSuccess', { lang }),
       };
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Delete failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('cafeteria.deleteFailed', { lang }), error);
     }
   }
 }

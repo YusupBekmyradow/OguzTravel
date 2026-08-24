@@ -1,0 +1,13 @@
+{
+  "createSuccess": "Cafeteria transaction created successfully.",
+  "createFailed": "Failed to create cafeteria transaction.",
+  "fetchSuccess": "Cafeteria list fetched successfully.",
+  "fetchFailed": "Failed to fetch cafeteria list.",
+  "summarySuccess": "Cafeteria summary fetched successfully.",
+  "summaryFailed": "Failed to fetch cafeteria summary.",
+  "updateSuccess": "Cafeteria transaction updated successfully.",
+  "updateFailed": "Failed to update cafeteria transaction.",
+  "deleteSuccess": "Cafeteria transaction deleted successfully.",
+  "deleteFailed": "Failed to delete cafeteria transaction.",
+  "notFound": "Cafeteria transaction not found."
+}

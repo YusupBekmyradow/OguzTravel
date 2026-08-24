@@ -23,6 +23,7 @@ import { TtpPayment } from "../../ttp_payment/entities/ttp_payment.entity";
 import { Inbound } from "../../inbound/entities/inbound.entity";
 import { ReportShare } from "../../report_share/entities/report_share.entity";
 import { Receiving } from "../../receiving/entities/receiving.entity";
+import { Cafeteria } from "../../cafeteria/entities/cafeteria.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -308,4 +309,10 @@ export class Employee extends Model<Employee> {
     sourceKey: 'guid'
   })
   declare receiving: Receiving[];
+
+  @HasMany(() => Cafeteria, {
+    foreignKey: 'created_by_guid',
+    sourceKey: 'guid'
+  })
+  declare cafeteria: Cafeteria[];
 }

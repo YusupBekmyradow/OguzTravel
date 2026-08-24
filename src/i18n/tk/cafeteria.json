@@ -1,0 +1,13 @@
+{
+  "createSuccess": "Naharhana amaly üstünlikli döredildi.",
+  "createFailed": "Naharhana amalyny döretmekde ýalňyşlyk ýüze çykdy.",
+  "fetchSuccess": "Naharhana sanawy üstünlikli getirildi.",
+  "fetchFailed": "Naharhana sanawyny getirmekde ýalňyşlyk ýüze çykdy.",
+  "summarySuccess": "Naharhana jemleýji maglumaty üstünlikli getirildi.",
+  "summaryFailed": "Naharhana jemleýji maglumatyny getirmekde ýalňyşlyk ýüze çykdy.",
+  "updateSuccess": "Naharhana amaly üstünlikli täzelendi.",
+  "updateFailed": "Naharhana amalyny täzelemekde ýalňyşlyk ýüze çykdy.",
+  "deleteSuccess": "Naharhana amaly üstünlikli aýryldy.",
+  "deleteFailed": "Naharhana amalyny aýyrmakda ýalňyşlyk ýüze çykdy.",
+  "notFound": "Naharhana amaly tapylmady."
+}

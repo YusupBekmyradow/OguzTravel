@@ -1,24 +1,10 @@
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { ApiProperty, PartialType } from '@nestjs/swagger';
+import { IsNotEmpty, IsUUID } from 'class-validator';
+import { CreateCafeteriaDto } from './create-cafeteria.dto';
 
-export class UpdateCafeteriaDto {
-  @IsNotEmpty({ message: 'guid is required' })
-  @IsString()
-  guid: string;
-
-  @IsOptional()
-  @IsBoolean()
-  type?: boolean;
-
-  @IsOptional()
-  @IsNumber()
-  @IsPositive()
-  amount?: number;
-
-  @IsOptional()
-  @IsString()
-  date?: string;
-
-  @IsOptional()
-  @IsString()
-  description?: string;
+export class UpdateCafeteriaDto extends PartialType(CreateCafeteriaDto) {
+  @ApiProperty()
+  @IsUUID()
+  @IsNotEmpty()
+  declare guid: string;
 }

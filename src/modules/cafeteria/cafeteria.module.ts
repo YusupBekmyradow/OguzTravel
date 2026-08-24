@@ -12,4 +12,4 @@ import { Employee } from '../employee/entities/employee.entity';
   providers: [CafeteriaService],
   exports: [CafeteriaService],
 })
-export class CafeteriaModule {}
+export class CafeteriaModule { }
