@@ -1,7 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class CreateVisaDto {
+
+  @ApiProperty()
+  @IsUUID()
+  @IsNotEmpty()
+  declare client_guid: string;
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
@@ -20,15 +26,7 @@ export class CreateVisaDto {
   @ApiProperty()
   @IsUUID()
   @IsNotEmpty()
-  declare client_guid: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsObject()
-  declare agent: {
-    name: string;
-    phone_number: string;
-  };
+  declare status_guid: string;
 
   @ApiPropertyOptional()
   @IsNumber()
@@ -39,6 +37,19 @@ export class CreateVisaDto {
   @IsNumber()
   @IsOptional()
   declare price_usd?: number
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  declare is_paid: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsObject()
+  declare agent: {
+    name: string;
+    phone_number: string;
+  };
 
   @ApiPropertyOptional()
   @IsString()

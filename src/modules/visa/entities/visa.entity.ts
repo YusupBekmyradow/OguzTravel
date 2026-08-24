@@ -23,6 +23,11 @@ export class Visa extends Model<Visa> {
   })
   declare index_number: string;
 
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+    defaultValue: 1
+  })
   declare passport_count: number;
 
   @Column({
@@ -60,12 +65,17 @@ export class Visa extends Model<Visa> {
   declare price_usd: number;
 
   @Column({
+    type: DataType.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+  })
+  declare is_paid: boolean;
+
+  @Column({
     type: DataType.TEXT,
     allowNull: true
   })
   declare note?: string;
-
-  //is_paid
 
   @BelongsTo(() => Client, {
     targetKey: 'guid',
