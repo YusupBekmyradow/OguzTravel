@@ -1,3 +1,4 @@
+import { CafeteriaModule } from './modules/cafeteria/cafeteria.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
@@ -108,7 +109,8 @@ dotenv.config();
     CountryModule,
     ReceivingModule,
     VisaDocsModule,
-    UserDatailsModule
+    UserDatailsModule,
+    CafeteriaModule
   ],
   controllers: [AppController],
   providers: [

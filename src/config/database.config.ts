@@ -1,3 +1,4 @@
+import { Cafeteria } from '../modules/cafeteria/entities/cafeteria.entity';
 import { SequelizeModuleOptions } from '@nestjs/sequelize';
 import { Dialect } from 'sequelize';
 import { User } from '../modules/user/entities/user.entity';
@@ -53,7 +54,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     synchronize: true,
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
-      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, ReportShare, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail]
+      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, ReportShare, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria]
   };
 };
 
