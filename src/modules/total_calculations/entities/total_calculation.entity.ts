@@ -73,7 +73,7 @@ export class TotalCalculation extends Model<TotalCalculation> {
 
   @Column({
     type: DataType.DECIMAL(12, 2),
-    allowNull: false,
+    allowNull: true,
     defaultValue: 0
   })
   declare credit_price: number;
