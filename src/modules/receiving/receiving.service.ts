@@ -297,10 +297,11 @@ export class ReceivingService {
         throw new NotFoundException(this.i18n.t('receiving.notFound', { lang }));
       }
       let updateData: any = { ...dto };
-      const targetClientGuid = dto.client_guid || receiving.client_guid;
-      const client = await this.clientRepository.findByPk(targetClientGuid);
-      if (client) {
-        updateData.passport_count = client.passport_count || 1;
+      if (dto.client_guid && dto.client_guid !== receiving.client_guid) {
+        const client = await this.clientRepository.findByPk(dto.client_guid);
+        if (client) {
+          updateData.passport_count = client.passport_count || 1;
+        }
       } else {
         updateData.passport_count = receiving.passport_count;
       }

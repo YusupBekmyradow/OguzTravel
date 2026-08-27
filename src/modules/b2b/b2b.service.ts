@@ -244,10 +244,11 @@ export class B2bService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('b2b.notFound', { lang }));
       }
       let updateData: any = { ...updateDto };
-      const targetClientGuid = updateDto.client_guid || existingB2b.client_guid;
-      const client = await this.clientRepository.findByPk(targetClientGuid, { transaction: t });
-      if (client) {
-        updateData.passport_count = client.passport_count || 1;
+      if (updateDto.client_guid && updateDto.client_guid !== existingB2b.client_guid) {
+        const client = await this.clientRepository.findByPk(updateDto.client_guid, { transaction: t });
+        if (client) {
+          updateData.passport_count = client.passport_count || 1;
+        }
       } else {
         updateData.passport_count = existingB2b.passport_count;
       }

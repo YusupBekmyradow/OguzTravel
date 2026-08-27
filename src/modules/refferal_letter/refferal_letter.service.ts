@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateRefferalLetterDto } from './dto/create-refferal_letter.dto';
 import { UpdateRefferalLetterDto } from './dto/update-refferal_letter.dto';
@@ -202,11 +202,11 @@ export class RefferalLetterService {
         return errorResponse(HttpStatuses.NOT_FOUND, 'Referral letter not found');
       }
       let updateData: any = { ...updateDto };
-      const targetClientGuid = updateDto.client_guid || existingLetter.client_guid;
-
-      const client = await this.clientRepository.findByPk(targetClientGuid, { transaction });
-      if (client) {
-        updateData.passport_count = client.passport_count || 1;
+      if (updateDto.client_guid && updateDto.client_guid !== existingLetter.client_guid) {
+        const client = await this.clientRepository.findByPk(updateDto.client_guid, { transaction });
+        if (client) {
+          updateData.passport_count = client.passport_count || 1;
+        }
       } else {
         updateData.passport_count = existingLetter.passport_count;
       }
