@@ -154,13 +154,13 @@ export class ReportShareService {
           totalPages: Math.ceil(totalItems / currentLimit),
           currentPage: currentPage,
         },
-        message: 'Report share list retrieved successfully',
+        message: this.i18n.t('report_share.listFetched', { lang }),
         total_report_count,
       };
     } catch (error: any) {
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Failed to retrieve report share list. Please try again later.',
+        this.i18n.t('report_share.fetchFailed', { lang }),
         error,
       );
     }

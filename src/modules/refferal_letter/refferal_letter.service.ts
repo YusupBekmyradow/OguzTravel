@@ -85,17 +85,17 @@ export class RefferalLetterService {
       await transaction.commit();
 
       if (!newRefferalLetter) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'ReferenceLetter not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
       }
       const formattedData = this.formatRefferalLetterPassport(newRefferalLetter);
       return {
         status: 201,
         data: formattedData,
-        message: 'RefferalLetter created successfully'
+        message: this.i18n.t('refferal_letter.created', { lang }),
       };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'RefferalLetter creation failed', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.createFailed', { lang }), error);
     }
   }
 
@@ -199,7 +199,7 @@ export class RefferalLetterService {
       const existingLetter = await this.refferalLetterRepo.findByPk(updateDto.guid, { transaction });
       if (!existingLetter) {
         await transaction.rollback();
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Referral letter not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
       }
       let updateData: any = { ...updateDto };
       if (updateDto.client_guid && updateDto.client_guid !== existingLetter.client_guid) {
@@ -222,11 +222,11 @@ export class RefferalLetterService {
       return {
         status: 200,
         data: formattedData,
-        message: 'Referral letter updated successfully'
+        message: this.i18n.t('refferal_letter.updated', { lang }),
       };
     } catch (error: any) {
       await transaction.rollback();
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Failed to update referral letter. Please try again later.', error);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.updateFailed', { lang }), error);
     }
   }
 
@@ -236,11 +236,11 @@ export class RefferalLetterService {
     try {
       const refferalLetter = await this.refferalLetterRepo.findByPk(guid);
       if (!refferalLetter) {
-        return errorResponse(HttpStatuses.NOT_FOUND, 'Referral letter not found');
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
       }
       await refferalLetter.destroy();
 
-      return successResponse(HttpStatuses.OK, null, 'Referral letter deleted successfully');
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('refferal_letter.deleted', { lang }));
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.deleteFailed', { lang }), error)
     }
