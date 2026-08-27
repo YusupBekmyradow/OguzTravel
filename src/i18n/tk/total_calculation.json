@@ -1,0 +1,13 @@
+{
+  "created": "Hasaplaşyk üstünlikli döredildi",
+  "createFailed": "Hasaplaşyk döredilmedi. Ýalňyşlyk ýüze çykdy.",
+  "updated": "Hasaplaşyk maglumaty üstünlikli täzelendi",
+  "updateFailed": "Hasaplaşyk maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+  "notFound": "Görkezilen hasaplaşyk tapylmady",
+  "cannotUpdateTrigger": "Diňe elden döredilen hasaplaşyklary üýtgedip bolýar",
+  "deleted": "Hasaplaşyk üstünlikli pozuldy",
+  "deleteFailed": "Hasaplaşyk pozulmady. Ýalňyşlyk ýüze çykdy.",
+  "cannotDeleteTrigger": "Diňe elden döredilen hasaplaşyklary pozup bolýar",
+  "listFetched": "Hasaplaşyklaryň sanawy üstünlikli alyndy",
+  "fetchFailed": "Hasaplaşyklaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
+}

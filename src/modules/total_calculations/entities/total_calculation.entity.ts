@@ -1,10 +1,11 @@
-import { Model, Column, DataType, Table } from "sequelize-typescript";
+import { Model, Column, DataType, Table, BelongsTo } from "sequelize-typescript";
+import { Employee } from "../../employee/entities/employee.entity";
+import { Office } from "../../office/entities/office.entity";
 
 @Table({
   tableName: 'tbl_total_calculations',
   timestamps: true
 })
-
 export class TotalCalculation extends Model<TotalCalculation> {
   @Column({
     primaryKey: true,
@@ -22,7 +23,8 @@ export class TotalCalculation extends Model<TotalCalculation> {
 
   @Column({
     type: DataType.DATE,
-    allowNull: false
+    allowNull: false,
+    defaultValue: DataType.NOW
   })
   declare datetime: Date;
 
@@ -30,19 +32,19 @@ export class TotalCalculation extends Model<TotalCalculation> {
     type: DataType.UUID,
     allowNull: true
   })
-  declare receiver_opr_guid: string;
+  declare receiver_opr_guid?: string;
 
   @Column({
     type: DataType.UUID,
     allowNull: true
   })
-  declare office_guid: string;
+  declare office_guid?: string;
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare status: string;
+  declare status?: string;
 
   @Column({
     type: DataType.DECIMAL(12, 2),
@@ -53,7 +55,7 @@ export class TotalCalculation extends Model<TotalCalculation> {
 
   @Column({
     type: DataType.DECIMAL(12, 2),
-    allowNull: false,
+    allowNull: true,
     defaultValue: 0
   })
   declare sale_price: number;
@@ -67,7 +69,8 @@ export class TotalCalculation extends Model<TotalCalculation> {
 
   @Column({
     type: DataType.DECIMAL(12, 2),
-    allowNull: false
+    allowNull: true,
+    defaultValue: 0
   })
   declare profit: number;
 
@@ -79,6 +82,13 @@ export class TotalCalculation extends Model<TotalCalculation> {
   declare credit_price: number;
 
   @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  })
+  declare is_manual: boolean;
+
+  @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
     allowNull: false,
@@ -86,4 +96,21 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare index_number: number;
 
+  @BelongsTo(() => Employee, {
+    foreignKey: 'receiver_opr_guid',
+    targetKey: 'guid',
+    as: 'receiver_operator',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
+  })
+  declare receiver_operator?: Employee;
+
+  @BelongsTo(() => Office, {
+    foreignKey: 'office_guid',
+    targetKey: 'guid',
+    as: 'office',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
+  })
+  declare office?: Office;
 }

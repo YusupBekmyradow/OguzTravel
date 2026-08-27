@@ -1,0 +1,13 @@
+{
+  "created": "Calculation created successfully",
+  "createFailed": "Failed to create calculation.",
+  "updated": "Calculation updated successfully",
+  "updateFailed": "Failed to update calculation.",
+  "notFound": "Calculation not found",
+  "cannotUpdateTrigger": "Only manually created calculations can be edited",
+  "deleted": "Calculation deleted successfully",
+  "deleteFailed": "Failed to delete calculation.",
+  "cannotDeleteTrigger": "Only manually created calculations can be deleted",
+  "listFetched": "Calculation list fetched successfully",
+  "fetchFailed": "Failed to fetch calculation list."
+}

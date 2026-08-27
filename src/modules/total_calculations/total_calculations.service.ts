@@ -1,18 +1,347 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { TotalCalculation } from './entities/total_calculation.entity';
+import { CreateTotalCalculationDto } from './dto/create-total_calculation.dto';
+import { UpdateTotalCalculationDto } from './dto/update-total_calculation.dto';
+import { Employee } from '../employee/entities/employee.entity';
+import { Office } from '../office/entities/office.entity';
+import { I18nService } from 'nestjs-i18n';
+import { errorResponse, successResponse } from '../../helpers/responseFunctions';
+import { HttpStatuses } from '../../helpers/httpStatuses.enum';
+import { Sequelize } from 'sequelize-typescript';
+import { QueryTypes } from 'sequelize';
 
 @Injectable()
 export class TotalCalculationsService implements OnModuleInit {
   constructor(
     @InjectModel(TotalCalculation)
     private totalCalculationModel: typeof TotalCalculation,
+    @InjectModel(Employee)
+    private employeeRepo: typeof Employee,
+    private sequelize: Sequelize,
+    private readonly i18n: I18nService,
   ) { }
 
   async onModuleInit() {
     await this.initTriggers();
   }
 
+  private getTotalCalculationIncludes() {
+    return [
+      {
+        model: Employee,
+        as: 'receiver_operator',
+        attributes: ['guid', 'fullName']
+      },
+      {
+        model: Office,
+        as: 'office',
+        attributes: ['guid', 'fullName', 'shortName']
+      }
+    ];
+  }
+
+
+
+
+  async addTotalCalculation(createDto: CreateTotalCalculationDto, lang: string = 'tk') {
+    try {
+      let officeGuid: string | null = null;
+
+      if (createDto.receiver_opr_guid) {
+        const employee = await this.employeeRepo.findOne({
+          where: { guid: createDto.receiver_opr_guid }
+        });
+        if (employee && employee.office_guid) {
+          officeGuid = employee.office_guid;
+        }
+      }
+      const record = await this.totalCalculationModel.create({
+        category: createDto.category,
+        datetime: createDto.datetime ? new Date(createDto.datetime) : new Date(),
+        receiver_opr_guid: createDto.receiver_opr_guid || null,
+        office_guid: officeGuid,
+        net_price: Number(createDto.net_price) || 0,
+        currency: createDto.currency || 'USD',
+        sale_price: 0,
+        profit: 0,
+        credit_price: 0,
+        status: null,
+        is_manual: true,
+      } as any);
+      const created = await this.totalCalculationModel.findByPk(record.guid, {
+        include: this.getTotalCalculationIncludes()
+      });
+
+      return successResponse(
+        HttpStatuses.CREATED,
+        created,
+        this.i18n.t('total_calculation.created', { lang })
+      );
+    } catch (error: any) {
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('total_calculation.createFailed', { lang }),
+        error
+      );
+    }
+  }
+
+
+  async updateTotalCalculation(updateDto: UpdateTotalCalculationDto, lang: string = 'tk') {
+    try {
+      const existing = await this.totalCalculationModel.findByPk(updateDto.guid);
+      if (!existing) {
+        return errorResponse(
+          HttpStatuses.NOT_FOUND,
+          this.i18n.t('total_calculation.notFound', { lang })
+        );
+      }
+      if (!existing.is_manual) {
+        return errorResponse(
+          HttpStatuses.FORBIDDEN,
+          this.i18n.t('total_calculation.cannotUpdateTrigger', { lang })
+        );
+      }
+      const updateData: any = {};
+
+      if (updateDto.category !== undefined) {
+        updateData.category = updateDto.category;
+      }
+      if (updateDto.datetime !== undefined) {
+        updateData.datetime = new Date(updateDto.datetime);
+      }
+      if (updateDto.net_price !== undefined) {
+        updateData.net_price = Number(updateDto.net_price);
+      }
+      if (updateDto.currency !== undefined) {
+        updateData.currency = updateDto.currency;
+      }
+
+      if (updateDto.receiver_opr_guid !== undefined) {
+        updateData.receiver_opr_guid = updateDto.receiver_opr_guid || null;
+        if (updateDto.receiver_opr_guid) {
+          const employee = await this.employeeRepo.findOne({
+            where: { guid: updateDto.receiver_opr_guid }
+          });
+          updateData.office_guid = employee?.office_guid || null;
+        } else {
+          updateData.office_guid = null;
+        }
+      }
+      await existing.update(updateData);
+      const updated = await this.totalCalculationModel.findByPk(existing.guid, {
+        include: this.getTotalCalculationIncludes()
+      });
+
+      return successResponse(
+        HttpStatuses.OK,
+        updated,
+        this.i18n.t('total_calculation.updated', { lang })
+      );
+    } catch (error: any) {
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('total_calculation.updateFailed', { lang }),
+        error
+      );
+    }
+  }
+
+
+  async deleteTotalCalculation(guid: string, lang: string = 'tk') {
+    try {
+      const existing = await this.totalCalculationModel.findByPk(guid);
+      if (!existing) {
+        return errorResponse(
+          HttpStatuses.NOT_FOUND,
+          this.i18n.t('total_calculation.notFound', { lang })
+        );
+      }
+      if (!existing.is_manual) {
+        return errorResponse(
+          HttpStatuses.FORBIDDEN,
+          this.i18n.t('total_calculation.cannotDeleteTrigger', { lang })
+        );
+      }
+      await existing.destroy();
+      return successResponse(
+        HttpStatuses.OK,
+        null,
+        this.i18n.t('total_calculation.deleted', { lang })
+      );
+    } catch (error: any) {
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('total_calculation.deleteFailed', { lang }),
+        error
+      );
+    }
+  }
+
+
+
+  async getAllTotalCalculations(
+    page: number = 1,
+    limit: number = 10,
+    filters?: {
+      search?: string;
+      category?: string;
+      datetime?: string;
+      receiver_opr_guid?: string;
+      office_guid?: string;
+      status?: string;
+      currency?: string;
+      is_manual?: boolean;
+    },
+    lang: string = 'tk',
+  ) {
+    try {
+      const currentPage = Math.max(1, Number(page));
+      const currentLimit = Math.max(1, Number(limit));
+      const offset = (currentPage - 1) * currentLimit;
+
+      const conditions: string[] = [];
+      const replacements: Record<string, any> = { limit: currentLimit, offset };
+
+      if (filters?.search?.trim()) {
+        conditions.push(`(
+          tc.category ILIKE :search OR
+          tc.status ILIKE :search OR
+          tc.currency ILIKE :search OR
+          emp."fullName" ILIKE :search
+        )`);
+        replacements.search = `%${filters.search.trim()}%`;
+      }
+      if (filters?.category?.trim()) {
+        conditions.push(`tc.category ILIKE :category`);
+        replacements.category = `%${filters.category.trim()}%`;
+      }
+      if (filters?.datetime) {
+        const d = new Date(filters.datetime);
+        if (!isNaN(d.getTime())) {
+          if (filters.datetime.length <= 4) {
+            conditions.push(`tc.datetime BETWEEN :dateFrom AND :dateTo`);
+            replacements.dateFrom = `${d.getFullYear()}-01-01 00:00:00`;
+            replacements.dateTo = `${d.getFullYear()}-12-31 23:59:59`;
+          } else {
+            const day = filters.datetime.substring(0, 10);
+            conditions.push(`tc.datetime BETWEEN :dateFrom AND :dateTo`);
+            replacements.dateFrom = `${day} 00:00:00`;
+            replacements.dateTo = `${day} 23:59:59`;
+          }
+        }
+      }
+      if (filters?.receiver_opr_guid) {
+        conditions.push(`tc.receiver_opr_guid = :receiver_opr_guid`);
+        replacements.receiver_opr_guid = filters.receiver_opr_guid;
+      }
+      if (filters?.office_guid) {
+        conditions.push(`tc.office_guid = :office_guid`);
+        replacements.office_guid = filters.office_guid;
+      }
+      if (filters?.status) {
+        conditions.push(`tc.status = :status`);
+        replacements.status = filters.status;
+      }
+      if (filters?.currency) {
+        conditions.push(`tc.currency = :currency`);
+        replacements.currency = filters.currency;
+      }
+      if (filters?.is_manual !== undefined && filters?.is_manual !== null) {
+        conditions.push(`tc.is_manual = :is_manual`);
+        replacements.is_manual = filters.is_manual;
+      }
+
+      const WHERE = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      const baseQuery = `
+        FROM tbl_total_calculations tc
+        LEFT JOIN tbl_employees emp ON emp.guid = tc.receiver_opr_guid
+        LEFT JOIN tbl_offices ofc ON ofc.guid = tc.office_guid
+        ${WHERE}
+      `;
+
+      const [data, countResult] = await Promise.all([
+        this.sequelize.query<any>(`
+          SELECT
+            tc.guid, tc.category, tc.datetime,
+            tc.receiver_opr_guid, tc.office_guid,
+            tc.status, tc.net_price, tc.sale_price,
+            tc.currency, tc.profit, tc.credit_price,
+            tc.is_manual, tc.index_number,
+            tc."createdAt", tc."updatedAt",
+            emp.guid            AS "opr_guid",
+            emp."fullName"      AS "opr_fullName",
+            ofc.guid            AS "off_guid",
+            ofc."fullName"      AS "off_fullName",
+            ofc."shortName"     AS "off_shortName"
+          ${baseQuery}
+          ORDER BY tc.index_number DESC
+          LIMIT :limit OFFSET :offset
+        `, { replacements, type: QueryTypes.SELECT }),
+
+        this.sequelize.query<any>(`SELECT COUNT(*) AS total ${baseQuery}`,
+          { replacements, type: QueryTypes.SELECT }
+        ),
+      ]);
+
+      const parseJson = (val: any) => {
+        if (!val) return null;
+        if (typeof val === 'object') return val;
+        try { return JSON.parse(val); } catch { return val; }
+      };
+
+      const rows = data.map(r => ({
+        guid: r.guid,
+        category: r.category,
+        datetime: r.datetime,
+        receiver_opr_guid: r.receiver_opr_guid,
+        office_guid: r.office_guid,
+        status: r.status,
+        net_price: r.net_price,
+        sale_price: r.sale_price,
+        currency: r.currency,
+        profit: r.profit,
+        credit_price: r.credit_price,
+        is_manual: r.is_manual,
+        index_number: r.index_number,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        receiver_operator: r['opr_guid']
+          ? { guid: r['opr_guid'], fullName: r['opr_fullName'] }
+          : null,
+        office: r['off_guid']
+          ? { guid: r['off_guid'], fullName: parseJson(r['off_fullName']), shortName: parseJson(r['off_shortName']) }
+          : null,
+      }));
+
+      const totalItems = Number(countResult[0]?.total ?? 0);
+
+      return {
+        status: 200,
+        data: rows,
+        meta: {
+          totalItems,
+          totalPages: Math.ceil(totalItems / currentLimit),
+          currentPage,
+        },
+        message: this.i18n.t('total_calculation.listFetched', { lang }),
+      };
+    } catch (error: any) {
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('total_calculation.fetchFailed', { lang }),
+        error
+      );
+    }
+  }
+
+
+
+  // -------------------------------------------------------------
+  // 5. Initialize Triggers for Sync
+  // -------------------------------------------------------------
   private async initTriggers() {
     const sequelize = this.totalCalculationModel.sequelize;
     if (!sequelize) return;
@@ -62,6 +391,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency,
             profit,
             credit_price,
+            is_manual,
             "createdAt",
             "updatedAt"
           ) VALUES (
@@ -76,6 +406,7 @@ export class TotalCalculationsService implements OnModuleInit {
             COALESCE(NEW.currency, 'USD'),
             COALESCE(NEW.profit, 0),
             COALESCE(v_credit_price, 0),
+            FALSE,
             NOW(),
             NOW()
           )
@@ -90,6 +421,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency = EXCLUDED.currency,
             profit = EXCLUDED.profit,
             credit_price = EXCLUDED.credit_price,
+            is_manual = FALSE,
             "updatedAt" = NOW();
 
           RETURN NEW;
@@ -201,6 +533,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency,
             profit,
             credit_price,
+            is_manual,
             "createdAt",
             "updatedAt"
           ) VALUES (
@@ -215,6 +548,7 @@ export class TotalCalculationsService implements OnModuleInit {
             COALESCE(NEW.currency, 'USD'),
             COALESCE(NEW.profit, 0),
             COALESCE(v_credit_price, 0),
+            FALSE,
             NOW(),
             NOW()
           )
@@ -229,6 +563,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency = EXCLUDED.currency,
             profit = EXCLUDED.profit,
             credit_price = EXCLUDED.credit_price,
+            is_manual = FALSE,
             "updatedAt" = NOW();
 
           RETURN NEW;
@@ -289,6 +624,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency,
             profit,
             credit_price,
+            is_manual,
             "createdAt",
             "updatedAt"
           ) VALUES (
@@ -303,6 +639,7 @@ export class TotalCalculationsService implements OnModuleInit {
             COALESCE(NEW.currency, 'USD'),
             COALESCE(NEW.profit, 0),
             COALESCE(v_credit_price, 0),
+            FALSE,
             NOW(),
             NOW()
           )
@@ -317,6 +654,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency = EXCLUDED.currency,
             profit = EXCLUDED.profit,
             credit_price = EXCLUDED.credit_price,
+            is_manual = FALSE,
             "updatedAt" = NOW();
 
           RETURN NEW;
@@ -377,6 +715,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency,
             profit,
             credit_price,
+            is_manual,
             "createdAt",
             "updatedAt"
           ) VALUES (
@@ -391,6 +730,7 @@ export class TotalCalculationsService implements OnModuleInit {
             COALESCE(NEW.currency, 'USD'),
             COALESCE(NEW.profit, 0),
             COALESCE(v_credit_price, 0),
+            FALSE,
             NOW(),
             NOW()
           )
@@ -405,6 +745,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency = EXCLUDED.currency,
             profit = EXCLUDED.profit,
             credit_price = EXCLUDED.credit_price,
+            is_manual = FALSE,
             "updatedAt" = NOW();
 
           RETURN NEW;
@@ -465,6 +806,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency,
             profit,
             credit_price,
+            is_manual,
             "createdAt",
             "updatedAt"
           ) VALUES (
@@ -479,6 +821,7 @@ export class TotalCalculationsService implements OnModuleInit {
             COALESCE(NEW.currency, 'USD'),
             COALESCE(NEW.profit, 0),
             COALESCE(v_credit_price, 0),
+            FALSE,
             NOW(),
             NOW()
           )
@@ -493,6 +836,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency = EXCLUDED.currency,
             profit = EXCLUDED.profit,
             credit_price = EXCLUDED.credit_price,
+            is_manual = FALSE,
             "updatedAt" = NOW();
 
           RETURN NEW;
@@ -553,6 +897,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency,
             profit,
             credit_price,
+            is_manual,
             "createdAt",
             "updatedAt"
           ) VALUES (
@@ -567,6 +912,7 @@ export class TotalCalculationsService implements OnModuleInit {
             COALESCE(NEW.currency, 'USD'),
             COALESCE(NEW.profit, 0),
             COALESCE(v_credit_price, 0),
+            FALSE,
             NOW(),
             NOW()
           )
@@ -581,6 +927,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency = EXCLUDED.currency,
             profit = EXCLUDED.profit,
             credit_price = EXCLUDED.credit_price,
+            is_manual = FALSE,
             "updatedAt" = NOW();
 
           RETURN NEW;
@@ -641,6 +988,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency,
             profit,
             credit_price,
+            is_manual,
             "createdAt",
             "updatedAt"
           ) VALUES (
@@ -655,6 +1003,7 @@ export class TotalCalculationsService implements OnModuleInit {
             COALESCE(NEW.currency, 'USD'),
             COALESCE(NEW.profit, 0),
             COALESCE(v_credit_price, 0),
+            FALSE,
             NOW(),
             NOW()
           )
@@ -669,6 +1018,7 @@ export class TotalCalculationsService implements OnModuleInit {
             currency = EXCLUDED.currency,
             profit = EXCLUDED.profit,
             credit_price = EXCLUDED.credit_price,
+            is_manual = FALSE,
             "updatedAt" = NOW();
 
           RETURN NEW;
