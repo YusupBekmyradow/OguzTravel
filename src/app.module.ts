@@ -47,6 +47,8 @@ import { CustomFieldModule } from './modules/custom_field/custom_field.module';
 import { ReceivingModule } from './modules/receiving/receiving.module';
 import { VisaDocsModule } from './modules/visa_doc/visa_doc.module';
 import { UserDatailsModule } from './modules/user_datails/user_datails.module';
+import { TotalCalculation } from './modules/total_calculations/entities/total_calculation.entity';
+import { TotalCalculationsModule } from './modules/total_calculations/total_calculations.module';
 dotenv.config();
 
 @Module({
@@ -110,7 +112,8 @@ dotenv.config();
     ReceivingModule,
     VisaDocsModule,
     UserDatailsModule,
-    CafeteriaModule
+    CafeteriaModule,
+    TotalCalculationsModule
   ],
   controllers: [AppController],
   providers: [

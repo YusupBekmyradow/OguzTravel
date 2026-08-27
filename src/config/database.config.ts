@@ -37,6 +37,7 @@ import { CustomField } from '../modules/custom_field/entities/custom_field.entit
 import { VisaDoc } from '../modules/visa_doc/entities/visa_doc.entity';
 import { DocDetails } from '../modules/visa_doc/entities/doc_details.entity';
 import { UserDetail } from '../modules/user_datails/entities/user_datail.entity';
+import { TotalCalculation } from '../modules/total_calculations/entities/total_calculation.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
@@ -54,7 +55,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     synchronize: true,
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
-      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, ReportShare, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria]
+      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, ReportShare, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria, TotalCalculation]
   };
 };
 
