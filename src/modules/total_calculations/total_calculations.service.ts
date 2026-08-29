@@ -85,6 +85,7 @@ export class TotalCalculationsService implements OnModuleInit {
     ];
   }
 
+
   async addTotalCalculation(createDto: CreateTotalCalculationDto, lang: string = 'tk') {
     try {
       let officeGuid: string | null = null;
@@ -97,7 +98,6 @@ export class TotalCalculationsService implements OnModuleInit {
           officeGuid = employee.office_guid;
         }
       }
-
       const record = await this.totalCalculationModel.create({
         category_guid: createDto.category_guid || null,
         datetime: createDto.datetime ? new Date(createDto.datetime) : new Date(),
@@ -130,6 +130,8 @@ export class TotalCalculationsService implements OnModuleInit {
     }
   }
 
+
+
   async updateTotalCalculation(updateDto: UpdateTotalCalculationDto, lang: string = 'tk') {
     try {
       const existing = await this.totalCalculationModel.findByPk(updateDto.guid);
@@ -160,7 +162,6 @@ export class TotalCalculationsService implements OnModuleInit {
       if (updateDto.currency !== undefined) {
         updateData.currency = updateDto.currency;
       }
-
       if (updateDto.receiver_opr_guid !== undefined) {
         updateData.receiver_opr_guid = updateDto.receiver_opr_guid || null;
         if (updateDto.receiver_opr_guid) {
@@ -176,7 +177,6 @@ export class TotalCalculationsService implements OnModuleInit {
       const updated = await this.totalCalculationModel.findByPk(existing.guid, {
         include: this.getTotalCalculationIncludes()
       });
-
       return successResponse(
         HttpStatuses.OK,
         updated,
@@ -190,6 +190,7 @@ export class TotalCalculationsService implements OnModuleInit {
       );
     }
   }
+
 
   async deleteTotalCalculation(guid: string, lang: string = 'tk') {
     try {
@@ -220,6 +221,8 @@ export class TotalCalculationsService implements OnModuleInit {
       );
     }
   }
+
+
 
   async getAllTotalCalculations(
     page: number = 1,
@@ -292,9 +295,7 @@ export class TotalCalculationsService implements OnModuleInit {
         conditions.push(`tc.is_manual = :is_manual`);
         replacements.is_manual = filters.is_manual;
       }
-
       const WHERE = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
       const baseQuery = `
         FROM tbl_total_calculations tc
         LEFT JOIN tbl_categories cat ON cat.guid = tc.category_guid
@@ -302,7 +303,6 @@ export class TotalCalculationsService implements OnModuleInit {
         LEFT JOIN tbl_offices ofc ON ofc.guid = tc.office_guid
         ${WHERE}
       `;
-
       const [data, countResult] = await Promise.all([
         this.sequelize.query<any>(`
           SELECT
@@ -341,10 +341,10 @@ export class TotalCalculationsService implements OnModuleInit {
         category_guid: r.category_guid,
         category: r['cat_guid']
           ? {
-              guid: r['cat_guid'],
-              name: parseJson(r['cat_name']),
-              index_number: r['cat_index_number'],
-            }
+            guid: r['cat_guid'],
+            name: parseJson(r['cat_name']),
+            index_number: r['cat_index_number'],
+          }
           : null,
         datetime: r.datetime,
         receiver_opr_guid: r.receiver_opr_guid,
@@ -366,9 +366,7 @@ export class TotalCalculationsService implements OnModuleInit {
           ? { guid: r['off_guid'], fullName: parseJson(r['off_fullName']), shortName: parseJson(r['off_shortName']) }
           : null,
       }));
-
       const totalItems = Number(countResult[0]?.total ?? 0);
-
       return {
         status: 200,
         data: rows,
@@ -387,6 +385,7 @@ export class TotalCalculationsService implements OnModuleInit {
       );
     }
   }
+
 
   // -------------------------------------------------------------
   // Initialize Triggers for Sync

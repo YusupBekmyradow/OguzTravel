@@ -21,7 +21,6 @@ export class CategoryService {
       const category = await this.categoryRepository.create({
         name: createDto.name,
       } as any);
-
       return successResponse(
         HttpStatuses.CREATED,
         category,
@@ -77,12 +76,10 @@ export class CategoryService {
           message: this.i18n.t('category.listFetched', { lang }),
         };
       }
-
       const categories = await this.categoryRepository.findAll({
         where,
         order: [['index_number', 'ASC']],
       });
-
       return successResponse(
         HttpStatuses.OK,
         categories,
@@ -117,11 +114,9 @@ export class CategoryService {
         },
         { where: { guid: updateDto.guid } },
       );
-
       const updated = await this.categoryRepository.findOne({
         where: { guid: updateDto.guid },
       });
-
       return successResponse(
         HttpStatuses.OK,
         updated,
@@ -143,7 +138,6 @@ export class CategoryService {
       const deletedCount = await this.categoryRepository.destroy({
         where: { guid },
       });
-
       if (deletedCount === 0) {
         return errorResponse(
           HttpStatuses.NOT_FOUND,

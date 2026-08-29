@@ -50,6 +50,7 @@ export class CategoryController {
     );
   }
 
+
   @Patch('/update-category')
   async update(
     @Body() updateCategoryDto: UpdateCategoryDto,
@@ -57,6 +58,7 @@ export class CategoryController {
   ) {
     return this.categoryService.updateCategory(updateCategoryDto, lang);
   }
+
 
   @Delete('/delete-category')
   @ApiBody({

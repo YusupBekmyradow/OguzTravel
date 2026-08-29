@@ -67,7 +67,6 @@ export class TotalCalculationsController {
   }
 
 
-
   @Delete('/delete-total-calculation')
   @ApiBody({ schema: { type: 'object', properties: { guid: { type: 'string' } } } })
   async remove(
