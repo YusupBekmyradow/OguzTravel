@@ -5,10 +5,11 @@ import { SequelizeModule } from '@nestjs/sequelize';
 import { TotalCalculation } from './entities/total_calculation.entity';
 import { Employee } from '../employee/entities/employee.entity';
 import { Office } from '../office/entities/office.entity';
+import { Category } from '../category/entities/category.entity';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([TotalCalculation, Employee, Office])
+    SequelizeModule.forFeature([TotalCalculation, Employee, Office, Category])
   ],
   controllers: [TotalCalculationsController],
   providers: [TotalCalculationsService],

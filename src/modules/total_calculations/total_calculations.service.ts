@@ -5,11 +5,23 @@ import { CreateTotalCalculationDto } from './dto/create-total_calculation.dto';
 import { UpdateTotalCalculationDto } from './dto/update-total_calculation.dto';
 import { Employee } from '../employee/entities/employee.entity';
 import { Office } from '../office/entities/office.entity';
+import { Category } from '../category/entities/category.entity';
 import { I18nService } from 'nestjs-i18n';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Sequelize } from 'sequelize-typescript';
-import { QueryTypes } from 'sequelize';
+import { QueryTypes, Op } from 'sequelize';
+
+export const SYSTEM_CATEGORIES = {
+  B2B: 'e1000000-0000-0000-0000-000000000001',
+  AIRWAY: 'e1000000-0000-0000-0000-000000000002',
+  RAILWAY: 'e1000000-0000-0000-0000-000000000003',
+  HOTEL: 'e1000000-0000-0000-0000-000000000004',
+  TOUR: 'e1000000-0000-0000-0000-000000000005',
+  TRANSFER: 'e1000000-0000-0000-0000-000000000006',
+  PACKAGE: 'e1000000-0000-0000-0000-000000000007',
+  VISA: 'e1000000-0000-0000-0000-000000000008',
+};
 
 @Injectable()
 export class TotalCalculationsService implements OnModuleInit {
@@ -18,12 +30,39 @@ export class TotalCalculationsService implements OnModuleInit {
     private totalCalculationModel: typeof TotalCalculation,
     @InjectModel(Employee)
     private employeeRepo: typeof Employee,
+    @InjectModel(Category)
+    private categoryRepo: typeof Category,
     private sequelize: Sequelize,
     private readonly i18n: I18nService,
   ) { }
 
   async onModuleInit() {
+    await this.ensureDefaultCategories();
     await this.initTriggers();
+  }
+
+  private async ensureDefaultCategories() {
+    try {
+      const defaults = [
+        { guid: SYSTEM_CATEGORIES.B2B, name: { tk: 'B2B', ru: 'B2B', en: 'B2B' } },
+        { guid: SYSTEM_CATEGORIES.AIRWAY, name: { tk: 'Howa ýollary', ru: 'Авиалинии', en: 'Airways' } },
+        { guid: SYSTEM_CATEGORIES.RAILWAY, name: { tk: 'Demir ýollary', ru: 'Железная дорога', en: 'Railway' } },
+        { guid: SYSTEM_CATEGORIES.HOTEL, name: { tk: 'Myhmanhana', ru: 'Отель', en: 'Hotel' } },
+        { guid: SYSTEM_CATEGORIES.TOUR, name: { tk: 'Syýahat', ru: 'Тур', en: 'Tour' } },
+        { guid: SYSTEM_CATEGORIES.TRANSFER, name: { tk: 'Ulag', ru: 'Трансфер', en: 'Transfer' } },
+        { guid: SYSTEM_CATEGORIES.PACKAGE, name: { tk: 'Bukja', ru: 'Пакет', en: 'Package' } },
+        { guid: SYSTEM_CATEGORIES.VISA, name: { tk: 'Wiza', ru: 'Виза', en: 'Visa' } },
+      ];
+
+      for (const item of defaults) {
+        const existing = await this.categoryRepo.findByPk(item.guid);
+        if (!existing) {
+          await this.categoryRepo.create(item as any);
+        }
+      }
+    } catch (err) {
+      console.error('Error ensuring default categories:', err);
+    }
   }
 
   private getTotalCalculationIncludes() {
@@ -37,12 +76,14 @@ export class TotalCalculationsService implements OnModuleInit {
         model: Office,
         as: 'office',
         attributes: ['guid', 'fullName', 'shortName']
+      },
+      {
+        model: Category,
+        as: 'category',
+        attributes: ['guid', 'name', 'index_number']
       }
     ];
   }
-
-
-
 
   async addTotalCalculation(createDto: CreateTotalCalculationDto, lang: string = 'tk') {
     try {
@@ -56,8 +97,9 @@ export class TotalCalculationsService implements OnModuleInit {
           officeGuid = employee.office_guid;
         }
       }
+
       const record = await this.totalCalculationModel.create({
-        category: createDto.category,
+        category_guid: createDto.category_guid || null,
         datetime: createDto.datetime ? new Date(createDto.datetime) : new Date(),
         receiver_opr_guid: createDto.receiver_opr_guid || null,
         office_guid: officeGuid,
@@ -69,6 +111,7 @@ export class TotalCalculationsService implements OnModuleInit {
         status: null,
         is_manual: true,
       } as any);
+
       const created = await this.totalCalculationModel.findByPk(record.guid, {
         include: this.getTotalCalculationIncludes()
       });
@@ -87,7 +130,6 @@ export class TotalCalculationsService implements OnModuleInit {
     }
   }
 
-
   async updateTotalCalculation(updateDto: UpdateTotalCalculationDto, lang: string = 'tk') {
     try {
       const existing = await this.totalCalculationModel.findByPk(updateDto.guid);
@@ -105,9 +147,10 @@ export class TotalCalculationsService implements OnModuleInit {
       }
       const updateData: any = {};
 
-      if (updateDto.category !== undefined) {
-        updateData.category = updateDto.category;
+      if (updateDto.category_guid !== undefined) {
+        updateData.category_guid = updateDto.category_guid || null;
       }
+
       if (updateDto.datetime !== undefined) {
         updateData.datetime = new Date(updateDto.datetime);
       }
@@ -148,7 +191,6 @@ export class TotalCalculationsService implements OnModuleInit {
     }
   }
 
-
   async deleteTotalCalculation(guid: string, lang: string = 'tk') {
     try {
       const existing = await this.totalCalculationModel.findByPk(guid);
@@ -179,14 +221,12 @@ export class TotalCalculationsService implements OnModuleInit {
     }
   }
 
-
-
   async getAllTotalCalculations(
     page: number = 1,
     limit: number = 10,
     filters?: {
       search?: string;
-      category?: string;
+      category_guid?: string;
       datetime?: string;
       receiver_opr_guid?: string;
       office_guid?: string;
@@ -206,16 +246,16 @@ export class TotalCalculationsService implements OnModuleInit {
 
       if (filters?.search?.trim()) {
         conditions.push(`(
-          tc.category ILIKE :search OR
+          cat.name::text ILIKE :search OR
           tc.status ILIKE :search OR
           tc.currency ILIKE :search OR
           emp."fullName" ILIKE :search
         )`);
         replacements.search = `%${filters.search.trim()}%`;
       }
-      if (filters?.category?.trim()) {
-        conditions.push(`tc.category ILIKE :category`);
-        replacements.category = `%${filters.category.trim()}%`;
+      if (filters?.category_guid) {
+        conditions.push(`tc.category_guid = :category_guid`);
+        replacements.category_guid = filters.category_guid;
       }
       if (filters?.datetime) {
         const d = new Date(filters.datetime);
@@ -257,6 +297,7 @@ export class TotalCalculationsService implements OnModuleInit {
 
       const baseQuery = `
         FROM tbl_total_calculations tc
+        LEFT JOIN tbl_categories cat ON cat.guid = tc.category_guid
         LEFT JOIN tbl_employees emp ON emp.guid = tc.receiver_opr_guid
         LEFT JOIN tbl_offices ofc ON ofc.guid = tc.office_guid
         ${WHERE}
@@ -265,12 +306,15 @@ export class TotalCalculationsService implements OnModuleInit {
       const [data, countResult] = await Promise.all([
         this.sequelize.query<any>(`
           SELECT
-            tc.guid, tc.category, tc.datetime,
+            tc.guid, tc.category_guid, tc.datetime,
             tc.receiver_opr_guid, tc.office_guid,
             tc.status, tc.net_price, tc.sale_price,
             tc.currency, tc.profit, tc.credit_price,
             tc.is_manual, tc.index_number,
             tc."createdAt", tc."updatedAt",
+            cat.guid            AS "cat_guid",
+            cat.name            AS "cat_name",
+            cat.index_number    AS "cat_index_number",
             emp.guid            AS "opr_guid",
             emp."fullName"      AS "opr_fullName",
             ofc.guid            AS "off_guid",
@@ -294,7 +338,14 @@ export class TotalCalculationsService implements OnModuleInit {
 
       const rows = data.map(r => ({
         guid: r.guid,
-        category: r.category,
+        category_guid: r.category_guid,
+        category: r['cat_guid']
+          ? {
+              guid: r['cat_guid'],
+              name: parseJson(r['cat_name']),
+              index_number: r['cat_index_number'],
+            }
+          : null,
         datetime: r.datetime,
         receiver_opr_guid: r.receiver_opr_guid,
         office_guid: r.office_guid,
@@ -337,16 +388,29 @@ export class TotalCalculationsService implements OnModuleInit {
     }
   }
 
-
-
   // -------------------------------------------------------------
-  // 5. Initialize Triggers for Sync
+  // Initialize Triggers for Sync
   // -------------------------------------------------------------
   private async initTriggers() {
     const sequelize = this.totalCalculationModel.sequelize;
     if (!sequelize) return;
 
     try {
+      // -------------------------------------------------------------
+      // Ensure category_guid column exists and update existing records
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'tbl_total_calculations' AND column_name = 'category_guid'
+          ) THEN
+            ALTER TABLE tbl_total_calculations ADD COLUMN category_guid UUID;
+          END IF;
+        END $$;
+      `);
+
       // -------------------------------------------------------------
       // 1. B2B & TicketPayment Triggers
       // -------------------------------------------------------------
@@ -381,7 +445,7 @@ export class TotalCalculationsService implements OnModuleInit {
 
           INSERT INTO tbl_total_calculations (
             guid,
-            category,
+            category_guid,
             datetime,
             receiver_opr_guid,
             office_guid,
@@ -396,7 +460,7 @@ export class TotalCalculationsService implements OnModuleInit {
             "updatedAt"
           ) VALUES (
             NEW.guid,
-            'B2B',
+            '${SYSTEM_CATEGORIES.B2B}'::uuid,
             COALESCE(NEW.datetime, NOW()),
             NEW.receiver_opr_guid,
             v_office_guid,
@@ -411,7 +475,7 @@ export class TotalCalculationsService implements OnModuleInit {
             NOW()
           )
           ON CONFLICT (guid) DO UPDATE SET
-            category = EXCLUDED.category,
+            category_guid = EXCLUDED.category_guid,
             datetime = EXCLUDED.datetime,
             receiver_opr_guid = EXCLUDED.receiver_opr_guid,
             office_guid = EXCLUDED.office_guid,
@@ -523,7 +587,7 @@ export class TotalCalculationsService implements OnModuleInit {
 
           INSERT INTO tbl_total_calculations (
             guid,
-            category,
+            category_guid,
             datetime,
             receiver_opr_guid,
             office_guid,
@@ -538,7 +602,7 @@ export class TotalCalculationsService implements OnModuleInit {
             "updatedAt"
           ) VALUES (
             NEW.guid,
-            'Airway',
+            '${SYSTEM_CATEGORIES.AIRWAY}'::uuid,
             COALESCE(NEW.application_date, NOW()),
             NEW.opr_guid,
             v_office_guid,
@@ -553,7 +617,7 @@ export class TotalCalculationsService implements OnModuleInit {
             NOW()
           )
           ON CONFLICT (guid) DO UPDATE SET
-            category = EXCLUDED.category,
+            category_guid = EXCLUDED.category_guid,
             datetime = EXCLUDED.datetime,
             receiver_opr_guid = EXCLUDED.receiver_opr_guid,
             office_guid = EXCLUDED.office_guid,
@@ -614,7 +678,7 @@ export class TotalCalculationsService implements OnModuleInit {
 
           INSERT INTO tbl_total_calculations (
             guid,
-            category,
+            category_guid,
             datetime,
             receiver_opr_guid,
             office_guid,
@@ -629,7 +693,7 @@ export class TotalCalculationsService implements OnModuleInit {
             "updatedAt"
           ) VALUES (
             NEW.guid,
-            'Railway',
+            '${SYSTEM_CATEGORIES.RAILWAY}'::uuid,
             COALESCE(NEW.application_date, NOW()),
             NEW.opr_guid,
             v_office_guid,
@@ -644,7 +708,7 @@ export class TotalCalculationsService implements OnModuleInit {
             NOW()
           )
           ON CONFLICT (guid) DO UPDATE SET
-            category = EXCLUDED.category,
+            category_guid = EXCLUDED.category_guid,
             datetime = EXCLUDED.datetime,
             receiver_opr_guid = EXCLUDED.receiver_opr_guid,
             office_guid = EXCLUDED.office_guid,
@@ -705,7 +769,7 @@ export class TotalCalculationsService implements OnModuleInit {
 
           INSERT INTO tbl_total_calculations (
             guid,
-            category,
+            category_guid,
             datetime,
             receiver_opr_guid,
             office_guid,
@@ -720,7 +784,7 @@ export class TotalCalculationsService implements OnModuleInit {
             "updatedAt"
           ) VALUES (
             NEW.guid,
-            'Hotel',
+            '${SYSTEM_CATEGORIES.HOTEL}'::uuid,
             COALESCE(NEW.application_date, NOW()),
             NEW.opr_guid,
             v_office_guid,
@@ -735,7 +799,7 @@ export class TotalCalculationsService implements OnModuleInit {
             NOW()
           )
           ON CONFLICT (guid) DO UPDATE SET
-            category = EXCLUDED.category,
+            category_guid = EXCLUDED.category_guid,
             datetime = EXCLUDED.datetime,
             receiver_opr_guid = EXCLUDED.receiver_opr_guid,
             office_guid = EXCLUDED.office_guid,
@@ -796,7 +860,7 @@ export class TotalCalculationsService implements OnModuleInit {
 
           INSERT INTO tbl_total_calculations (
             guid,
-            category,
+            category_guid,
             datetime,
             receiver_opr_guid,
             office_guid,
@@ -811,7 +875,7 @@ export class TotalCalculationsService implements OnModuleInit {
             "updatedAt"
           ) VALUES (
             NEW.guid,
-            'Tour',
+            '${SYSTEM_CATEGORIES.TOUR}'::uuid,
             COALESCE(NEW.application_date, NOW()),
             NEW.opr_guid,
             v_office_guid,
@@ -826,7 +890,7 @@ export class TotalCalculationsService implements OnModuleInit {
             NOW()
           )
           ON CONFLICT (guid) DO UPDATE SET
-            category = EXCLUDED.category,
+            category_guid = EXCLUDED.category_guid,
             datetime = EXCLUDED.datetime,
             receiver_opr_guid = EXCLUDED.receiver_opr_guid,
             office_guid = EXCLUDED.office_guid,
@@ -887,7 +951,7 @@ export class TotalCalculationsService implements OnModuleInit {
 
           INSERT INTO tbl_total_calculations (
             guid,
-            category,
+            category_guid,
             datetime,
             receiver_opr_guid,
             office_guid,
@@ -902,7 +966,7 @@ export class TotalCalculationsService implements OnModuleInit {
             "updatedAt"
           ) VALUES (
             NEW.guid,
-            'Transfer',
+            '${SYSTEM_CATEGORIES.TRANSFER}'::uuid,
             COALESCE(NEW.application_date, NOW()),
             NEW.opr_guid,
             v_office_guid,
@@ -917,7 +981,7 @@ export class TotalCalculationsService implements OnModuleInit {
             NOW()
           )
           ON CONFLICT (guid) DO UPDATE SET
-            category = EXCLUDED.category,
+            category_guid = EXCLUDED.category_guid,
             datetime = EXCLUDED.datetime,
             receiver_opr_guid = EXCLUDED.receiver_opr_guid,
             office_guid = EXCLUDED.office_guid,
@@ -978,7 +1042,7 @@ export class TotalCalculationsService implements OnModuleInit {
 
           INSERT INTO tbl_total_calculations (
             guid,
-            category,
+            category_guid,
             datetime,
             receiver_opr_guid,
             office_guid,
@@ -993,7 +1057,7 @@ export class TotalCalculationsService implements OnModuleInit {
             "updatedAt"
           ) VALUES (
             NEW.guid,
-            'Package',
+            '${SYSTEM_CATEGORIES.PACKAGE}'::uuid,
             COALESCE(NEW.application_date, NOW()),
             NEW.opr_guid,
             v_office_guid,
@@ -1008,7 +1072,7 @@ export class TotalCalculationsService implements OnModuleInit {
             NOW()
           )
           ON CONFLICT (guid) DO UPDATE SET
-            category = EXCLUDED.category,
+            category_guid = EXCLUDED.category_guid,
             datetime = EXCLUDED.datetime,
             receiver_opr_guid = EXCLUDED.receiver_opr_guid,
             office_guid = EXCLUDED.office_guid,
@@ -1175,7 +1239,7 @@ export class TotalCalculationsService implements OnModuleInit {
         FOR EACH ROW EXECUTE FUNCTION sync_ttp_payment_to_total_calculations();
       `);
 
-      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');
+      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi (Category GUID bilen).');
     } catch (error) {
       console.error('❌ Total Calculations trigger döredilende ýalňyşlyk:', error);
     }

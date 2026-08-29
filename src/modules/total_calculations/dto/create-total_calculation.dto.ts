@@ -2,10 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class CreateTotalCalculationDto {
-  @ApiProperty({ example: 'Visa' })
-  @IsString()
-  @IsNotEmpty()
-  declare category: string;
+  @ApiPropertyOptional({ example: 'e1000000-0000-0000-0000-000000000001' })
+  @IsUUID()
+  @IsOptional()
+  declare category_guid?: string;
 
   @ApiPropertyOptional({ example: '2026-08-27T10:00:00.000Z' })
   @IsDateString()

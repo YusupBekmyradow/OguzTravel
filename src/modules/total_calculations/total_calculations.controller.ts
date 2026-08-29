@@ -30,7 +30,7 @@ export class TotalCalculationsController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Query('search') search?: string,
-    @Query('category') category?: string,
+    @Query('category_guid') category_guid?: string,
     @Query('datetime') datetime?: string,
     @Query('receiver_opr_guid') receiver_opr_guid?: string,
     @Query('office_guid') office_guid?: string,
@@ -41,7 +41,7 @@ export class TotalCalculationsController {
   ) {
     const filters = {
       search,
-      category,
+      category_guid,
       datetime,
       receiver_opr_guid,
       office_guid,

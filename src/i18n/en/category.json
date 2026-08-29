@@ -1,0 +1,11 @@
+{
+  "created": "Category created successfully",
+  "createFailed": "Failed to create category. An error occurred.",
+  "updated": "Category information updated successfully",
+  "updateFailed": "Failed to update category information. An error occurred.",
+  "notFound": "Category not found",
+  "deleted": "Category deleted successfully",
+  "deleteFailed": "Failed to delete category. An error occurred.",
+  "listFetched": "Category list fetched successfully",
+  "fetchFailed": "Failed to fetch category list. An error occurred."
+}

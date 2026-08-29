@@ -1,6 +1,7 @@
 import { Model, Column, DataType, Table, BelongsTo } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Office } from "../../office/entities/office.entity";
+import { Category } from "../../category/entities/category.entity";
 
 @Table({
   tableName: 'tbl_total_calculations',
@@ -16,10 +17,10 @@ export class TotalCalculation extends Model<TotalCalculation> {
   declare guid: string;
 
   @Column({
-    type: DataType.STRING(50),
-    allowNull: false,
+    type: DataType.UUID,
+    allowNull: true,
   })
-  declare category: string;
+  declare category_guid?: string;
 
   @Column({
     type: DataType.DATE,
@@ -113,4 +114,13 @@ export class TotalCalculation extends Model<TotalCalculation> {
     onUpdate: 'SET NULL'
   })
   declare office?: Office;
+
+  @BelongsTo(() => Category, {
+    foreignKey: 'category_guid',
+    targetKey: 'guid',
+    as: 'category',
+    onDelete: 'SET NULL',
+    onUpdate: 'SET NULL'
+  })
+  declare category?: Category;
 }
