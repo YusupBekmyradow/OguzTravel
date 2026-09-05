@@ -138,12 +138,39 @@ export class B2bService {
   }
 
 
+  private parseStartDate(date: string | Date): Date {
+    if (typeof date === 'string') {
+      const trimmed = date.trim();
+      if (/^\d{4}$/.test(trimmed)) {
+        return new Date(`${trimmed}-01-01T00:00:00.000Z`);
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return new Date(`${trimmed}T00:00:00.000Z`);
+      }
+    }
+    return new Date(date);
+  }
+
+  private parseEndDate(date: string | Date): Date {
+    if (typeof date === 'string') {
+      const trimmed = date.trim();
+      if (/^\d{4}$/.test(trimmed)) {
+        return new Date(`${trimmed}-12-31T23:59:59.999Z`);
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return new Date(`${trimmed}T23:59:59.999Z`);
+      }
+    }
+    return new Date(date);
+  }
+
   async getAllB2b(
     page: number = 1,
     limit: number = 10,
     filters?: {
       search?: string;
-      datetime?: string | Date;
+      start_date?: string | Date;
+      end_date?: string | Date;
       assignment_opr_guid?: string;
       receiver_opr_guid?: string;
       status_guid?: string;
@@ -175,13 +202,26 @@ export class B2bService {
             { '$client.fullName$': { [Op.iLike]: searchPattern } },
           ];
         }
-        if (filters.datetime) {
-          const year = new Date(filters.datetime).getFullYear();
-          if (!isNaN(year)) {
-            const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
-            const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+        if (filters.start_date && filters.end_date) {
+          const startDate = this.parseStartDate(filters.start_date);
+          const endDate = this.parseEndDate(filters.end_date);
+          if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
             whereConditions.datetime = {
               [Op.between]: [startDate, endDate],
+            };
+          }
+        } else if (filters.start_date) {
+          const startDate = this.parseStartDate(filters.start_date);
+          if (!isNaN(startDate.getTime())) {
+            whereConditions.datetime = {
+              [Op.gte]: startDate,
+            };
+          }
+        } else if (filters.end_date) {
+          const endDate = this.parseEndDate(filters.end_date);
+          if (!isNaN(endDate.getTime())) {
+            whereConditions.datetime = {
+              [Op.lte]: endDate,
             };
           }
         }

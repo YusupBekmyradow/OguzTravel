@@ -26,7 +26,8 @@ export class B2bController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Query('search') search?: string,
-    @Query('datetime') datetime?: string,
+    @Query('start_date') start_date?: string,
+    @Query('end_date') end_date?: string,
     @Query('assignment_opr_guid') assignment_opr_guid?: string,
     @Query('receiver_opr_guid') receiver_opr_guid?: string,
     @Query('status_guid') status_guid?: string,
@@ -37,7 +38,8 @@ export class B2bController {
   ) {
     const filters = {
       search,
-      datetime,
+      start_date,
+      end_date,
       assignment_opr_guid,
       receiver_opr_guid,
       status_guid,
