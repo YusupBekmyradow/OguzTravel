@@ -95,11 +95,46 @@ export class TourService {
     }
   }
 
+  private parseStartDate(date?: string | Date): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') {
+      const trimmed = date.trim();
+      if (!trimmed) return null;
+      if (/^\d{4}$/.test(trimmed)) {
+        return `${trimmed}-01-01`;
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return trimmed;
+      }
+    }
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
+  }
+
+  private parseEndDate(date?: string | Date): string | null {
+    if (!date) return null;
+    if (typeof date === 'string') {
+      const trimmed = date.trim();
+      if (!trimmed) return null;
+      if (/^\d{4}$/.test(trimmed)) {
+        return `${trimmed}-12-31`;
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return trimmed;
+      }
+    }
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
+  }
+
   async getAllTour(
     page: number = 1,
     limit: number = 10,
     search?: string,
-    application_date?: string,
+    start_date?: string,
+    end_date?: string,
     opr_guid?: string,
     prepared_opr_guid?: string,
     is_paid?: number,
@@ -114,7 +149,8 @@ export class TourService {
         limit: currentLimit,
         offset,
         search: search ? `%${search}%` : null,
-        application_date: application_date || null,
+        start_date: this.parseStartDate(start_date),
+        end_date: this.parseEndDate(end_date),
         opr_guid: opr_guid || null,
         prepared_opr_guid: prepared_opr_guid || null,
         is_paid: is_paid !== undefined && is_paid !== null ? is_paid : null,
@@ -162,7 +198,8 @@ export class TourService {
             t.guests_count::text ILIKE :search
           ))
 
-          AND (:application_date::date IS NULL OR t.application_date::date = :application_date::date)
+          AND (:start_date::date IS NULL OR t.application_date::date >= :start_date::date)
+          AND (:end_date::date IS NULL OR t.application_date::date <= :end_date::date)
           AND (:opr_guid::uuid IS NULL OR t.opr_guid = :opr_guid::uuid)
           AND (:prepared_opr_guid::uuid IS NULL OR t.prepared_opr_guid = :prepared_opr_guid::uuid)
           AND (:is_paid::integer IS NULL OR t.is_paid = :is_paid::integer)

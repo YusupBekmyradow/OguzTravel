@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { PackageService } from './package.service';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
@@ -21,13 +21,14 @@ export class PackageController {
     return this.packageService.addPackage(createDto, lang);
   }
 
-  
+
   @Get('/get-packages')
   async findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
-    @Query('application_date') application_date?: string,
+    @Query('start_date') start_date?: string,
+    @Query('end_date') end_date?: string,
     @Query('opr_guid') opr_guid?: string,
     @Query('prepared_opr_guid') prepared_opr_guid?: string,
     @Query('is_paid') is_paid?: number,
@@ -37,7 +38,8 @@ export class PackageController {
       page,
       limit,
       search,
-      application_date,
+      start_date,
+      end_date,
       opr_guid,
       prepared_opr_guid,
       is_paid,

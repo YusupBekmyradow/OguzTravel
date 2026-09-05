@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { TourService } from './tour.service';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
@@ -26,7 +26,8 @@ export class TourController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
-    @Query('application_date') application_date?: string,
+    @Query('start_date') start_date?: string,
+    @Query('end_date') end_date?: string,
     @Query('opr_guid') opr_guid?: string,
     @Query('prepared_opr_guid') prepared_opr_guid?: string,
     @Query('is_paid') is_paid?: number,
@@ -36,7 +37,8 @@ export class TourController {
       page,
       limit,
       search,
-      application_date,
+      start_date,
+      end_date,
       opr_guid,
       prepared_opr_guid,
       is_paid,
