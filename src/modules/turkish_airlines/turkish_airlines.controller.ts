@@ -31,7 +31,8 @@ export class TurkishAirlinesController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Query('search') search?: string,
-    @Query('datetime') datetime?: string,
+    @Query('start_date') start_date?: string,
+    @Query('end_date') end_date?: string,
     @Query('assignment_opr_guid') assignment_opr_guid?: string,
     @Query('receiver_opr_guid') receiver_opr_guid?: string,
     @Query('status_guid') status_guid?: string,
@@ -40,7 +41,7 @@ export class TurkishAirlinesController {
     @Query('office_guid') office_guid?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    const filters = { search, datetime, assignment_opr_guid, receiver_opr_guid, status_guid, flight_date, is_paid, office_guid };
+    const filters = { search, start_date, end_date, assignment_opr_guid, receiver_opr_guid, status_guid, flight_date, is_paid, office_guid };
     return await this.turkishAirlinesService.getAllTurkishAirline(Number(page), Number(limit), filters, lang);
   }
 

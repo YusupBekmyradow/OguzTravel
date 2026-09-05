@@ -224,8 +224,34 @@ export class TurkishAirlinesService {
   }
 
 
+  private parseStartDate(date: string | Date): Date {
+    if (typeof date === 'string') {
+      const trimmed = date.trim();
+      if (/^\d{4}$/.test(trimmed)) {
+        return new Date(`${trimmed}-01-01T00:00:00.000Z`);
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return new Date(`${trimmed}T00:00:00.000Z`);
+      }
+    }
+    return new Date(date);
+  }
+
+  private parseEndDate(date: string | Date): Date {
+    if (typeof date === 'string') {
+      const trimmed = date.trim();
+      if (/^\d{4}$/.test(trimmed)) {
+        return new Date(`${trimmed}-12-31T23:59:59.999Z`);
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return new Date(`${trimmed}T23:59:59.999Z`);
+      }
+    }
+    return new Date(date);
+  }
+
   async getAllTurkishAirline(page: number = 1, limit: number = 10,
-    filters: { search?: string; datetime?: string; assignment_opr_guid?: string; receiver_opr_guid?: string; status_guid?: string; flight_date?: string; is_paid?: boolean | string; office_guid?: string; } = {},
+    filters: { search?: string; start_date?: string | Date; end_date?: string | Date; assignment_opr_guid?: string; receiver_opr_guid?: string; status_guid?: string; flight_date?: string; is_paid?: boolean | string; office_guid?: string; } = {},
     lang: string = 'tk',
   ) {
     try {
@@ -250,15 +276,28 @@ export class TurkishAirlinesService {
           { '$client.fullName$': { [Op.iLike]: searchPattern } },
         ];
       }
-      if (filters.datetime) {
-        const dateOnly = filters.datetime.includes('T')
-          ? filters.datetime.split('T')[0]
-          : filters.datetime.trim();
-        whereCondition.datetime = this.sequelize.where(
-          this.sequelize.fn('date', this.sequelize.col('datetime')),
-          '=',
-          dateOnly
-        );
+      if (filters.start_date && filters.end_date) {
+        const startDate = this.parseStartDate(filters.start_date);
+        const endDate = this.parseEndDate(filters.end_date);
+        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+          whereCondition.datetime = {
+            [Op.between]: [startDate, endDate],
+          };
+        }
+      } else if (filters.start_date) {
+        const startDate = this.parseStartDate(filters.start_date);
+        if (!isNaN(startDate.getTime())) {
+          whereCondition.datetime = {
+            [Op.gte]: startDate,
+          };
+        }
+      } else if (filters.end_date) {
+        const endDate = this.parseEndDate(filters.end_date);
+        if (!isNaN(endDate.getTime())) {
+          whereCondition.datetime = {
+            [Op.lte]: endDate,
+          };
+        }
       }
       if (filters.assignment_opr_guid) {
         whereCondition.assignment_opr_guid = filters.assignment_opr_guid;
