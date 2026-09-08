@@ -130,11 +130,13 @@ export class GeneralTranslationService {
 
   async searchAndFilterTranslations(filters: {
     search?: string;
-    received_day?: string;
+    start_received_day?: string;
+    end_received_day?: string;
     received_time?: string;
     opr_guid?: string;
     completed_time?: string;
-    completed_day?: string;
+    start_completed_day?: string;
+    end_completed_day?: string;
     translator_guid?: string;
     page?: number;
     limit?: number;
@@ -146,9 +148,16 @@ export class GeneralTranslationService {
 
       const whereConditions: any = {};
 
-      if (filters.received_day && filters.received_day.trim() !== '') {
-        whereConditions.received_day = filters.received_day;
+      const startRec = filters.start_received_day?.trim();
+      const endRec = filters.end_received_day?.trim();
+      if (startRec && endRec) {
+        whereConditions.received_day = { [Op.between]: [startRec, endRec] };
+      } else if (startRec) {
+        whereConditions.received_day = { [Op.gte]: startRec };
+      } else if (endRec) {
+        whereConditions.received_day = { [Op.lte]: endRec };
       }
+
       if (filters.received_time && filters.received_time.trim() !== '') {
         whereConditions[Op.and] = whereConditions[Op.and] || [];
         whereConditions[Op.and].push(
@@ -170,9 +179,17 @@ export class GeneralTranslationService {
           )
         );
       }
-      if (filters.completed_day && filters.completed_day.trim() !== '') {
-        whereConditions.completed_day = filters.completed_day;
+
+      const startComp = filters.start_completed_day?.trim();
+      const endComp = filters.end_completed_day?.trim();
+      if (startComp && endComp) {
+        whereConditions.completed_day = { [Op.between]: [startComp, endComp] };
+      } else if (startComp) {
+        whereConditions.completed_day = { [Op.gte]: startComp };
+      } else if (endComp) {
+        whereConditions.completed_day = { [Op.lte]: endComp };
       }
+
       if (filters.translator_guid && filters.translator_guid.trim() !== '') {
         whereConditions.translator_guid = filters.translator_guid;
       }
@@ -247,7 +264,7 @@ export class GeneralTranslationService {
           currentPage: page,
           itemsPerPage: limit,
           totalProfit: Number(totalProfit.toFixed(2)),
-          totalExpense: totalExpense // totalPrice - totalProfit
+          totalExpense: totalExpense
         },
         message: this.i18n.t('general_translation.listFetched', { lang })
       };
