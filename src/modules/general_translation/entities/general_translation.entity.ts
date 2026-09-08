@@ -97,6 +97,12 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   declare price: number;
 
   @Column({
+    type: DataType.DECIMAL(12, 2),
+    defaultValue: 0
+  })
+  declare profit: number;
+
+  @Column({
     type: DataType.INTEGER,
     autoIncrement: true,
     allowNull: false,

@@ -227,13 +227,16 @@ export class GeneralTranslationService {
           ]
           : [],
         attributes: [
-          [Sequelize.fn('SUM', Sequelize.col('GeneralTranslation.price')), 'totalPrice']
+          [Sequelize.fn('SUM', Sequelize.col('GeneralTranslation.price')), 'totalPrice'],
+          [Sequelize.fn('SUM', Sequelize.col('GeneralTranslation.profit')), 'totalProfit']
         ],
         raw: true,
       }),
       ]);
 
       const totalPrice = Number((totalPriceResult as any)?.totalPrice || 0);
+      const totalProfit = Number((totalPriceResult as any)?.totalProfit || 0);
+      const totalExpense = Number((totalPrice - totalProfit).toFixed(2));
 
       return {
         status: 200,
@@ -243,7 +246,8 @@ export class GeneralTranslationService {
           totalPages: Math.ceil(count / limit),
           currentPage: page,
           itemsPerPage: limit,
-          totalPrice: totalPrice
+          totalProfit: Number(totalProfit.toFixed(2)),
+          totalExpense: totalExpense // totalPrice - totalProfit
         },
         message: this.i18n.t('general_translation.listFetched', { lang })
       };
