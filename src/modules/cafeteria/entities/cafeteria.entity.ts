@@ -29,10 +29,17 @@ export class Cafeteria extends Model<Cafeteria> {
   declare amount: number;
 
   @Column({
-    type: DataType.DATEONLY,
+    type: DataType.STRING,
+    allowNull: false,
+    defaultValue: 'TMT',
+  })
+  declare currency: string;
+
+  @Column({
+    type: DataType.DATE,
     allowNull: false,
   })
-  declare date: Date | string;
+  declare date: Date;
 
   @Column({
     type: DataType.TEXT,

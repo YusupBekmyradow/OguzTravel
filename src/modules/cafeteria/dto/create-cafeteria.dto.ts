@@ -13,10 +13,15 @@ export class CreateCafeteriaDto {
   @IsPositive()
   declare amount: number;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ default: 'TMT' })
+  @IsOptional()
+  @IsString()
+  declare currency?: string;
+
+  @ApiProperty({ description: 'ISO 8601 datetime, e.g. 2026-09-09T14:30:00.000Z' })
   @IsNotEmpty()
   @IsDateString()
-  declare date: Date;
+  declare date: string;
 
   @ApiPropertyOptional()
   @IsOptional()
