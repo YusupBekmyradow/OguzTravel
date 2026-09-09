@@ -23,6 +23,7 @@ export const SYSTEM_CATEGORIES = {
   VISA: 'e1000000-0000-0000-0000-000000000008',
   TRANSLATION: 'e1000000-0000-0000-0000-000000000009',
   REFERRAL_LETTER: 'e1000000-0000-0000-0000-000000000010',
+  CAFETERIA: 'e1000000-0000-0000-0000-000000000011',
 };
 
 @Injectable()
@@ -56,6 +57,7 @@ export class TotalCalculationsService implements OnModuleInit {
         { guid: SYSTEM_CATEGORIES.VISA, name: { tk: 'Wiza', ru: 'Виза', en: 'Visa' } },
         { guid: SYSTEM_CATEGORIES.TRANSLATION, name: { tk: 'Terjime', ru: 'Перевод', en: 'Translation' } },
         { guid: SYSTEM_CATEGORIES.REFERRAL_LETTER, name: { tk: 'Ugur haty', ru: 'Направление', en: 'Referral Letter' } },
+        { guid: SYSTEM_CATEGORIES.CAFETERIA, name: { tk: 'Kafe', ru: 'Кафе', en: 'Cafeteria' } },
       ];
 
       for (const item of defaults) {
@@ -1572,7 +1574,134 @@ export class TotalCalculationsService implements OnModuleInit {
           "updatedAt" = NOW();
       `);
 
-      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation, Referral Letter we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');
+      // -------------------------------------------------------------
+      // 13. Cafeteria Trigger (tbl_cafeteria)
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        CREATE OR REPLACE FUNCTION sync_cafeteria_to_total_calculations()
+        RETURNS TRIGGER AS $$
+        DECLARE
+          v_office_guid UUID;
+        BEGIN
+          IF TG_OP = 'DELETE' THEN
+            DELETE FROM tbl_total_calculations WHERE guid = OLD.guid;
+            RETURN OLD;
+          END IF;
+
+          SELECT office_guid INTO v_office_guid 
+          FROM tbl_employees 
+          WHERE guid = NEW.created_by_guid;
+
+          INSERT INTO tbl_total_calculations (
+            guid,
+            category_guid,
+            datetime,
+            receiver_opr_guid,
+            office_guid,
+            status,
+            net_price,
+            sale_price,
+            currency,
+            profit,
+            credit_price,
+            is_manual,
+            "createdAt",
+            "updatedAt"
+          ) VALUES (
+            NEW.guid,
+            '${SYSTEM_CATEGORIES.CAFETERIA}'::uuid,
+            COALESCE(NEW.date, COALESCE(NEW."createdAt", NOW())),
+            NEW.created_by_guid,
+            v_office_guid,
+            NULL,
+            CASE WHEN NEW.type = FALSE THEN COALESCE(NEW.amount, 0) ELSE 0 END,
+            CASE WHEN NEW.type = TRUE  THEN COALESCE(NEW.amount, 0) ELSE 0 END,
+            COALESCE(NEW.currency, 'TMT'),
+            0,
+            0,
+            FALSE,
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (guid) DO UPDATE SET
+            category_guid = EXCLUDED.category_guid,
+            datetime = EXCLUDED.datetime,
+            receiver_opr_guid = EXCLUDED.receiver_opr_guid,
+            office_guid = EXCLUDED.office_guid,
+            status = EXCLUDED.status,
+            net_price = EXCLUDED.net_price,
+            sale_price = EXCLUDED.sale_price,
+            currency = EXCLUDED.currency,
+            profit = EXCLUDED.profit,
+            credit_price = EXCLUDED.credit_price,
+            is_manual = FALSE,
+            "updatedAt" = NOW();
+
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+
+      await sequelize.query(`
+        DROP TRIGGER IF EXISTS trg_sync_cafeteria_to_total_calculations ON tbl_cafeteria;
+        CREATE TRIGGER trg_sync_cafeteria_to_total_calculations
+        AFTER INSERT OR UPDATE OR DELETE ON tbl_cafeteria
+        FOR EACH ROW EXECUTE FUNCTION sync_cafeteria_to_total_calculations();
+      `);
+
+      // -------------------------------------------------------------
+      // Initial Backfill for existing cafeteria records
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        INSERT INTO tbl_total_calculations (
+          guid,
+          category_guid,
+          datetime,
+          receiver_opr_guid,
+          office_guid,
+          status,
+          net_price,
+          sale_price,
+          currency,
+          profit,
+          credit_price,
+          is_manual,
+          "createdAt",
+          "updatedAt"
+        )
+        SELECT
+          c.guid,
+          '${SYSTEM_CATEGORIES.CAFETERIA}'::uuid,
+          COALESCE(c.date, COALESCE(c."createdAt", NOW())),
+          c.created_by_guid,
+          emp.office_guid,
+          NULL,
+          CASE WHEN c.type = FALSE THEN COALESCE(c.amount, 0) ELSE 0 END,
+          CASE WHEN c.type = TRUE  THEN COALESCE(c.amount, 0) ELSE 0 END,
+          COALESCE(c.currency, 'TMT'),
+          0,
+          0,
+          FALSE,
+          COALESCE(c."createdAt", NOW()),
+          NOW()
+        FROM tbl_cafeteria c
+        LEFT JOIN tbl_employees emp ON emp.guid = c.created_by_guid
+        ON CONFLICT (guid) DO UPDATE SET
+          category_guid = EXCLUDED.category_guid,
+          datetime = EXCLUDED.datetime,
+          receiver_opr_guid = EXCLUDED.receiver_opr_guid,
+          office_guid = EXCLUDED.office_guid,
+          status = EXCLUDED.status,
+          net_price = EXCLUDED.net_price,
+          sale_price = EXCLUDED.sale_price,
+          currency = EXCLUDED.currency,
+          profit = EXCLUDED.profit,
+          credit_price = EXCLUDED.credit_price,
+          is_manual = FALSE,
+          "updatedAt" = NOW();
+      `);
+
+      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation, Referral Letter, Cafeteria we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');
     } catch (error) {
       console.error('❌ Total Calculations trigger döredilende ýalňyşlyk:', error);
     }
