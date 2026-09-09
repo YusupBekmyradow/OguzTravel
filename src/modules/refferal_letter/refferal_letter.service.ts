@@ -73,6 +73,7 @@ export class RefferalLetterService {
       const refferalLetter = await this.refferalLetterRepo.create(
         {
           ...createDto,
+          date_time: createDto.date_time ? new Date(createDto.date_time) : new Date(),
           passport_count: client ? (client.passport_count || 1) : 1,
         } as any,
         { transaction }
@@ -111,6 +112,9 @@ export class RefferalLetterService {
       departure_date?: string | Date;
       return_date?: string | Date;
       contract_date?: string | Date;
+      start_date?: string | Date;
+      end_date?: string | Date;
+      status?: string;
     },
     lang: string = 'tk',
   ) {
@@ -128,6 +132,7 @@ export class RefferalLetterService {
             { tranzit: { [Op.iLike]: searchPattern } },
             { travel_document_number: { [Op.iLike]: searchPattern } },
             { contract_number: { [Op.iLike]: searchPattern } },
+            { status: { [Op.iLike]: searchPattern } },
             this.sequelize.where(
               this.sequelize.fn('LOWER', this.sequelize.literal(`"RefferalLetter"."agent"->>'name'`)),
               { [Op.like]: `%${searchLower}%` }
@@ -164,6 +169,40 @@ export class RefferalLetterService {
           whereConditions.contract_date = {
             [Op.between]: [startDate, endDate],
           };
+        }
+
+        if (filters.start_date && filters.end_date) {
+          const startDate = new Date(filters.start_date);
+          const endDate = new Date(filters.end_date);
+          if (typeof filters.start_date === 'string' && filters.start_date.length === 10) {
+            startDate.setUTCHours(0, 0, 0, 0);
+          }
+          if (typeof filters.end_date === 'string' && filters.end_date.length === 10) {
+            endDate.setUTCHours(23, 59, 59, 999);
+          }
+          whereConditions.date_time = {
+            [Op.between]: [startDate, endDate],
+          };
+        } else if (filters.start_date) {
+          const startDate = new Date(filters.start_date);
+          if (typeof filters.start_date === 'string' && filters.start_date.length === 10) {
+            startDate.setUTCHours(0, 0, 0, 0);
+          }
+          whereConditions.date_time = {
+            [Op.gte]: startDate,
+          };
+        } else if (filters.end_date) {
+          const endDate = new Date(filters.end_date);
+          if (typeof filters.end_date === 'string' && filters.end_date.length === 10) {
+            endDate.setUTCHours(23, 59, 59, 999);
+          }
+          whereConditions.date_time = {
+            [Op.lte]: endDate,
+          };
+        }
+
+        if (filters.status !== undefined && filters.status !== null && String(filters.status).trim() !== '') {
+          whereConditions.status = filters.status;
         }
       }
       const { rows, count } = await this.refferalLetterRepo.findAndCountAll({

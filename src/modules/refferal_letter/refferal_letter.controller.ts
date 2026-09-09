@@ -33,9 +33,12 @@ export class RefferalLetterController {
     @Query('departure_date') departure_date?: string,
     @Query('return_date') return_date?: string,
     @Query('contract_date') contract_date?: string,
+    @Query('start_date') start_date?: string,
+    @Query('end_date') end_date?: string,
+    @Query('status') status?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    const filters = { search, received_opr_guid, departure_date, return_date, contract_date };
+    const filters = { search, received_opr_guid, departure_date, return_date, contract_date, start_date, end_date, status };
     return await this.refferalLetterService.getAllRefferalLetter(Number(page), Number(limit), filters, lang);
   }
 
