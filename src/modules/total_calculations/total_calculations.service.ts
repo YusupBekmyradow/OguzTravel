@@ -21,6 +21,7 @@ export const SYSTEM_CATEGORIES = {
   TRANSFER: 'e1000000-0000-0000-0000-000000000006',
   PACKAGE: 'e1000000-0000-0000-0000-000000000007',
   VISA: 'e1000000-0000-0000-0000-000000000008',
+  TRANSLATION: 'e1000000-0000-0000-0000-000000000009',
 };
 
 @Injectable()
@@ -52,6 +53,7 @@ export class TotalCalculationsService implements OnModuleInit {
         { guid: SYSTEM_CATEGORIES.TRANSFER, name: { tk: 'Ulag', ru: 'Трансфер', en: 'Transfer' } },
         { guid: SYSTEM_CATEGORIES.PACKAGE, name: { tk: 'Bukja', ru: 'Пакет', en: 'Package' } },
         { guid: SYSTEM_CATEGORIES.VISA, name: { tk: 'Wiza', ru: 'Виза', en: 'Visa' } },
+        { guid: SYSTEM_CATEGORIES.TRANSLATION, name: { tk: 'Terjime', ru: 'Перевод', en: 'Translation' } },
       ];
 
       for (const item of defaults) {
@@ -1238,7 +1240,210 @@ export class TotalCalculationsService implements OnModuleInit {
         FOR EACH ROW EXECUTE FUNCTION sync_ttp_payment_to_total_calculations();
       `);
 
-      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi (Category GUID bilen).');
+      // -------------------------------------------------------------
+      // 10. Translation Trigger (tbl_general_translations)
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        CREATE OR REPLACE FUNCTION sync_translation_to_total_calculations()
+        RETURNS TRIGGER AS $$
+        DECLARE
+          v_office_guid UUID;
+          v_credit_price DECIMAL(12, 2);
+          v_status VARCHAR(50);
+        BEGIN
+          IF TG_OP = 'DELETE' THEN
+            DELETE FROM tbl_total_calculations WHERE guid = OLD.guid;
+            RETURN OLD;
+          END IF;
+
+          SELECT office_guid INTO v_office_guid 
+          FROM tbl_employees 
+          WHERE guid = NEW.opr_guid;
+
+          SELECT COALESCE(SUM(amount), 0) INTO v_credit_price 
+          FROM tbl_trans_payments 
+          WHERE translation_guid = NEW.guid;
+
+          IF NEW.status = '0' OR NEW.status = 'REFUND' THEN
+            v_status := 'REFUND';
+          ELSIF NEW.is_paid IS TRUE OR NEW.status = 'true' OR NEW.status = 'paid' THEN
+            v_status := 'paid';
+          ELSE
+            v_status := 'notpaid';
+          END IF;
+
+          INSERT INTO tbl_total_calculations (
+            guid,
+            category_guid,
+            datetime,
+            receiver_opr_guid,
+            office_guid,
+            status,
+            net_price,
+            sale_price,
+            currency,
+            profit,
+            credit_price,
+            is_manual,
+            "createdAt",
+            "updatedAt"
+          ) VALUES (
+            NEW.guid,
+            '${SYSTEM_CATEGORIES.TRANSLATION}'::uuid,
+            CASE 
+              WHEN NEW.received_day IS NOT NULL THEN (NEW.received_day::text || ' ' || COALESCE(NEW.received_time::text, '00:00:00'))::timestamp
+              ELSE COALESCE(NEW."createdAt", NOW())
+            END,
+            NEW.opr_guid,
+            v_office_guid,
+            v_status,
+            COALESCE(NEW.price, 0) - COALESCE(NEW.profit, 0),
+            COALESCE(NEW.price, 0),
+            'TMT',
+            COALESCE(NEW.profit, 0),
+            COALESCE(v_credit_price, 0),
+            FALSE,
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (guid) DO UPDATE SET
+            category_guid = EXCLUDED.category_guid,
+            datetime = EXCLUDED.datetime,
+            receiver_opr_guid = EXCLUDED.receiver_opr_guid,
+            office_guid = EXCLUDED.office_guid,
+            status = EXCLUDED.status,
+            net_price = EXCLUDED.net_price,
+            sale_price = EXCLUDED.sale_price,
+            currency = EXCLUDED.currency,
+            profit = EXCLUDED.profit,
+            credit_price = EXCLUDED.credit_price,
+            is_manual = FALSE,
+            "updatedAt" = NOW();
+
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+
+      await sequelize.query(`
+        DROP TRIGGER IF EXISTS trg_sync_translation_to_total_calculations ON tbl_general_translations;
+        CREATE TRIGGER trg_sync_translation_to_total_calculations
+        AFTER INSERT OR UPDATE OR DELETE ON tbl_general_translations
+        FOR EACH ROW EXECUTE FUNCTION sync_translation_to_total_calculations();
+      `);
+
+      // -------------------------------------------------------------
+      // 11. Trans Payments Trigger (tbl_trans_payments)
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        CREATE OR REPLACE FUNCTION sync_trans_payment_to_total_calculations()
+        RETURNS TRIGGER AS $$
+        DECLARE
+          v_total_paid DECIMAL(12, 2);
+          v_guid UUID;
+        BEGIN
+          IF TG_OP = 'DELETE' THEN
+            v_guid := OLD.translation_guid;
+          ELSE
+            v_guid := NEW.translation_guid;
+          END IF;
+
+          IF v_guid IS NOT NULL THEN
+            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid 
+            FROM tbl_trans_payments 
+            WHERE translation_guid = v_guid;
+
+            UPDATE tbl_total_calculations 
+            SET credit_price = v_total_paid, "updatedAt" = NOW() 
+            WHERE guid = v_guid;
+          END IF;
+
+          IF TG_OP = 'UPDATE' AND OLD.translation_guid IS NOT NULL AND OLD.translation_guid IS DISTINCT FROM NEW.translation_guid THEN
+            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid 
+            FROM tbl_trans_payments 
+            WHERE translation_guid = OLD.translation_guid;
+
+            UPDATE tbl_total_calculations 
+            SET credit_price = v_total_paid, "updatedAt" = NOW() 
+            WHERE guid = OLD.translation_guid;
+          END IF;
+
+          IF TG_OP = 'DELETE' THEN
+            RETURN OLD;
+          ELSE
+            RETURN NEW;
+          END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+
+      await sequelize.query(`
+        DROP TRIGGER IF EXISTS trg_sync_trans_payment_to_total_calculations ON tbl_trans_payments;
+        CREATE TRIGGER trg_sync_trans_payment_to_total_calculations
+        AFTER INSERT OR UPDATE OR DELETE ON tbl_trans_payments
+        FOR EACH ROW EXECUTE FUNCTION sync_trans_payment_to_total_calculations();
+      `);
+
+      // -------------------------------------------------------------
+      // Initial Backfill for existing translations
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        INSERT INTO tbl_total_calculations (
+          guid,
+          category_guid,
+          datetime,
+          receiver_opr_guid,
+          office_guid,
+          status,
+          net_price,
+          sale_price,
+          currency,
+          profit,
+          credit_price,
+          is_manual,
+          "createdAt",
+          "updatedAt"
+        )
+        SELECT
+          gt.guid,
+          '${SYSTEM_CATEGORIES.TRANSLATION}'::uuid,
+          CASE 
+            WHEN gt.received_day IS NOT NULL THEN (gt.received_day::text || ' ' || COALESCE(gt.received_time::text, '00:00:00'))::timestamp
+            ELSE COALESCE(gt."createdAt", NOW())
+          END,
+          gt.opr_guid,
+          emp.office_guid,
+          CASE 
+            WHEN gt.status = '0' OR gt.status = 'REFUND' THEN 'REFUND'
+            WHEN gt.is_paid IS TRUE OR gt.status = 'true' OR gt.status = 'paid' THEN 'paid'
+            ELSE 'notpaid'
+          END,
+          COALESCE(gt.price, 0) - COALESCE(gt.profit, 0),
+          COALESCE(gt.price, 0),
+          'TMT',
+          COALESCE(gt.profit, 0),
+          COALESCE((SELECT SUM(tp.amount) FROM tbl_trans_payments tp WHERE tp.translation_guid = gt.guid), 0),
+          FALSE,
+          COALESCE(gt."createdAt", NOW()),
+          NOW()
+        FROM tbl_general_translations gt
+        LEFT JOIN tbl_employees emp ON emp.guid = gt.opr_guid
+        ON CONFLICT (guid) DO UPDATE SET
+          category_guid = EXCLUDED.category_guid,
+          datetime = EXCLUDED.datetime,
+          receiver_opr_guid = EXCLUDED.receiver_opr_guid,
+          office_guid = EXCLUDED.office_guid,
+          status = EXCLUDED.status,
+          net_price = EXCLUDED.net_price,
+          sale_price = EXCLUDED.sale_price,
+          currency = EXCLUDED.currency,
+          profit = EXCLUDED.profit,
+          credit_price = EXCLUDED.credit_price,
+          is_manual = FALSE,
+          "updatedAt" = NOW();
+      `);
+
+      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');
     } catch (error) {
       console.error('❌ Total Calculations trigger döredilende ýalňyşlyk:', error);
     }
