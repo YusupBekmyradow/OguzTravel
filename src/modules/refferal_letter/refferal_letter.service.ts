@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateRefferalLetterDto } from './dto/create-refferal_letter.dto';
 import { UpdateRefferalLetterDto } from './dto/update-refferal_letter.dto';
@@ -13,13 +13,39 @@ import { Sequelize } from 'sequelize-typescript';
 import { Op } from 'sequelize';
 
 @Injectable()
-export class RefferalLetterService {
+export class RefferalLetterService implements OnModuleInit {
   constructor(
     @InjectModel(RefferalLetter) private refferalLetterRepo: typeof RefferalLetter,
     @InjectModel(Client) private clientRepository: typeof Client,
     private sequelize: Sequelize,
     private readonly i18n: I18nService,
   ) { }
+
+  async onModuleInit() {
+    try {
+      // tranzit kolonunu bgn_departure olarak rename et (varsa)
+      await this.sequelize.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'tbl_refferal_letter' AND column_name = 'tranzit'
+          ) THEN
+            ALTER TABLE "tbl_refferal_letter" RENAME COLUMN "tranzit" TO "bgn_departure";
+          END IF;
+          -- Eger bgn_departure yoksa ekle
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'tbl_refferal_letter' AND column_name = 'bgn_departure'
+          ) THEN
+            ALTER TABLE "tbl_refferal_letter" ADD COLUMN "bgn_departure" VARCHAR;
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+      // ignore
+    }
+  }
 
   private getRefferalLetterIncludes() {
     return [
@@ -129,7 +155,7 @@ export class RefferalLetterService {
           const searchLower = filters.search.trim().toLowerCase();
           whereConditions[Op.or] = [
             { destination_country: { [Op.iLike]: searchPattern } },
-            { tranzit: { [Op.iLike]: searchPattern } },
+            { bgn_departure: { [Op.iLike]: searchPattern } },
             { travel_document_number: { [Op.iLike]: searchPattern } },
             { contract_number: { [Op.iLike]: searchPattern } },
             { status: { [Op.iLike]: searchPattern } },

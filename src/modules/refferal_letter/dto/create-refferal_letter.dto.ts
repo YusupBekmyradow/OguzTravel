@@ -27,7 +27,7 @@ export class CreateRefferalLetterDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  declare tranzit?: string;
+  declare bgn_departure?: string;
 
   @ApiProperty()
   @IsString()

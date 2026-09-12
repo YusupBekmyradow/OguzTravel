@@ -59,7 +59,7 @@ export class RefferalLetter extends Model<RefferalLetter> {
         type: DataType.STRING,
         allowNull: true
     })
-    declare tranzit?: string;
+    declare bgn_departure?: string;
 
     @Column({
         type: DataType.STRING,
