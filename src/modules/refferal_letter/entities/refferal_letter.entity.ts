@@ -114,12 +114,7 @@ export class RefferalLetter extends Model<RefferalLetter> {
     })
     declare contract_date?: Date;
 
-    @Column({
-        type: DataType.DATE,
-        allowNull: true,
-        defaultValue: DataType.NOW,
-    })
-    declare date_time?: Date;
+
 
     @Column({
         type: DataType.STRING,

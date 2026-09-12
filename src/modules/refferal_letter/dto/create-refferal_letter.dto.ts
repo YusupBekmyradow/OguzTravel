@@ -81,12 +81,6 @@ export class CreateRefferalLetterDto {
   @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) => (value === "" ? null : value))
-  @IsDateString()
-  declare date_time?: Date;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => (value === "" ? null : value))
   @IsString()
   declare status?: string;
 }

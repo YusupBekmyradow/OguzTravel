@@ -99,7 +99,6 @@ export class RefferalLetterService implements OnModuleInit {
       const refferalLetter = await this.refferalLetterRepo.create(
         {
           ...createDto,
-          date_time: createDto.date_time ? new Date(createDto.date_time) : new Date(),
           passport_count: client ? (client.passport_count || 1) : 1,
         } as any,
         { transaction }
@@ -135,11 +134,11 @@ export class RefferalLetterService implements OnModuleInit {
     filters?: {
       search?: string;
       received_opr_guid?: string;
-      departure_date?: string | Date;
-      return_date?: string | Date;
+      start_departure_date?: string;
+      end_departure_date?: string;
+      start_return_date?: string;
+      end_return_date?: string;
       contract_date?: string | Date;
-      start_date?: string | Date;
-      end_date?: string | Date;
       status?: string;
     },
     lang: string = 'tk',
@@ -170,61 +169,34 @@ export class RefferalLetterService implements OnModuleInit {
         if (filters.received_opr_guid) {
           whereConditions.received_opr_guid = filters.received_opr_guid;
         }
-        if (filters.departure_date) {
-          const dateStr = new Date(filters.departure_date).toISOString().split('T')[0];
-          const startDate = new Date(`${dateStr}T00:00:00.000Z`);
-          const endDate = new Date(`${dateStr}T23:59:59.999Z`);
-          whereConditions.departure_date = {
-            [Op.between]: [startDate, endDate],
-          };
+
+        // departure_date range filter
+        const startDep = filters.start_departure_date?.trim();
+        const endDep = filters.end_departure_date?.trim();
+        if (startDep && endDep) {
+          whereConditions.departure_date = { [Op.between]: [new Date(`${startDep}T00:00:00.000Z`), new Date(`${endDep}T23:59:59.999Z`)] };
+        } else if (startDep) {
+          whereConditions.departure_date = { [Op.gte]: new Date(`${startDep}T00:00:00.000Z`) };
+        } else if (endDep) {
+          whereConditions.departure_date = { [Op.lte]: new Date(`${endDep}T23:59:59.999Z`) };
         }
 
-        if (filters.return_date) {
-          const dateStr = new Date(filters.return_date).toISOString().split('T')[0];
-          const startDate = new Date(`${dateStr}T00:00:00.000Z`);
-          const endDate = new Date(`${dateStr}T23:59:59.999Z`);
-          whereConditions.return_date = {
-            [Op.between]: [startDate, endDate],
-          };
+        // return_date range filter
+        const startRet = filters.start_return_date?.trim();
+        const endRet = filters.end_return_date?.trim();
+        if (startRet && endRet) {
+          whereConditions.return_date = { [Op.between]: [new Date(`${startRet}T00:00:00.000Z`), new Date(`${endRet}T23:59:59.999Z`)] };
+        } else if (startRet) {
+          whereConditions.return_date = { [Op.gte]: new Date(`${startRet}T00:00:00.000Z`) };
+        } else if (endRet) {
+          whereConditions.return_date = { [Op.lte]: new Date(`${endRet}T23:59:59.999Z`) };
         }
 
         if (filters.contract_date) {
           const dateStr = new Date(filters.contract_date).toISOString().split('T')[0];
           const startDate = new Date(`${dateStr}T00:00:00.000Z`);
           const endDate = new Date(`${dateStr}T23:59:59.999Z`);
-          whereConditions.contract_date = {
-            [Op.between]: [startDate, endDate],
-          };
-        }
-
-        if (filters.start_date && filters.end_date) {
-          const startDate = new Date(filters.start_date);
-          const endDate = new Date(filters.end_date);
-          if (typeof filters.start_date === 'string' && filters.start_date.length === 10) {
-            startDate.setUTCHours(0, 0, 0, 0);
-          }
-          if (typeof filters.end_date === 'string' && filters.end_date.length === 10) {
-            endDate.setUTCHours(23, 59, 59, 999);
-          }
-          whereConditions.date_time = {
-            [Op.between]: [startDate, endDate],
-          };
-        } else if (filters.start_date) {
-          const startDate = new Date(filters.start_date);
-          if (typeof filters.start_date === 'string' && filters.start_date.length === 10) {
-            startDate.setUTCHours(0, 0, 0, 0);
-          }
-          whereConditions.date_time = {
-            [Op.gte]: startDate,
-          };
-        } else if (filters.end_date) {
-          const endDate = new Date(filters.end_date);
-          if (typeof filters.end_date === 'string' && filters.end_date.length === 10) {
-            endDate.setUTCHours(23, 59, 59, 999);
-          }
-          whereConditions.date_time = {
-            [Op.lte]: endDate,
-          };
+          whereConditions.contract_date = { [Op.between]: [startDate, endDate] };
         }
 
         if (filters.status !== undefined && filters.status !== null && String(filters.status).trim() !== '') {
