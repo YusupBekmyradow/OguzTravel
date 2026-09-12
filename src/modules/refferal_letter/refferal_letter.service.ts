@@ -94,7 +94,10 @@ export class RefferalLetterService implements OnModuleInit {
   async addRefferalLetter(createDto: CreateRefferalLetterDto, lang: string) {
     const transaction = await this.sequelize.transaction();
     try {
-      const client = await this.clientRepository.findByPk(createDto.client_guid, { transaction });
+      const client = await this.clientRepository.findByPk(createDto.client_guid, {
+        attributes: ['guid', 'passport_count'],
+        transaction
+      });
 
       const refferalLetter = await this.refferalLetterRepo.create(
         {
@@ -103,12 +106,13 @@ export class RefferalLetterService implements OnModuleInit {
         } as any,
         { transaction }
       );
+      await transaction.commit();
+
+      // Transaction kapandiktan sonra fetch - daha hizli
       const newRefferalLetter = await this.refferalLetterRepo.findOne({
         where: { guid: refferalLetter.guid },
         include: this.getRefferalLetterIncludes(),
-        transaction
       });
-      await transaction.commit();
 
       if (!newRefferalLetter) {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
@@ -138,7 +142,8 @@ export class RefferalLetterService implements OnModuleInit {
       end_departure_date?: string;
       start_return_date?: string;
       end_return_date?: string;
-      contract_date?: string | Date;
+      start_contract_date?: string;
+      end_contract_date?: string;
       status?: string;
     },
     lang: string = 'tk',
@@ -192,11 +197,15 @@ export class RefferalLetterService implements OnModuleInit {
           whereConditions.return_date = { [Op.lte]: new Date(`${endRet}T23:59:59.999Z`) };
         }
 
-        if (filters.contract_date) {
-          const dateStr = new Date(filters.contract_date).toISOString().split('T')[0];
-          const startDate = new Date(`${dateStr}T00:00:00.000Z`);
-          const endDate = new Date(`${dateStr}T23:59:59.999Z`);
-          whereConditions.contract_date = { [Op.between]: [startDate, endDate] };
+        // contract_date range filter
+        const startCon = filters.start_contract_date?.trim();
+        const endCon = filters.end_contract_date?.trim();
+        if (startCon && endCon) {
+          whereConditions.contract_date = { [Op.between]: [new Date(`${startCon}T00:00:00.000Z`), new Date(`${endCon}T23:59:59.999Z`)] };
+        } else if (startCon) {
+          whereConditions.contract_date = { [Op.gte]: new Date(`${startCon}T00:00:00.000Z`) };
+        } else if (endCon) {
+          whereConditions.contract_date = { [Op.lte]: new Date(`${endCon}T23:59:59.999Z`) };
         }
 
         if (filters.status !== undefined && filters.status !== null && String(filters.status).trim() !== '') {
@@ -207,7 +216,7 @@ export class RefferalLetterService implements OnModuleInit {
         where: whereConditions,
         include: this.getRefferalLetterIncludes(),
         order: [['index_number', 'DESC']],
-        limit: Number(limit),
+        limit: currentLimit,
         offset: Number(offset),
         distinct: true
       });
@@ -240,7 +249,10 @@ export class RefferalLetterService implements OnModuleInit {
       }
       let updateData: any = { ...updateDto };
       if (updateDto.client_guid && updateDto.client_guid !== existingLetter.client_guid) {
-        const client = await this.clientRepository.findByPk(updateDto.client_guid, { transaction });
+        const client = await this.clientRepository.findByPk(updateDto.client_guid, {
+          attributes: ['guid', 'passport_count'],
+          transaction
+        });
         if (client) {
           updateData.passport_count = client.passport_count || 1;
         }
@@ -248,13 +260,13 @@ export class RefferalLetterService implements OnModuleInit {
         updateData.passport_count = existingLetter.passport_count;
       }
       await existingLetter.update(updateData, { transaction });
+      await transaction.commit();
 
+      // Transaction kapandiktan sonra fetch - lock serbest kalir
       const newRefferalLetter = await this.refferalLetterRepo.findOne({
         where: { guid: updateDto.guid },
         include: this.getRefferalLetterIncludes(),
-        transaction
       });
-      await transaction.commit();
       const formattedData = this.formatRefferalLetterPassport(newRefferalLetter);
       return {
         status: 200,
@@ -271,12 +283,10 @@ export class RefferalLetterService implements OnModuleInit {
 
   async deleteRefferalLetter(guid: string, lang: string) {
     try {
-      const refferalLetter = await this.refferalLetterRepo.findByPk(guid);
-      if (!refferalLetter) {
+      const deleted = await this.refferalLetterRepo.destroy({ where: { guid } });
+      if (!deleted) {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
       }
-      await refferalLetter.destroy();
-
       return successResponse(HttpStatuses.OK, null, this.i18n.t('refferal_letter.deleted', { lang }));
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.deleteFailed', { lang }), error)

@@ -34,11 +34,12 @@ export class RefferalLetterController {
     @Query('end_departure_date') end_departure_date?: string,
     @Query('start_return_date') start_return_date?: string,
     @Query('end_return_date') end_return_date?: string,
-    @Query('contract_date') contract_date?: string,
+    @Query('start_contract_date') start_contract_date?: string,
+    @Query('end_contract_date') end_contract_date?: string,
     @Query('status') status?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    const filters = { search, received_opr_guid, start_departure_date, end_departure_date, start_return_date, end_return_date, contract_date, status };
+    const filters = { search, received_opr_guid, start_departure_date, end_departure_date, start_return_date, end_return_date, start_contract_date, end_contract_date, status };
     return await this.refferalLetterService.getAllRefferalLetter(Number(page), Number(limit), filters, lang);
   }
 
