@@ -93,16 +93,6 @@ export class RefferalLetter extends Model<RefferalLetter> {
     declare currency: string;
 
     @Column({
-        type: DataType.JSONB,
-        allowNull: true,
-        defaultValue: {}
-    })
-    declare agent: {
-        name: string,
-        phone_number: string
-    };
-
-    @Column({
         type: DataType.STRING,
         allowNull: true,
     })

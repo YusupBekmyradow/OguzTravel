@@ -1483,7 +1483,7 @@ export class TotalCalculationsService implements OnModuleInit {
           ) VALUES (
             NEW.guid,
             '${SYSTEM_CATEGORIES.REFERRAL_LETTER}'::uuid,
-            COALESCE(NEW.date_time, COALESCE(NEW."createdAt", NOW())),
+            COALESCE(NEW."createdAt", NOW()),
             NEW.received_opr_guid,
             v_office_guid,
             NULL,
@@ -1545,7 +1545,7 @@ export class TotalCalculationsService implements OnModuleInit {
         SELECT
           rl.guid,
           '${SYSTEM_CATEGORIES.REFERRAL_LETTER}'::uuid,
-          COALESCE(rl.date_time, COALESCE(rl."createdAt", NOW())),
+          COALESCE(rl."createdAt", NOW()),
           rl.received_opr_guid,
           emp.office_guid,
           NULL,

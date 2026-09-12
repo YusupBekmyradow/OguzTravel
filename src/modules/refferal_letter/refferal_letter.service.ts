@@ -23,7 +23,6 @@ export class RefferalLetterService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      // tranzit kolonunu bgn_departure olarak rename et (varsa)
       await this.sequelize.query(`
         DO $$
         BEGIN
@@ -43,7 +42,6 @@ export class RefferalLetterService implements OnModuleInit {
         END $$;
       `);
     } catch (e) {
-      // ignore
     }
   }
 
@@ -107,8 +105,6 @@ export class RefferalLetterService implements OnModuleInit {
         { transaction }
       );
       await transaction.commit();
-
-      // Transaction kapandiktan sonra fetch - daha hizli
       const newRefferalLetter = await this.refferalLetterRepo.findOne({
         where: { guid: refferalLetter.guid },
         include: this.getRefferalLetterIncludes(),
@@ -175,7 +171,6 @@ export class RefferalLetterService implements OnModuleInit {
           whereConditions.received_opr_guid = filters.received_opr_guid;
         }
 
-        // departure_date range filter
         const startDep = filters.start_departure_date?.trim();
         const endDep = filters.end_departure_date?.trim();
         if (startDep && endDep) {
@@ -186,7 +181,6 @@ export class RefferalLetterService implements OnModuleInit {
           whereConditions.departure_date = { [Op.lte]: new Date(`${endDep}T23:59:59.999Z`) };
         }
 
-        // return_date range filter
         const startRet = filters.start_return_date?.trim();
         const endRet = filters.end_return_date?.trim();
         if (startRet && endRet) {
@@ -197,7 +191,7 @@ export class RefferalLetterService implements OnModuleInit {
           whereConditions.return_date = { [Op.lte]: new Date(`${endRet}T23:59:59.999Z`) };
         }
 
-        // contract_date range filter
+
         const startCon = filters.start_contract_date?.trim();
         const endCon = filters.end_contract_date?.trim();
         if (startCon && endCon) {
@@ -262,7 +256,6 @@ export class RefferalLetterService implements OnModuleInit {
       await existingLetter.update(updateData, { transaction });
       await transaction.commit();
 
-      // Transaction kapandiktan sonra fetch - lock serbest kalir
       const newRefferalLetter = await this.refferalLetterRepo.findOne({
         where: { guid: updateDto.guid },
         include: this.getRefferalLetterIncludes(),

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsDateString, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class CreateRefferalLetterDto {
   @ApiPropertyOptional()
@@ -53,14 +53,6 @@ export class CreateRefferalLetterDto {
   @IsOptional()
   @IsString()
   declare currency?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsObject()
-  declare agent?: {
-    name: string,
-    phone_number: string;
-  }
 
   @ApiPropertyOptional()
   @IsString()
