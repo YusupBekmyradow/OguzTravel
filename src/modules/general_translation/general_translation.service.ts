@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateGeneralTranslationDto } from './dto/create-general_translation.dto';
 import { UpdateGeneralTranslationDto } from './dto/update-general_translation.dto';
@@ -15,13 +15,24 @@ import { TransPayment } from '../trans_payment/entities/trans_payment.entity';
 import { Op } from 'sequelize';
 
 @Injectable()
-export class GeneralTranslationService {
+export class GeneralTranslationService implements OnModuleInit {
   constructor(
     @InjectModel(GeneralTranslation) private translationRepository: typeof GeneralTranslation,
     @InjectModel(TransPayment) private transPaymentRepo: typeof TransPayment,
     private sequelize: Sequelize,
     private readonly i18n: I18nService,
   ) { }
+
+  async onModuleInit() {
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_general_translations" 
+        ADD COLUMN IF NOT EXISTS "expense_price" NUMERIC(12, 2) DEFAULT 0;
+      `);
+    } catch (e) {
+      // Ignore if table doesn't exist yet or already altered
+    }
+  }
 
   private getIncludes() {
     return [
@@ -66,8 +77,15 @@ export class GeneralTranslationService {
   async addGeneralTranslation(createDto: any, lang: string) {
     const t = await this.sequelize.transaction();
     try {
+      const price = Number(createDto.price) || 0;
+      const expensePrice = Number(createDto.expense_price) || 0;
+      const profit = Number((price - expensePrice).toFixed(2));
+
       const translation = await this.translationRepository.create({
-        ...createDto
+        ...createDto,
+        price,
+        expense_price: expensePrice,
+        profit
       } as any, { hooks: true, transaction: t });
 
       if ((createDto.is_paid === true || createDto.is_paid === 'true' || createDto.status === '0' || createDto.status === 0) && (Number(translation.price) || 0) > 0) {
@@ -245,15 +263,15 @@ export class GeneralTranslationService {
           : [],
         attributes: [
           [Sequelize.fn('SUM', Sequelize.col('GeneralTranslation.price')), 'totalPrice'],
-          [Sequelize.fn('SUM', Sequelize.col('GeneralTranslation.profit')), 'totalProfit']
+          [Sequelize.fn('SUM', Sequelize.col('GeneralTranslation.expense_price')), 'totalExpensePrice']
         ],
         raw: true,
       }),
       ]);
 
-      const totalPrice = Number((totalPriceResult as any)?.totalPrice || 0);
-      const totalProfit = Number((totalPriceResult as any)?.totalProfit || 0);
-      const totalExpense = Number((totalPrice - totalProfit).toFixed(2));
+      const totalPrice = Number(Number((totalPriceResult as any)?.totalPrice || 0).toFixed(2));
+      const totalExpensePrice = Number(Number((totalPriceResult as any)?.totalExpensePrice || 0).toFixed(2));
+      const totalProfit = Number((totalPrice - totalExpensePrice).toFixed(2));
 
       return {
         status: 200,
@@ -263,8 +281,9 @@ export class GeneralTranslationService {
           totalPages: Math.ceil(count / limit),
           currentPage: page,
           itemsPerPage: limit,
-          totalProfit: Number(totalProfit.toFixed(2)),
-          totalExpense: totalExpense
+          totalPrice: totalPrice,
+          totalExpensePrice: totalExpensePrice,
+          totalProfit: totalProfit
         },
         message: this.i18n.t('general_translation.listFetched', { lang })
       };
@@ -288,7 +307,9 @@ export class GeneralTranslationService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('general_translation.notFound', { lang }));
       }
 
-      const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(translation.price);
+      const targetPrice = updateDto.price !== undefined ? Number(updateDto.price) : Number(translation.price || 0);
+      const targetExpensePrice = updateDto.expense_price !== undefined ? Number(updateDto.expense_price) : Number(translation.expense_price || 0);
+      const targetProfit = Number((targetPrice - targetExpensePrice).toFixed(2));
       const operatorGuid = updateDto.opr_guid || translation.opr_guid;
 
       if (updateDto.status === '0' || updateDto.status === 0) {
@@ -363,7 +384,11 @@ export class GeneralTranslationService {
         }
       }
 
-      await translation.update(updateDto as any, { transaction: t });
+      await translation.update({
+        ...updateDto,
+        expense_price: targetExpensePrice,
+        profit: targetProfit,
+      } as any, { transaction: t });
 
       await t.commit();
 

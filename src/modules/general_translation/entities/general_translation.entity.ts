@@ -100,6 +100,12 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
     type: DataType.DECIMAL(12, 2),
     defaultValue: 0
   })
+  declare expense_price: number;
+
+  @Column({
+    type: DataType.DECIMAL(12, 2),
+    defaultValue: 0
+  })
   declare profit: number;
 
   @Column({

@@ -68,7 +68,7 @@ export class CreateGeneralTranslationDto {
   @ApiPropertyOptional()
   @IsNumber()
   @IsOptional()
-  declare profit?: number;
+  declare expense_price?: number;
 
   @ApiPropertyOptional()
   @IsString()
