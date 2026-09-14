@@ -1,5 +1,4 @@
 import { Table, Column, Model, DataType, HasMany } from 'sequelize-typescript';
-import { ReportShare } from '../../report_share/entities/report_share.entity';
 
 @Table({
   tableName: 'tbl_reports',

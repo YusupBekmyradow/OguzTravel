@@ -29,7 +29,6 @@ import { TtpPayment } from '../modules/ttp_payment/entities/ttp_payment.entity';
 import { Inbound } from '../modules/inbound/entities/inbound.entity';
 import { Message } from '../modules/messages/entities/message.entity';
 import { TaskAssignee } from '../modules/messages/entities/task_assignees.entity';
-import { ReportShare } from '../modules/report_share/entities/report_share.entity';
 import { Report } from '../modules/report/entities/report.entity';
 import { Country } from '../modules/country/entities/country.entity';
 import { Receiving } from '../modules/receiving/entities/receiving.entity';
@@ -56,7 +55,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     synchronize: true,
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
-      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, ReportShare, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria, TotalCalculation, Category]
+      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria, TotalCalculation, Category]
   };
 };
 

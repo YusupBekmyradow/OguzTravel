@@ -21,7 +21,6 @@ import { Package } from "../../package/entities/package.entity";
 import { HarPayment } from "../../har_payment/entities/har_payment.entity";
 import { TtpPayment } from "../../ttp_payment/entities/ttp_payment.entity";
 import { Inbound } from "../../inbound/entities/inbound.entity";
-import { ReportShare } from "../../report_share/entities/report_share.entity";
 import { Receiving } from "../../receiving/entities/receiving.entity";
 import { Cafeteria } from "../../cafeteria/entities/cafeteria.entity";
 import { TotalCalculation } from "../../total_calculations/entities/total_calculation.entity";
@@ -290,20 +289,6 @@ export class Employee extends Model<Employee> {
     as: 'INreceiveroperator'
   })
   declare inbound: Inbound[];
-
-  @HasMany(() => ReportShare, {
-    foreignKey: 'assignment_opr_guid',
-    sourceKey: 'guid',
-    as: 'reportAS_operator'
-  })
-  declare rShareOperator: ReportShare[];
-
-  @HasMany(() => ReportShare, {
-    foreignKey: 'receiver_opr_guid',
-    sourceKey: 'guid',
-    as: 'reportRe_operator'
-  })
-  declare rShareRecipient: ReportShare[];
 
   @HasMany(() => Receiving, {
     foreignKey: 'operator_guid',

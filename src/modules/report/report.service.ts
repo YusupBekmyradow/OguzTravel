@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { InjectModel } from '@nestjs/sequelize';
 import { Report } from './entities/report.entity';
-import { ReportShare } from '../report_share/entities/report_share.entity';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
@@ -13,16 +12,12 @@ import { QueryTypes } from 'sequelize';
 export class ReportService {
   constructor(
     @InjectModel(Report) private readonly reportRepository: typeof Report,
-    @InjectModel(ReportShare) private readonly reportShareRepository: typeof ReportShare,
     private readonly i18n: I18nService,
   ) { }
 
   async getTotalReportCount(): Promise<number> {
     const [result]: any[] = await this.reportRepository.sequelize!.query(
-      `SELECT (
-        COALESCE((SELECT SUM(total_letter) FROM tbl_reports), 0) -
-        COALESCE((SELECT SUM(total_count) FROM tbl_report_share), 0)
-      )::int AS total`,
+      `SELECT COALESCE((SELECT SUM(total_letter) FROM tbl_reports), 0)::int AS total`,
       { type: QueryTypes.SELECT },
     );
     return Number(result?.total || 0);
