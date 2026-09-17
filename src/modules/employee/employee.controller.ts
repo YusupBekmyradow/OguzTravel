@@ -33,9 +33,10 @@ export class EmployeeController {
     @Query('department_guid') department_guid?: string,
     @Query('office_guid') office_guid?: string,
     @Query('position_guids') position_guids?: string | string[],
+    @Query('is_active') is_active?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    const filters = { department_guid, office_guid, position_guids };
+    const filters = { department_guid, office_guid, position_guids, is_active };
     return this.employeeService.getAllEmployee(Number(page), Number(limit), search, filters, lang);
   }
 

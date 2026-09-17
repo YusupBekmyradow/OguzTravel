@@ -1,4 +1,5 @@
 import { CafeteriaModule } from './modules/cafeteria/cafeteria.module';
+import { SalaryModule } from './modules/salary/salary.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
@@ -113,7 +114,8 @@ dotenv.config();
     UserDatailsModule,
     CafeteriaModule,
     TotalCalculationsModule,
-    CategoryModule
+    CategoryModule,
+    SalaryModule
   ],
   controllers: [AppController],
   providers: [

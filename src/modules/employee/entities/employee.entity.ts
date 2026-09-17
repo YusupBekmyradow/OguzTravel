@@ -86,6 +86,14 @@ export class Employee extends Model<Employee> {
   })
   declare department_guid: string;
 
+  // Inactive employees are hidden from payroll (salary lists / generation).
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+  })
+  declare is_active: boolean;
+
   @BelongsTo(() => Office, {
     targetKey: 'guid',
     foreignKey: 'office_guid',

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -8,18 +8,35 @@ import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Office } from '../office/entities/office.entity';
 import { Position } from '../position/entities/position.entity';
 import { Department } from '../department/entities/department.entity';
-import { Op, QueryTypes } from 'sequelize';
+import { DataTypes, Op, QueryTypes } from 'sequelize';
 import { I18nService } from 'nestjs-i18n';
 import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
-export class EmployeeService {
+export class EmployeeService implements OnModuleInit {
+  private readonly logger = new Logger(EmployeeService.name);
+
   constructor(
     @InjectModel(Employee) private employeeRepository: typeof Employee,
     @InjectModel(Position) private positionRepository: typeof Position,
     private readonly i18n: I18nService,
     private readonly sequelize: Sequelize
   ) { }
+
+  // is_active was added after tbl_employees existed; `synchronize` does not
+  // alter existing tables, so add it once here (existing rows become active).
+  async onModuleInit() {
+    const queryInterface = this.sequelize.getQueryInterface();
+    const table = await queryInterface.describeTable('tbl_employees');
+    if (!table.is_active) {
+      await queryInterface.addColumn('tbl_employees', 'is_active', {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      });
+      this.logger.log('Added column tbl_employees.is_active');
+    }
+  }
 
   async addEmployee(createEmployeeDto: CreateEmployeeDto, lang: string) {
     try {
@@ -63,7 +80,7 @@ export class EmployeeService {
     page: number = 1,
     limit: number = 10,
     search?: string,
-    filters?: { department_guid?: string; office_guid?: string; position_guids?: string | string[] },
+    filters?: { department_guid?: string; office_guid?: string; position_guids?: string | string[]; is_active?: string },
     lang: string = 'tk',
   ) {
     try {
@@ -82,6 +99,10 @@ export class EmployeeService {
         conditions.push('e.office_guid = :office_guid');
         replacements.office_guid = filters.office_guid;
       }
+      if (filters?.is_active === 'true' || filters?.is_active === 'false') {
+        conditions.push('e.is_active = :is_active');
+        replacements.is_active = filters.is_active === 'true';
+      }
       if (filters?.position_guids) {
         const posArray = Array.isArray(filters.position_guids) ? filters.position_guids : [filters.position_guids];
         if (posArray.length > 0) {
@@ -96,7 +117,7 @@ export class EmployeeService {
 
       const query = `
       SELECT 
-        e.guid, e."fullName", e.phone_number, e.gmail, e.index_number, e.position_guids, e."createdAt", e."updatedAt",
+        e.guid, e."fullName", e.phone_number, e.gmail, e.index_number, e.position_guids, e.is_active, e."createdAt", e."updatedAt",
         json_build_object('guid', o.guid, 'fullName', o."fullName", 'shortName', o."shortName") AS office,
         json_build_object('guid', d.guid, 'name', d.name) AS department,
         COALESCE((

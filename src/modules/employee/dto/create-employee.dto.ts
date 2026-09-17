@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNotEmpty, IsArray, ArrayNotEmpty, IsObject, IsUUID, IsOptional, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, IsArray, ArrayNotEmpty, IsObject, IsUUID, IsOptional, MinLength, MaxLength, IsBoolean } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -54,4 +54,10 @@ export class CreateEmployeeDto {
   @IsUUID()
   @IsNotEmpty()
   declare office_guid: string;
+
+  @ApiPropertyOptional({ default: true })
+  @Transform(({ value }) => (value === 'true' ? true : value === 'false' ? false : value))
+  @IsBoolean()
+  @IsOptional()
+  declare is_active?: boolean;
 }
