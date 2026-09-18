@@ -22,6 +22,13 @@ export class GenerateSalaryMonthDto {
   @IsOptional()
   @IsUUID()
   declare office_guid?: string;
+
+  @ApiPropertyOptional({ type: [String], description: 'Only these employees (default: every active one)' })
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUUID('all', { each: true })
+  declare employee_guids?: string[];
 }
 
 export class MarkSalaryPaidDto {

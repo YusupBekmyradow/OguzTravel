@@ -330,6 +330,7 @@ export class SalaryService implements OnModuleInit {
     limit: number = 40,
     search?: string,
     lang: string = 'tk',
+    missingMonth?: string,
   ) {
     try {
       const currentPage = Math.max(1, Number(page) || 1);
@@ -341,6 +342,16 @@ export class SalaryService implements OnModuleInit {
       const where: any = { is_active: true };
       if (!scope.allOffices) where.office_guid = scope.officeGuid;
       if (search?.trim()) where.fullName = { [Op.iLike]: `%${search.trim()}%` };
+      // Only employees without a row in that month (the "add employee" picker).
+      if (missingMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(missingMonth)) {
+        const existing = await this.salaryRepo.findAll({
+          where: { month: missingMonth },
+          attributes: ['employee_guid'],
+          raw: true,
+        });
+        const taken = existing.map((e: any) => e.employee_guid);
+        if (taken.length) where.guid = { [Op.notIn]: taken };
+      }
 
       const { rows, count } = await this.employeeRepo.findAndCountAll({
         where,
@@ -494,6 +505,8 @@ export class SalaryService implements OnModuleInit {
       const officeGuid = scope.allOffices ? dto.office_guid : scope.officeGuid;
       const employeeWhere: any = { is_active: true };
       if (officeGuid) employeeWhere.office_guid = officeGuid;
+      // "Add employee" on the salary page adds just the picked ones.
+      if (dto.employee_guids?.length) employeeWhere.guid = dto.employee_guids;
 
       const employees = await this.employeeRepo.findAll({
         where: employeeWhere,
@@ -687,18 +700,61 @@ export class SalaryService implements OnModuleInit {
         locked_at: dto.is_locked ? new Date() : null,
         locked_by_guid: dto.is_locked ? scope.employeeGuid : null,
       };
-      const existing = await this.salaryMonthRepo.findOne({ where: { month: dto.month, office_guid: officeGuid } });
-      if (existing) await existing.update(values as any);
-      else await this.salaryMonthRepo.create({ month: dto.month, office_guid: officeGuid, ...values } as any);
+
+      // Closing the month settles it: every row still short of BERMELI is
+      // marked paid in the same transaction as the lock.
+      const paidCount = await this.salaryRepo.sequelize!.transaction(async (transaction) => {
+        let settled = 0;
+        if (dto.is_locked) {
+          // Same rows the salary page lists: active employees of the office.
+          const employees = await this.employeeRepo.findAll({
+            where: { office_guid: officeGuid, is_active: true },
+            attributes: ['guid'],
+            raw: true,
+            transaction,
+          });
+          const employeeGuids = employees.map((e: any) => e.guid);
+          if (employeeGuids.length > 0) {
+            [settled] = await this.salaryRepo.update(
+              {
+                paid_amount: fn('GREATEST', col('payable_amount'), 0),
+                paid_date: today(),
+              } as any,
+              {
+                where: {
+                  month: dto.month,
+                  employee_guid: employeeGuids,
+                  // A row counts as paid only once it has a paid date.
+                  paid_date: null,
+                } as any,
+                transaction,
+              },
+            );
+          }
+        }
+
+        const existing = await this.salaryMonthRepo.findOne({
+          where: { month: dto.month, office_guid: officeGuid },
+          transaction,
+        });
+        if (existing) await existing.update(values as any, { transaction });
+        else await this.salaryMonthRepo.create({ month: dto.month, office_guid: officeGuid, ...values } as any, { transaction });
+        return settled;
+      });
 
       const status = await this.salaryMonthRepo.findOne({
         where: { month: dto.month, office_guid: officeGuid },
         include: [{ model: Employee, as: 'lockedBy', attributes: ['guid', 'fullName'] }],
       });
+      const messageKey = !dto.is_locked
+        ? 'salary.unlockSuccess'
+        : paidCount > 0
+          ? 'salary.lockPaidSuccess'
+          : 'salary.lockSuccess';
       return {
         status: 200,
-        data: status,
-        message: await this.i18n.translate(dto.is_locked ? 'salary.lockSuccess' : 'salary.unlockSuccess', { lang }),
+        data: status ? { ...status.get({ plain: true }), paid_count: paidCount } : status,
+        message: await this.i18n.translate(messageKey, { lang, args: { count: paidCount } }),
       };
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('salary.lockFailed', { lang }), error);

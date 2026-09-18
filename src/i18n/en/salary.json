@@ -20,6 +20,7 @@
   "markPaidSuccess": "{count} salaries marked as paid.",
   "markPaidFailed": "Failed to mark as paid.",
   "lockSuccess": "Month locked.",
+  "lockPaidSuccess": "Month locked, {count} salaries marked as paid.",
   "unlockSuccess": "Month unlocked.",
   "lockFailed": "Failed to change month status.",
   "noOffice": "Your office could not be determined.",

@@ -20,6 +20,7 @@
   "markPaidSuccess": "{count} aýlyk tölenen edildi.",
   "markPaidFailed": "Tölegi bellemekde ýalňyşlyk ýüze çykdy.",
   "lockSuccess": "Aý ýapyldy.",
+  "lockPaidSuccess": "Aý ýapyldy, {count} aýlyk tölenen edildi.",
   "unlockSuccess": "Aý açyldy.",
   "lockFailed": "Aýyň ýagdaýyny üýtgetmekde ýalňyşlyk ýüze çykdy.",
   "noOffice": "Siziň ofisiňiz kesgitlenmedi.",

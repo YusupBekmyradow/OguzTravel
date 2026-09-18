@@ -57,9 +57,10 @@ export class SalaryController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 40,
     @Query('search') search?: string,
+    @Query('missing_month') missing_month?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    return this.salaryService.getEmployees(req?.user, Number(page), Number(limit), search, lang);
+    return this.salaryService.getEmployees(req?.user, Number(page), Number(limit), search, lang, missing_month);
   }
 
 
