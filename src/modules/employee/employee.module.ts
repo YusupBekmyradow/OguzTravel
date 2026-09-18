@@ -7,13 +7,15 @@ import { PositionModule } from '../position/position.module';
 import { DepartmentModule } from '../department/department.module';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Position } from '../position/entities/position.entity';
+import { SalaryModule } from '../salary/salary.module';
 
 @Module({
   imports: [
     SequelizeModule.forFeature([Employee,Position]),
     OfficeModule,
     PositionModule,
-    DepartmentModule
+    DepartmentModule,
+    SalaryModule,
   ],
   controllers: [EmployeeController],
   providers: [EmployeeService],

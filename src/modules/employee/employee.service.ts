@@ -11,6 +11,7 @@ import { Department } from '../department/entities/department.entity';
 import { DataTypes, Op, QueryTypes } from 'sequelize';
 import { I18nService } from 'nestjs-i18n';
 import { Sequelize } from 'sequelize-typescript';
+import { SalaryService } from '../salary/salary.service';
 
 @Injectable()
 export class EmployeeService implements OnModuleInit {
@@ -20,7 +21,8 @@ export class EmployeeService implements OnModuleInit {
     @InjectModel(Employee) private employeeRepository: typeof Employee,
     @InjectModel(Position) private positionRepository: typeof Position,
     private readonly i18n: I18nService,
-    private readonly sequelize: Sequelize
+    private readonly sequelize: Sequelize,
+    private readonly salaryService: SalaryService,
   ) { }
 
   // is_active was added after tbl_employees existed; `synchronize` does not
@@ -65,6 +67,9 @@ export class EmployeeService implements OnModuleInit {
         ...newEmployee.toJSON(),
         positions
       };
+      // Payroll row for the running month (skipped when the month has not
+      // been started yet or is locked).
+      await this.salaryService.ensureCurrentMonthRow(newEmployee.guid, (newEmployee as any).createdAt);
       return {
         status: 201,
         data: responseData,
@@ -208,9 +213,14 @@ export class EmployeeService implements OnModuleInit {
       if (!employee) {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFound', { lang }));
       }
+      const wasInactive = employee.is_active === false;
       await employee.update({
         ...updateEmployeeDto,
       } as any);
+      // Re-activated employees join the running month as well.
+      if (wasInactive && updateEmployeeDto.is_active === true) {
+        await this.salaryService.ensureCurrentMonthRow(employee.guid, new Date());
+      }
       const updatedEmployee = await this.employeeRepository.findOne({
         where: { guid: employee.guid },
         include: [

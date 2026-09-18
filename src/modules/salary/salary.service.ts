@@ -78,6 +78,20 @@ const workDaysInMonth = (month: string) => {
   return count;
 };
 
+// Working days from a given day of the month to its end (Sundays off).
+const workDaysFrom = (month: string, fromDay: number) => {
+  const [y, m] = month.split('-').map(Number);
+  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  let count = 0;
+  for (let day = Math.max(1, fromDay); day <= days; day += 1) {
+    if (new Date(Date.UTC(y, m - 1, day)).getUTCDay() !== 0) count += 1;
+  }
+  return count;
+};
+
+const monthOf = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 // Columns added after tbl_salary first shipped. `synchronize` only creates
@@ -393,6 +407,81 @@ export class SalaryService implements OnModuleInit {
       };
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('salary.createFailed', { lang }), error);
+    }
+  }
+
+
+  /**
+   * Adds the current month's row for one employee — used when an employee is
+   * created or re-activated, so nobody has to press a "fill the gaps" button.
+   *
+   * Deliberately does nothing when:
+   *  - the employee is inactive or has no office,
+   *  - the month has not been started for that office (no rows yet): the page
+   *    should keep showing its "start the month" screen,
+   *  - the month is locked, or the row already exists.
+   *
+   * The hire date is the employee's creation date, so a mid-month hire only
+   * gets the remaining working days; anyone can correct it in the table.
+   * Never throws: employee creation must not fail because of payroll.
+   */
+  async ensureCurrentMonthRow(employeeGuid: string, hireDate?: Date | null) {
+    try {
+      const employee = await this.employeeRepo.findByPk(employeeGuid, {
+        attributes: ['guid', 'office_guid', 'is_active', 'createdAt'],
+      });
+      if (!employee?.office_guid || employee.is_active === false) return null;
+
+      const hiredAt = hireDate ?? (employee as any).createdAt ?? new Date();
+      const now = new Date();
+      // Only the running month: never backfill closed months.
+      const month = monthOf(now);
+      if (await this.isDuplicate(employee.guid, month)) return null;
+      if (await this.hasLockedPeriod([{ month, office_guid: employee.office_guid }])) return null;
+
+      const monthStarted = await this.salaryRepo.count({
+        where: { month },
+        include: [
+          {
+            model: Employee,
+            as: 'employee',
+            attributes: [],
+            where: { office_guid: employee.office_guid },
+            required: true,
+          },
+        ],
+      });
+      if (!monthStarted) return null;
+
+      const previous = await this.salaryRepo.findOne({
+        where: { employee_guid: employee.guid, month: { [Op.lt]: month } },
+        attributes: [...CARRY_OVER_FIELDS, 'bonus_percent'],
+        order: [['month', 'DESC']],
+        raw: true,
+      });
+
+      const hiredThisMonth = monthOf(new Date(hiredAt)) === month;
+      const workDays = workDaysInMonth(month);
+      const base = {
+        base_salary: Number(previous?.base_salary || 0),
+        card_amount: Number(previous?.card_amount || 0),
+        work_days: workDays,
+        worked_days: hiredThisMonth ? workDaysFrom(month, new Date(hiredAt).getDate()) : workDays,
+        bonus_percent: previous?.bonus_percent ?? null,
+        sales_amount: previous?.bonus_percent != null ? 0 : null,
+      };
+
+      const created = await this.salaryRepo.create({
+        month,
+        employee_guid: employee.guid,
+        ...base,
+        ...this.normalize(base),
+      } as any);
+      this.logger.log(`Created ${month} salary row for employee ${employee.guid}`);
+      return created;
+    } catch (error: any) {
+      this.logger.error(`Could not create the salary row: ${error?.message}`);
+      return null;
     }
   }
 
