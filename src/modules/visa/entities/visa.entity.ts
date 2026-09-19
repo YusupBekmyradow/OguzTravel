@@ -53,6 +53,13 @@ export class Visa extends Model<Visa> {
   declare receiver_opr_guid: string;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 1
+  })
+  declare status: number;
+
+  @Column({
     type: DataType.DECIMAL(12, 2),
     defaultValue: 0
   })
@@ -84,7 +91,6 @@ export class Visa extends Model<Visa> {
     onUpdate: 'SET NULL'
   })
   declare client: Client;
-
 
   @BelongsTo(() => Employee, {
     targetKey: 'guid',
