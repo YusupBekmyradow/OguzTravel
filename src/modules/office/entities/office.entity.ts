@@ -3,6 +3,8 @@ import { Employee } from '../../employee/entities/employee.entity';
 import { TurkishAirline } from '../../turkish_airlines/entities/turkish_airline.entity';
 import { Receiving } from '../../receiving/entities/receiving.entity';
 import { TotalCalculation } from '../../total_calculations/entities/total_calculation.entity';
+import { Salary } from '../../salary/entities/salary.entity';
+import { SalaryMonth } from '../../salary/entities/salary-month.entity';
 
 @Table({
   tableName: 'tbl_offices',
@@ -64,6 +66,12 @@ export class Office extends Model<Office> {
     sourceKey: 'guid'
   })
   declare totalCalculation: TotalCalculation[];
+
+  @HasMany(() => SalaryMonth, {
+    foreignKey: 'office_guid',
+    sourceKey: 'guid'
+  })
+  declare salaryMonth: SalaryMonth[];
 }
 
 

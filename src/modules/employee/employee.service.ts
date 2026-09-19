@@ -25,8 +25,6 @@ export class EmployeeService implements OnModuleInit {
     private readonly salaryService: SalaryService,
   ) { }
 
-  // is_active was added after tbl_employees existed; `synchronize` does not
-  // alter existing tables, so add it once here (existing rows become active).
   async onModuleInit() {
     const queryInterface = this.sequelize.getQueryInterface();
     const table = await queryInterface.describeTable('tbl_employees');
@@ -67,8 +65,6 @@ export class EmployeeService implements OnModuleInit {
         ...newEmployee.toJSON(),
         positions
       };
-      // Payroll row for the running month (skipped when the month has not
-      // been started yet or is locked).
       await this.salaryService.ensureCurrentMonthRow(newEmployee.guid, (newEmployee as any).createdAt);
       return {
         status: 201,
@@ -217,7 +213,6 @@ export class EmployeeService implements OnModuleInit {
       await employee.update({
         ...updateEmployeeDto,
       } as any);
-      // Re-activated employees join the running month as well.
       if (wasInactive && updateEmployeeDto.is_active === true) {
         await this.salaryService.ensureCurrentMonthRow(employee.guid, new Date());
       }

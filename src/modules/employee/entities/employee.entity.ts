@@ -24,6 +24,8 @@ import { Inbound } from "../../inbound/entities/inbound.entity";
 import { Receiving } from "../../receiving/entities/receiving.entity";
 import { Cafeteria } from "../../cafeteria/entities/cafeteria.entity";
 import { TotalCalculation } from "../../total_calculations/entities/total_calculation.entity";
+import { Salary } from "../../salary/entities/salary.entity";
+import { SalaryMonth } from "../../salary/entities/salary-month.entity";
 
 @Table({
   tableName: 'tbl_employees',
@@ -86,7 +88,6 @@ export class Employee extends Model<Employee> {
   })
   declare department_guid: string;
 
-  // Inactive employees are hidden from payroll (salary lists / generation).
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,
@@ -315,4 +316,24 @@ export class Employee extends Model<Employee> {
     sourceKey: 'guid'
   })
   declare totalCalculation: TotalCalculation[];
+
+  @HasMany(() => Salary, {
+    foreignKey: 'employee_guid',
+    sourceKey: 'guid',
+    as: 'salary'
+  })
+  declare salary: Salary[];
+
+  @HasMany(() => Salary, {
+    foreignKey: 'employee_guid',
+    sourceKey: 'guid',
+    as: 'salaryCreate'
+  })
+  declare salaryCreate: Salary[];
+
+  @HasMany(() => SalaryMonth, {
+    foreignKey: 'locked_by_guid',
+    sourceKey: 'guid'
+  })
+  declare salaryMonth: SalaryMonth[];
 }

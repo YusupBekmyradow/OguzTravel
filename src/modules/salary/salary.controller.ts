@@ -8,9 +8,6 @@ import { GenerateSalaryMonthDto, LockSalaryMonthDto, MarkSalaryPaidDto } from '.
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
-
-// Every endpoint is scoped to the caller's office and active employees
-// (see SalaryService.resolveScope).
 @ApiTags('Salary')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
