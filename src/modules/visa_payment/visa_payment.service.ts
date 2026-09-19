@@ -4,6 +4,8 @@ import { UpdateVisaPaymentDto } from './dto/update-visa_payment.dto';
 import { Sequelize } from 'sequelize-typescript';
 import { InjectModel } from '@nestjs/sequelize';
 import { VisaPayment } from './entities/visa_payment.entity';
+import { Visa } from '../visa/entities/visa.entity';
+import { Client } from '../client/entities/client.entity';
 import { Employee } from '../employee/entities/employee.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
@@ -18,6 +20,21 @@ export class VisaPaymentService {
     private readonly i18n: I18nService,
   ) { }
 
+  private getPaymentIncludes() {
+    return [
+      {
+        model: Employee,
+        as: 'visaoperator',
+        attributes: ['guid', 'fullName']
+      },
+      {
+        model: Visa,
+        attributes: ['guid', 'index_number', 'price_tmt', 'price_usd', 'is_paid', 'status'],
+        include: [{ model: Client, attributes: ['guid', 'fullName', 'phone_number'] }],
+        required: false,
+      }
+    ];
+  }
 
   async addVisaPayment(createDto: CreateVisaPaymentDto, lang: string) {
     try {
@@ -25,7 +42,7 @@ export class VisaPaymentService {
         ...createDto,
       } as any);
       const createdPayment = await this.visaPaymentRepo.findByPk(payment.guid, {
-        include: [{ model: Employee, as: 'visaoperator', attributes: ['guid', 'fullName'] }]
+        include: this.getPaymentIncludes()
       });
       if (!createdPayment) {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('payment.notFoundAfterCreate', { lang }));
@@ -61,13 +78,7 @@ export class VisaPaymentService {
 
       const { rows, count } = await this.visaPaymentRepo.findAndCountAll({
         where: whereCondition,
-        include: [
-          {
-            model: Employee,
-            as: 'visaoperator',
-            attributes: ['guid', 'fullName']
-          }
-        ],
+        include: this.getPaymentIncludes(),
         order: [['createdAt', 'DESC']],
         limit: Number(limit),
         offset: Number(offset),
@@ -104,7 +115,7 @@ export class VisaPaymentService {
       await this.visaPaymentRepo.update(updateDto as any, { where: { guid: updateDto.guid } });
       const updatedPayment = await this.visaPaymentRepo.findOne({
         where: { guid: updateDto.guid },
-        include: [{ model: Employee, as: 'visaoperator', attributes: ['guid', 'fullName'] }]
+        include: this.getPaymentIncludes()
       });
       if (!updatedPayment) {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('payment.updatedNotFound', { lang }));
