@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@n
 import { TotalCalculationsService } from './total_calculations.service';
 import { CreateTotalCalculationDto } from './dto/create-total_calculation.dto';
 import { UpdateTotalCalculationDto } from './dto/update-total_calculation.dto';
+import { ImportTotalCalculationsDto } from './dto/import-total_calculations.dto';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
@@ -9,9 +10,11 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Total Calculations')
-// @ApiBearerAuth('bearerAuth')
-// @UseGuards(JwtAuthGuard, PermissionsGuard)
-// @RequirePermissions('/total-calculations')
+// Login required (financial data). A page permission (e.g. '/finance/cash-flow')
+// can be added once users are assigned it — the dashboard reads this too.
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+// @RequirePermissions('/finance/cash-flow')
 @Controller('total-calculations')
 export class TotalCalculationsController {
   constructor(private readonly totalCalculationsService: TotalCalculationsService) { }
@@ -22,6 +25,17 @@ export class TotalCalculationsController {
     @I18nLang() lang: string = 'tk',
   ) {
     return this.totalCalculationsService.addTotalCalculation(createDto, lang);
+  }
+
+
+  // Bulk import of kassa-book (Excel) rows. Rows whose import_key already
+  // exists are skipped, so re-uploading the same file is safe.
+  @Post('/import-total-calculations')
+  async importRows(
+    @Body() importDto: ImportTotalCalculationsDto,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.totalCalculationsService.importTotalCalculations(importDto.rows, lang);
   }
 
 
@@ -37,6 +51,10 @@ export class TotalCalculationsController {
     @Query('status') status?: string,
     @Query('currency') currency?: string,
     @Query('is_manual') is_manual?: boolean,
+    @Query('source') source?: string,
+    @Query('type') type?: string,
+    @Query('date_from') date_from?: string,
+    @Query('date_to') date_to?: string,
     @I18nLang() lang: string = 'tk',
   ) {
     const filters = {
@@ -48,6 +66,10 @@ export class TotalCalculationsController {
       status,
       currency,
       is_manual: is_manual !== undefined ? String(is_manual) === 'true' : undefined,
+      source,
+      type,
+      date_from,
+      date_to,
     };
     return this.totalCalculationsService.getAllTotalCalculations(
       Number(page),

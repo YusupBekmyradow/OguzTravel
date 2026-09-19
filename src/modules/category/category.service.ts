@@ -7,6 +7,7 @@ import { I18nService } from 'nestjs-i18n';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Op, WhereOptions } from 'sequelize';
+import { SYSTEM_CATEGORIES } from '../total_calculations/total_calculations.service';
 
 @Injectable()
 export class CategoryService {
@@ -135,6 +136,15 @@ export class CategoryService {
 
   async deleteCategory(guid: string, lang: string = 'tk') {
     try {
+      // The total_calculations DB triggers write every synced sale (B2B,
+      // airway, visa, translation, …) with these guids; deleting one would
+      // break or orphan those inserts.
+      if ((Object.values(SYSTEM_CATEGORIES) as string[]).includes(guid)) {
+        return errorResponse(
+          HttpStatuses.FORBIDDEN,
+          this.i18n.t('category.cannotDeleteSystem', { lang }),
+        );
+      }
       const deletedCount = await this.categoryRepository.destroy({
         where: { guid },
       });

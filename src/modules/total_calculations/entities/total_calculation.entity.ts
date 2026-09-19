@@ -97,6 +97,55 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare index_number: number;
 
+  // INCOME | EXPENSE — direction for cash-ledger rows (manual / Excel).
+  // Project (trigger) rows leave it null and use sale_price / net_price.
+  @Column({
+    type: DataType.STRING(20),
+    allowNull: true
+  })
+  declare type?: string;
+
+  // PROJECT (DB triggers) | MANUAL (added from UI) | EXCEL (imported kassa book)
+  @Column({
+    type: DataType.STRING(20),
+    allowNull: true,
+    defaultValue: 'PROJECT'
+  })
+  declare source?: string;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true
+  })
+  declare description?: string;
+
+  // Free-text "Tabşyran" / "Kabul eden" from the kassa book
+  @Column({
+    type: DataType.STRING,
+    allowNull: true
+  })
+  declare giver?: string;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true
+  })
+  declare receiver?: string;
+
+  // "Kärhana üçin" (Oguztravel, Oguzabat, ...)
+  @Column({
+    type: DataType.STRING,
+    allowNull: true
+  })
+  declare company?: string;
+
+  // Deterministic key of an imported Excel row; a unique index prevents re-importing it.
+  @Column({
+    type: DataType.STRING(64),
+    allowNull: true
+  })
+  declare import_key?: string;
+
   @BelongsTo(() => Employee, {
     foreignKey: 'receiver_opr_guid',
     targetKey: 'guid',

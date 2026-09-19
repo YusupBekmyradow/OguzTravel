@@ -9,5 +9,7 @@
   "deleteFailed": "Failed to delete calculation.",
   "cannotDeleteTrigger": "Only manually created calculations can be deleted",
   "listFetched": "Calculation list fetched successfully",
-  "fetchFailed": "Failed to fetch calculation list."
+  "fetchFailed": "Failed to fetch calculation list.",
+  "imported": "Kassa records imported successfully",
+  "importFailed": "Failed to import kassa records."
 }

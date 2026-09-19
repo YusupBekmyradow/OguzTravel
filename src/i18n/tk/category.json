@@ -7,5 +7,6 @@
   "deleted": "Kategoriýa üstünlikli pozuldy",
   "deleteFailed": "Kategoriýa pozulmady. Ýalňyşlyk ýüze çykdy.",
   "listFetched": "Kategoriýalaryň sanawy üstünlikli alyndy",
-  "fetchFailed": "Kategoriýalaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
+  "fetchFailed": "Kategoriýalaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
+  "cannotDeleteSystem": "Ulgam kategoriýasyny pozup bolmaýar — satyşlar oňa baglanyşykly"
 }

@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { TotalCalculation } from './entities/total_calculation.entity';
 import { CreateTotalCalculationDto } from './dto/create-total_calculation.dto';
 import { UpdateTotalCalculationDto } from './dto/update-total_calculation.dto';
+import { ImportTotalCalculationRowDto } from './dto/import-total_calculations.dto';
 import { Employee } from '../employee/entities/employee.entity';
 import { Office } from '../office/entities/office.entity';
 import { Category } from '../category/entities/category.entity';
@@ -104,18 +105,26 @@ export class TotalCalculationsService implements OnModuleInit {
           officeGuid = employee.office_guid;
         }
       }
+      const type = createDto.type || 'EXPENSE';
+      const amount = Number(createDto.amount ?? createDto.net_price) || 0;
+
       const record = await this.totalCalculationModel.create({
         category_guid: createDto.category_guid || null,
         datetime: createDto.datetime ? new Date(createDto.datetime) : new Date(),
         receiver_opr_guid: createDto.receiver_opr_guid || null,
         office_guid: officeGuid,
-        net_price: Number(createDto.net_price) || 0,
+        ...this.splitAmount(type, amount),
         currency: createDto.currency || 'USD',
-        sale_price: 0,
         profit: 0,
         credit_price: 0,
         status: null,
         is_manual: true,
+        type,
+        source: 'MANUAL',
+        description: createDto.description?.trim() || null,
+        giver: createDto.giver?.trim() || null,
+        receiver: createDto.receiver?.trim() || null,
+        company: createDto.company?.trim() || null,
       } as any);
 
       const created = await this.totalCalculationModel.findByPk(record.guid, {
@@ -162,8 +171,20 @@ export class TotalCalculationsService implements OnModuleInit {
       if (updateDto.datetime !== undefined) {
         updateData.datetime = new Date(updateDto.datetime);
       }
-      if (updateDto.net_price !== undefined) {
-        updateData.net_price = Number(updateDto.net_price);
+      const nextAmount = updateDto.amount ?? updateDto.net_price;
+      if (updateDto.type !== undefined || nextAmount !== undefined) {
+        const prevType = existing.type || 'EXPENSE';
+        const type = updateDto.type || prevType;
+        const amount = nextAmount !== undefined
+          ? Number(nextAmount)
+          : Number(prevType === 'INCOME' ? existing.sale_price : existing.net_price);
+        updateData.type = type;
+        Object.assign(updateData, this.splitAmount(type, amount));
+      }
+      for (const key of ['description', 'giver', 'receiver', 'company'] as const) {
+        if (updateDto[key] !== undefined) {
+          updateData[key] = updateDto[key]?.trim() || null;
+        }
       }
       if (updateDto.currency !== undefined) {
         updateData.currency = updateDto.currency;
@@ -230,6 +251,93 @@ export class TotalCalculationsService implements OnModuleInit {
 
 
 
+  // Cash-ledger rows keep income in sale_price and expense in net_price so
+  // SUM(sale_price) / SUM(net_price) work the same for project and cash rows.
+  private splitAmount(type: string, amount: number) {
+    return type === 'INCOME'
+      ? { sale_price: amount, net_price: 0 }
+      : { sale_price: 0, net_price: amount };
+  }
+
+
+  async importTotalCalculations(rows: ImportTotalCalculationRowDto[], lang: string = 'tk') {
+    const transaction = await this.sequelize.transaction();
+    try {
+      // Drop rows already imported earlier (or repeated inside this batch).
+      const keys = [...new Set(rows.map(r => r.import_key))];
+      const existing = await this.totalCalculationModel.findAll({
+        where: { import_key: { [Op.in]: keys } },
+        attributes: ['import_key'],
+        transaction,
+      });
+      const seen = new Set(existing.map(e => e.import_key));
+      const fresh = rows.filter(r => {
+        if (seen.has(r.import_key)) return false;
+        seen.add(r.import_key);
+        return true;
+      });
+
+      // Resolve category names against tk/ru/en names, creating missing ones.
+      const categories = await this.categoryRepo.findAll({ attributes: ['guid', 'name'], transaction });
+      const categoryByName = new Map<string, string>();
+      for (const cat of categories) {
+        for (const n of Object.values(cat.name || {})) {
+          const k = String(n || '').trim().toLowerCase();
+          if (k && !categoryByName.has(k)) categoryByName.set(k, cat.guid);
+        }
+      }
+      let categoriesCreated = 0;
+      for (const row of fresh) {
+        const name = row.category_name?.trim();
+        if (!name || categoryByName.has(name.toLowerCase())) continue;
+        const created = await this.categoryRepo.create(
+          { name: { tk: name, ru: name, en: name } } as any,
+          { transaction },
+        );
+        categoryByName.set(name.toLowerCase(), created.guid);
+        categoriesCreated++;
+      }
+
+      if (fresh.length) {
+        await this.totalCalculationModel.bulkCreate(
+          fresh.map(r => ({
+            category_guid: r.category_name ? categoryByName.get(r.category_name.trim().toLowerCase()) || null : null,
+            datetime: new Date(r.datetime),
+            ...this.splitAmount(r.type, Number(r.amount)),
+            currency: r.currency.trim().toUpperCase(),
+            profit: 0,
+            credit_price: 0,
+            status: null,
+            is_manual: true,
+            type: r.type,
+            source: 'EXCEL',
+            description: r.description?.trim() || null,
+            giver: r.giver?.trim() || null,
+            receiver: r.receiver?.trim() || null,
+            company: r.company?.trim() || null,
+            import_key: r.import_key,
+          })) as any[],
+          { transaction, ignoreDuplicates: true },
+        );
+      }
+
+      await transaction.commit();
+      return successResponse(
+        HttpStatuses.CREATED,
+        { inserted: fresh.length, skipped: rows.length - fresh.length, categoriesCreated },
+        this.i18n.t('total_calculation.imported', { lang })
+      );
+    } catch (error: any) {
+      await transaction.rollback();
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('total_calculation.importFailed', { lang }),
+        error
+      );
+    }
+  }
+
+
   async getAllTotalCalculations(
     page: number = 1,
     limit: number = 10,
@@ -242,6 +350,10 @@ export class TotalCalculationsService implements OnModuleInit {
       status?: string;
       currency?: string;
       is_manual?: boolean;
+      source?: string;
+      type?: string;
+      date_from?: string;
+      date_to?: string;
     },
     lang: string = 'tk',
   ) {
@@ -258,6 +370,10 @@ export class TotalCalculationsService implements OnModuleInit {
           cat.name::text ILIKE :search OR
           tc.status ILIKE :search OR
           tc.currency ILIKE :search OR
+          tc.description ILIKE :search OR
+          tc.giver ILIKE :search OR
+          tc.receiver ILIKE :search OR
+          tc.company ILIKE :search OR
           emp."fullName" ILIKE :search
         )`);
         replacements.search = `%${filters.search.trim()}%`;
@@ -301,6 +417,26 @@ export class TotalCalculationsService implements OnModuleInit {
         conditions.push(`tc.is_manual = :is_manual`);
         replacements.is_manual = filters.is_manual;
       }
+      // source accepts a comma list, e.g. "MANUAL,EXCEL" for the kassa tab
+      const sources = (filters?.source || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+      if (sources.length) {
+        conditions.push(`COALESCE(tc.source, 'PROJECT') IN (:sources)`);
+        replacements.sources = sources;
+      }
+      // INCOME / EXPENSE: cash rows by their type, project rows by which side has money
+      if (filters?.type === 'INCOME') {
+        conditions.push(`(tc.type = 'INCOME' OR (tc.type IS NULL AND tc.sale_price > 0))`);
+      } else if (filters?.type === 'EXPENSE') {
+        conditions.push(`(tc.type = 'EXPENSE' OR (tc.type IS NULL AND tc.net_price > 0))`);
+      }
+      if (filters?.date_from && /^d{4}-d{2}-d{2}/.test(filters.date_from)) {
+        conditions.push(`tc.datetime >= :rangeFrom`);
+        replacements.rangeFrom = `${filters.date_from.substring(0, 10)} 00:00:00`;
+      }
+      if (filters?.date_to && /^d{4}-d{2}-d{2}/.test(filters.date_to)) {
+        conditions.push(`tc.datetime <= :rangeTo`);
+        replacements.rangeTo = `${filters.date_to.substring(0, 10)} 23:59:59`;
+      }
       const WHERE = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
       const baseQuery = `
         FROM tbl_total_calculations tc
@@ -309,7 +445,7 @@ export class TotalCalculationsService implements OnModuleInit {
         LEFT JOIN tbl_offices ofc ON ofc.guid = tc.office_guid
         ${WHERE}
       `;
-      const [data, countResult] = await Promise.all([
+      const [data, countResult, totalsResult] = await Promise.all([
         this.sequelize.query<any>(`
           SELECT
             tc.guid, tc.category_guid, tc.datetime,
@@ -317,6 +453,8 @@ export class TotalCalculationsService implements OnModuleInit {
             tc.status, tc.net_price, tc.sale_price,
             tc.currency, tc.profit, tc.credit_price,
             tc.is_manual, tc.index_number,
+            tc.type, COALESCE(tc.source, 'PROJECT') AS source,
+            tc.description, tc.giver, tc.receiver, tc.company,
             tc."createdAt", tc."updatedAt",
             cat.guid            AS "cat_guid",
             cat.name            AS "cat_name",
@@ -327,13 +465,26 @@ export class TotalCalculationsService implements OnModuleInit {
             ofc."fullName"      AS "off_fullName",
             ofc."shortName"     AS "off_shortName"
           ${baseQuery}
-          ORDER BY tc.index_number DESC
+          ORDER BY tc.datetime DESC, tc.index_number DESC
           LIMIT :limit OFFSET :offset
         `, { replacements, type: QueryTypes.SELECT }),
 
         this.sequelize.query<any>(`SELECT COUNT(*) AS total ${baseQuery}`,
           { replacements, type: QueryTypes.SELECT }
         ),
+
+        // Totals per currency for the whole filtered set (not just this page)
+        this.sequelize.query<any>(`
+          SELECT
+            tc.currency,
+            COALESCE(SUM(tc.sale_price), 0) AS income,
+            COALESCE(SUM(tc.net_price), 0)  AS expense,
+            COALESCE(SUM(tc.profit), 0)     AS profit,
+            COUNT(*)                        AS count
+          ${baseQuery}
+          GROUP BY tc.currency
+          ORDER BY tc.currency
+        `, { replacements, type: QueryTypes.SELECT }),
       ]);
 
       const parseJson = (val: any) => {
@@ -363,6 +514,12 @@ export class TotalCalculationsService implements OnModuleInit {
         credit_price: r.credit_price,
         is_manual: r.is_manual,
         index_number: r.index_number,
+        type: r.type,
+        source: r.source,
+        description: r.description,
+        giver: r.giver,
+        receiver: r.receiver,
+        company: r.company,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
         receiver_operator: r['opr_guid']
@@ -380,6 +537,14 @@ export class TotalCalculationsService implements OnModuleInit {
           totalItems,
           totalPages: Math.ceil(totalItems / currentLimit),
           currentPage,
+          totals: totalsResult.map(t => ({
+            currency: t.currency,
+            income: Number(t.income),
+            expense: Number(t.expense),
+            profit: Number(t.profit),
+            balance: Number(t.income) - Number(t.expense),
+            count: Number(t.count),
+          })),
         },
         message: this.i18n.t('total_calculation.listFetched', { lang }),
       };
@@ -413,7 +578,33 @@ export class TotalCalculationsService implements OnModuleInit {
           ) THEN
             ALTER TABLE tbl_total_calculations ADD COLUMN category_guid UUID;
           END IF;
-        END $$;
+        END $;
+      `);
+
+      // -------------------------------------------------------------
+      // Cash-ledger columns (manual + Excel kassa rows)
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        ALTER TABLE tbl_total_calculations
+          ADD COLUMN IF NOT EXISTS type VARCHAR(20),
+          ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'PROJECT',
+          ADD COLUMN IF NOT EXISTS description TEXT,
+          ADD COLUMN IF NOT EXISTS giver VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS receiver VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS company VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS import_key VARCHAR(64);
+      `);
+      // Rows created from the UI before these columns existed were expenses.
+      await sequelize.query(`
+        UPDATE tbl_total_calculations
+        SET source = 'MANUAL', type = COALESCE(type, 'EXPENSE')
+        WHERE is_manual = TRUE AND (source IS NULL OR source = 'PROJECT');
+      `);
+      await sequelize.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_total_calculations_import_key
+          ON tbl_total_calculations (import_key) WHERE import_key IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS idx_total_calculations_datetime
+          ON tbl_total_calculations (datetime DESC);
       `);
 
       // -------------------------------------------------------------
