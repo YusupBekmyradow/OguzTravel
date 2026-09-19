@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateVisaDto } from './dto/create-visa.dto';
 import { UpdateVisaDto } from './dto/update-visa.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -21,7 +21,7 @@ export class VisaService {
   private getVisaIncludes() {
     return [
       { model: Employee, as: 'receiveroperator', attributes: ['guid', 'fullName'], include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }] },
-      { model: Client, attributes: ['guid', 'fullName', 'phone_number', 'passport_number', 'dateOfBirth', 'passport_count', 'passportHistory'] },
+      { model: Client, attributes: ['guid', 'fullName', 'phone_number', 'passport_number', 'passportExpiryDate', 'passportCountryOfIssue', 'dateOfBirth', 'passport_count', 'passportHistory'] },
     ];
   }
 

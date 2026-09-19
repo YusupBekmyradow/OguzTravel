@@ -24,6 +24,13 @@ export class Visa extends Model<Visa> {
   declare index_number: string;
 
   @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    defaultValue: DataType.NOW
+  })
+  declare datetime: Date;
+
+  @Column({
     type: DataType.INTEGER,
     allowNull: true,
     defaultValue: 1
