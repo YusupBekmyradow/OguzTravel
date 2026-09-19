@@ -1,4 +1,4 @@
-import { Table, Model, Column, DataType, BelongsTo } from "sequelize-typescript";
+import { Table, Model, Column, DataType, BelongsTo, ForeignKey } from "sequelize-typescript";
 import { Visa } from "../../visa/entities/visa.entity";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Inbound } from "../../inbound/entities/inbound.entity";
@@ -31,12 +31,14 @@ export class VisaPayment extends Model<VisaPayment> {
   })
   declare currency: string;
 
+  @ForeignKey(() => Visa)
   @Column({
     type: DataType.UUID,
     allowNull: true
   })
   declare visa_guid: string;
 
+  @ForeignKey(() => Inbound)
   @Column({
     type: DataType.UUID,
     allowNull: true
@@ -55,6 +57,7 @@ export class VisaPayment extends Model<VisaPayment> {
   })
   declare note?: string;
 
+  @ForeignKey(() => Employee)
   @Column({
     type: DataType.UUID,
     allowNull: true

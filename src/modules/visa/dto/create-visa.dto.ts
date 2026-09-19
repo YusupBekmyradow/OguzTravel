@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsBoolean, IsDateString, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class CreateVisaDto {
 
@@ -23,10 +23,11 @@ export class CreateVisaDto {
   @IsNotEmpty()
   declare receiver_opr_guid: string;
 
-  @ApiProperty()
-  @IsUUID()
+  @ApiProperty({ example: 1, enum: [1, 2, 3], description: 'Visa status (1, 2, 3)' })
+  @IsNumber()
+  @IsIn([1, 2, 3])
   @IsNotEmpty()
-  declare status_guid: string;
+  declare status: number;
 
   @ApiPropertyOptional()
   @IsNumber()

@@ -21,19 +21,16 @@ type SalaryFilters = {
   employee_guid?: string;
 };
 
-// Who is asking. Everyone is limited to their own office's active
-// employees; only an admin without an office sees every office.
 type SalaryScope = {
   employeeGuid: string | null;
   officeGuid: string | null;
   allOffices: boolean;
 };
 
-type ServiceResult = { status: number; message: string; [key: string]: any };
+type ServiceResult = { status: number; message: string;[key: string]: any };
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
-// Summed columns returned by get-salary-summary (the Excel totals row).
 const SUMMARY_FIELDS = [
   'base_salary',
   'card_amount',
@@ -46,7 +43,6 @@ const SUMMARY_FIELDS = [
   'paid_amount',
 ] as const;
 
-// Input fields compared against the previous month in get-all-salaries.
 const PREVIOUS_FIELDS = [
   'base_salary',
   'work_days',
@@ -58,7 +54,6 @@ const PREVIOUS_FIELDS = [
   'bonus',
 ] as const;
 
-// Values copied into a new month by generate-month.
 const CARRY_OVER_FIELDS = ['base_salary', 'card_amount'] as const;
 
 const shiftMonth = (month: string, delta: number) => {
@@ -67,7 +62,6 @@ const shiftMonth = (month: string, delta: number) => {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 };
 
-// Calendar days minus Sundays (July 2026 → 27, same as the Excel sheet).
 const workDaysInMonth = (month: string) => {
   const [y, m] = month.split('-').map(Number);
   const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -78,7 +72,6 @@ const workDaysInMonth = (month: string) => {
   return count;
 };
 
-// Working days from a given day of the month to its end (Sundays off).
 const workDaysFrom = (month: string, fromDay: number) => {
   const [y, m] = month.split('-').map(Number);
   const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -94,8 +87,6 @@ const monthOf = (date: Date) =>
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-// Columns added after tbl_salary first shipped. `synchronize` only creates
-// missing tables, so they are added here once on startup.
 const ADDED_COLUMNS = {
   sales_amount: { type: DataTypes.DECIMAL(14, 2), allowNull: true },
   bonus_percent: { type: DataTypes.DECIMAL(5, 2), allowNull: true },
@@ -126,8 +117,7 @@ export class SalaryService implements OnModuleInit {
   }
 
 
-  // ---------------------------------------------------------------- scope
-
+ 
   private async resolveScope(userPayload: any): Promise<SalaryScope> {
     const directGuid = userPayload?.employee_guid || userPayload?.guid || userPayload?.id;
     const isAdmin = String(userPayload?.role || '').toLowerCase() === UserType.ADMIN.toLowerCase();
@@ -151,7 +141,6 @@ export class SalaryService implements OnModuleInit {
     };
   }
 
-  // A user with no office (and not an admin) can see nothing.
   private hasAccess(scope: SalaryScope) {
     return scope.allOffices || Boolean(scope.officeGuid);
   }
@@ -164,7 +153,6 @@ export class SalaryService implements OnModuleInit {
     return errorResponse(HttpStatuses.FORBIDDEN, await this.i18n.translate('salary.outOfScope', { lang }));
   }
 
-  // Employee conditions every salary query shares (needs the `employee` include).
   private scopeWhere(scope: SalaryScope, officeFilter?: string) {
     const where: any = { '$employee.is_active$': true };
     const office = scope.allOffices ? officeFilter : scope.officeGuid;
@@ -177,7 +165,6 @@ export class SalaryService implements OnModuleInit {
     return scope.allOffices || employee.office_guid === scope.officeGuid;
   }
 
-  // Loads salary rows with their employee and checks every one is in scope.
   private async loadScopedRows(guids: string[], scope: SalaryScope) {
     const rows = await this.salaryRepo.findAll({
       where: { guid: guids },
@@ -189,7 +176,6 @@ export class SalaryService implements OnModuleInit {
   }
 
 
-  // ------------------------------------------------------------- helpers
 
   private getIncludes() {
     return [
@@ -224,7 +210,6 @@ export class SalaryService implements OnModuleInit {
   }
 
 
-  // JEMI / BERMELI from the Excel sheet. Pay is prorated by worked days.
   private calculate(values: {
     base_salary: number; work_days: number; worked_days: number;
     card_amount: number; advance: number; cafeteria_credit: number;
@@ -268,7 +253,6 @@ export class SalaryService implements OnModuleInit {
   }
 
 
-  // Locks are per (month, office).
   private async hasLockedPeriod(periods: { month: string; office_guid?: string | null }[]) {
     const unique = new Map<string, { month: string; office_guid: string }>();
     periods.forEach((p) => {
@@ -287,8 +271,7 @@ export class SalaryService implements OnModuleInit {
   }
 
 
-  // Attaches `previous` (same employee, previous month) so the UI can flag
-  // values that changed.
+
   private async attachPrevious(rows: Salary[]) {
     const plain = rows.map((r) => r.get({ plain: true }) as any);
     if (plain.length === 0) return plain;
@@ -321,9 +304,6 @@ export class SalaryService implements OnModuleInit {
   }
 
 
-  // ------------------------------------------------------------ endpoints
-
-  // Active employees of the caller's office (for the salary form picker).
   async getEmployees(
     userPayload: any,
     page: number = 1,
@@ -342,7 +322,6 @@ export class SalaryService implements OnModuleInit {
       const where: any = { is_active: true };
       if (!scope.allOffices) where.office_guid = scope.officeGuid;
       if (search?.trim()) where.fullName = { [Op.iLike]: `%${search.trim()}%` };
-      // Only employees without a row in that month (the "add employee" picker).
       if (missingMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(missingMonth)) {
         const existing = await this.salaryRepo.findAll({
           where: { month: missingMonth },
@@ -422,20 +401,7 @@ export class SalaryService implements OnModuleInit {
   }
 
 
-  /**
-   * Adds the current month's row for one employee — used when an employee is
-   * created or re-activated, so nobody has to press a "fill the gaps" button.
-   *
-   * Deliberately does nothing when:
-   *  - the employee is inactive or has no office,
-   *  - the month has not been started for that office (no rows yet): the page
-   *    should keep showing its "start the month" screen,
-   *  - the month is locked, or the row already exists.
-   *
-   * The hire date is the employee's creation date, so a mid-month hire only
-   * gets the remaining working days; anyone can correct it in the table.
-   * Never throws: employee creation must not fail because of payroll.
-   */
+
   async ensureCurrentMonthRow(employeeGuid: string, hireDate?: Date | null) {
     try {
       const employee = await this.employeeRepo.findByPk(employeeGuid, {
@@ -445,7 +411,6 @@ export class SalaryService implements OnModuleInit {
 
       const hiredAt = hireDate ?? (employee as any).createdAt ?? new Date();
       const now = new Date();
-      // Only the running month: never backfill closed months.
       const month = monthOf(now);
       if (await this.isDuplicate(employee.guid, month)) return null;
       if (await this.hasLockedPeriod([{ month, office_guid: employee.office_guid }])) return null;
@@ -505,7 +470,6 @@ export class SalaryService implements OnModuleInit {
       const officeGuid = scope.allOffices ? dto.office_guid : scope.officeGuid;
       const employeeWhere: any = { is_active: true };
       if (officeGuid) employeeWhere.office_guid = officeGuid;
-      // "Add employee" on the salary page adds just the picked ones.
       if (dto.employee_guids?.length) employeeWhere.guid = dto.employee_guids;
 
       const employees = await this.employeeRepo.findAll({
@@ -537,9 +501,6 @@ export class SalaryService implements OnModuleInit {
           message: await this.i18n.translate('salary.generateNothing', { lang }),
         };
       }
-
-      // Latest earlier record per employee (within a year) supplies the
-      // carried-over values; rows are newest first, so the first hit wins.
       const history = await this.salaryRepo.findAll({
         where: {
           employee_guid: missing,
@@ -562,7 +523,6 @@ export class SalaryService implements OnModuleInit {
           card_amount: Number(prev.card_amount || 0),
           work_days: workDays,
           worked_days: workDays,
-          // Keep the percent rule; sales start at 0 for the new month.
           bonus_percent: prev.bonus_percent ?? null,
           sales_amount: prev.bonus_percent != null ? 0 : null,
         };
@@ -678,7 +638,6 @@ export class SalaryService implements OnModuleInit {
           is_locked: false,
           locked_at: null,
           lockedBy: null,
-          // Locking needs a concrete office.
           can_lock: Boolean(officeGuid),
         },
         message: await this.i18n.translate('salary.fetchSuccess', { lang }),
@@ -700,13 +659,9 @@ export class SalaryService implements OnModuleInit {
         locked_at: dto.is_locked ? new Date() : null,
         locked_by_guid: dto.is_locked ? scope.employeeGuid : null,
       };
-
-      // Closing the month settles it: every row still short of BERMELI is
-      // marked paid in the same transaction as the lock.
       const paidCount = await this.salaryRepo.sequelize!.transaction(async (transaction) => {
         let settled = 0;
         if (dto.is_locked) {
-          // Same rows the salary page lists: active employees of the office.
           const employees = await this.employeeRepo.findAll({
             where: { office_guid: officeGuid, is_active: true },
             attributes: ['guid'],
@@ -724,7 +679,6 @@ export class SalaryService implements OnModuleInit {
                 where: {
                   month: dto.month,
                   employee_guid: employeeGuids,
-                  // A row counts as paid only once it has a paid date.
                   paid_date: null,
                 } as any,
                 transaction,
@@ -828,7 +782,6 @@ export class SalaryService implements OnModuleInit {
   }
 
 
-  // BERLEN = BERMELI (never below zero), SENESI = given date or today.
   async markPaid(dto: MarkSalaryPaidDto, userPayload: any, lang: string = 'tk'): Promise<ServiceResult> {
     try {
       const scope = await this.resolveScope(userPayload);

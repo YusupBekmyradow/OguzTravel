@@ -1,6 +1,7 @@
-import { Table, Model, Column, DataType, BelongsTo, HasMany } from "sequelize-typescript";
+import { Table, Model, Column, DataType, BelongsTo, HasMany, ForeignKey } from "sequelize-typescript";
 import { Client } from "../../client/entities/client.entity";
 import { Employee } from "../../employee/entities/employee.entity";
+import { VisaPayment } from "../../visa_payment/entities/visa_payment.entity";
 
 @Table({
   tableName: 'tbl_visa',
@@ -24,6 +25,13 @@ export class Visa extends Model<Visa> {
   declare index_number: string;
 
   @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    defaultValue: DataType.NOW
+  })
+  declare datetime: Date;
+
+  @Column({
     type: DataType.INTEGER,
     allowNull: true,
     defaultValue: 1
@@ -40,17 +48,26 @@ export class Visa extends Model<Visa> {
     phone_number: string
   };
 
+  @ForeignKey(() => Client)
   @Column({
     type: DataType.UUID,
     allowNull: true
   })
   declare client_guid: string;
 
+  @ForeignKey(() => Employee)
   @Column({
     type: DataType.UUID,
     allowNull: true
   })
   declare receiver_opr_guid: string;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 1
+  })
+  declare status: number;
 
   @Column({
     type: DataType.DECIMAL(12, 2),
@@ -85,7 +102,6 @@ export class Visa extends Model<Visa> {
   })
   declare client: Client;
 
-
   @BelongsTo(() => Employee, {
     targetKey: 'guid',
     foreignKey: 'receiver_opr_guid',
@@ -94,4 +110,10 @@ export class Visa extends Model<Visa> {
     onUpdate: 'SET NULL'
   })
   declare receiver_operator: Employee;
+
+  @HasMany(() => VisaPayment, {
+    foreignKey: 'visa_guid',
+    sourceKey: 'guid'
+  })
+  declare visaPayments: VisaPayment[];
 }

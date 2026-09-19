@@ -34,26 +34,26 @@ export class RefferalLetter extends Model<RefferalLetter> {
         type: DataType.UUID,
         allowNull: true
     })
-    declare received_opr_guid: string;
+    declare received_opr_guid?: string;
 
     @Column({
         type: DataType.UUID,
         allowNull: true
     })
-    declare client_guid: string;
+    declare client_guid?: string;
 
     @Column({
         type: DataType.INTEGER,
         allowNull: true,
         defaultValue: 1
     })
-    declare passport_count: number;
+    declare passport_count?: number;
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
-    declare destination_country: string;
+    declare destination_country?: string;
 
     @Column({
         type: DataType.STRING,
@@ -63,34 +63,34 @@ export class RefferalLetter extends Model<RefferalLetter> {
 
     @Column({
         type: DataType.STRING,
-        allowNull: false,
+        allowNull: true
     })
-    declare travel_document_number: string;
+    declare travel_document_number?: string;
 
     @Column({
         type: DataType.DATE,
-        allowNull: false
+        allowNull: true
     })
-    declare departure_date: Date;
+    declare departure_date?: Date;
 
     @Column({
         type: DataType.DATE,
-        allowNull: false
+        allowNull: true
     })
-    declare return_date: Date;
+    declare return_date?: Date;
 
     @Column({
         type: DataType.DECIMAL(10, 2),
         defaultValue: 0
     })
-    declare price: number;
+    declare price?: number;
 
     @Column({
         type: DataType.STRING,
         allowNull: false,
         defaultValue: 'TMT'
     })
-    declare currency: string;
+    declare currency?: string;
 
     @Column({
         type: DataType.STRING,
@@ -104,7 +104,11 @@ export class RefferalLetter extends Model<RefferalLetter> {
     })
     declare contract_date?: Date;
 
-
+    @Column({
+        type: DataType.TEXT,
+        allowNull: true
+    })
+    declare note?: string;
 
     @Column({
         type: DataType.STRING,
@@ -113,10 +117,43 @@ export class RefferalLetter extends Model<RefferalLetter> {
     declare status?: string;
 
     @Column({
-        type: DataType.TEXT,
+        type: DataType.BOOLEAN,
+        allowNull: true,
+        defaultValue: true
+    })
+    declare isRefferal?: boolean;
+
+    @Column({
+        type: DataType.BOOLEAN,
+        allowNull: true,
+        defaultValue: true
+    })
+    declare isOne?: boolean;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: true,
+    })
+    declare travel_document_number1?: string;
+
+    @Column({
+        type: DataType.INTEGER,
         allowNull: true
     })
-    declare note?: string;
+    declare total_letter?: number;
+
+    @Column({
+        type: DataType.DATE,
+        allowNull: true
+    })
+    declare date_time?: Date;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: true,
+    })
+    declare accepted_by?: string;
+
 
     @BelongsTo(() => Employee, {
         targetKey: 'guid',

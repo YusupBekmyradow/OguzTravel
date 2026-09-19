@@ -11,6 +11,8 @@ import { errorResponse, successResponse } from '../../helpers/responseFunctions'
 import { Office } from '../office/entities/office.entity';
 import { Sequelize } from 'sequelize-typescript';
 import { Op } from 'sequelize';
+import { CreateOtherLetterDto } from './dto/sub_report.dto';
+import { UpdateOtherLetterDto } from './dto/sub_report_update.dto';
 
 @Injectable()
 export class RefferalLetterService implements OnModuleInit {
@@ -87,6 +89,30 @@ export class RefferalLetterService implements OnModuleInit {
     return letterJson;
   }
 
+  private getRefferalLetterAttributes() {
+    return [
+      'guid',
+      'index_number',
+      'application_number',
+      'received_opr_guid',
+      'client_guid',
+      'passport_count',
+      'destination_country',
+      'bgn_departure',
+      'travel_document_number',
+      'departure_date',
+      'return_date',
+      'price',
+      'currency',
+      'contract_number',
+      'contract_date',
+      'note',
+      'status',
+      'isRefferal',
+      'createdAt',
+      'updatedAt',
+    ];
+  }
 
 
   async addRefferalLetter(createDto: CreateRefferalLetterDto, lang: string) {
@@ -100,6 +126,7 @@ export class RefferalLetterService implements OnModuleInit {
       const refferalLetter = await this.refferalLetterRepo.create(
         {
           ...createDto,
+          isRefferal: true,
           passport_count: client ? (client.passport_count || 1) : 1,
         } as any,
         { transaction }
@@ -107,6 +134,7 @@ export class RefferalLetterService implements OnModuleInit {
       await transaction.commit();
       const newRefferalLetter = await this.refferalLetterRepo.findOne({
         where: { guid: refferalLetter.guid },
+        attributes: this.getRefferalLetterAttributes(),
         include: this.getRefferalLetterIncludes(),
       });
 
@@ -148,7 +176,7 @@ export class RefferalLetterService implements OnModuleInit {
       const currentPage = Math.max(1, Number(page));
       const currentLimit = Math.max(1, Number(limit));
       const offset = (currentPage - 1) * currentLimit;
-      const whereConditions: any = {};
+      const whereConditions: any = { isRefferal: true };
       if (filters) {
         if (filters.search && filters.search.trim() !== '') {
           const searchPattern = `%${filters.search.trim()}%`;
@@ -208,6 +236,7 @@ export class RefferalLetterService implements OnModuleInit {
       }
       const { rows, count } = await this.refferalLetterRepo.findAndCountAll({
         where: whereConditions,
+        attributes: this.getRefferalLetterAttributes(),
         include: this.getRefferalLetterIncludes(),
         order: [['index_number', 'DESC']],
         limit: currentLimit,
@@ -258,6 +287,7 @@ export class RefferalLetterService implements OnModuleInit {
 
       const newRefferalLetter = await this.refferalLetterRepo.findOne({
         where: { guid: updateDto.guid },
+        attributes: this.getRefferalLetterAttributes(),
         include: this.getRefferalLetterIncludes(),
       });
       const formattedData = this.formatRefferalLetterPassport(newRefferalLetter);
@@ -283,6 +313,317 @@ export class RefferalLetterService implements OnModuleInit {
       return successResponse(HttpStatuses.OK, null, this.i18n.t('refferal_letter.deleted', { lang }));
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.deleteFailed', { lang }), error)
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  private getOtherLetterAttributes() {
+    return [
+      'guid',
+      'index_number',
+      'isOne',
+      'travel_document_number',
+      'travel_document_number1',
+      'total_letter',
+      'date_time',
+      'status',
+      'received_opr_guid',
+      'accepted_by',
+      'note',
+      'isRefferal',
+      'createdAt',
+      'updatedAt',
+    ];
+  }
+
+  async addOtherLetter(createDto: CreateOtherLetterDto, lang: string) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      const letter = await this.refferalLetterRepo.create(
+        {
+          ...createDto,
+          isRefferal: false,
+        } as any,
+        { transaction }
+      );
+      await transaction.commit();
+
+      const newLetter = await this.refferalLetterRepo.findOne({
+        where: { guid: letter.guid },
+        attributes: this.getOtherLetterAttributes(),
+        include: [
+          {
+            model: Employee,
+            as: 'refferaloperator',
+            attributes: ['guid', 'fullName'],
+          },
+        ],
+      });
+
+      if (!newLetter) {
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
+      }
+      return {
+        status: 201,
+        data: newLetter,
+        message: this.i18n.t('refferal_letter.created', { lang }),
+      };
+    } catch (error: any) {
+      await transaction.rollback();
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.createFailed', { lang }), error);
+    }
+  }
+
+  async getAllOtherLetters(
+    page: number = 1,
+    limit: number = 10,
+    filters?: {
+      search?: string;
+      received_opr_guid?: string;
+      start_date_time?: string;
+      end_date_time?: string;
+      status?: string;
+    },
+    lang: string = 'tk',
+  ) {
+    try {
+      const currentPage = Math.max(1, Number(page));
+      const currentLimit = Math.max(1, Number(limit));
+      const offset = (currentPage - 1) * currentLimit;
+      const whereConditions: any = { isRefferal: false };
+
+      if (filters) {
+        if (filters.search && filters.search.trim() !== '') {
+          const searchPattern = `%${filters.search.trim()}%`;
+          whereConditions[Op.or] = [
+            { travel_document_number: { [Op.iLike]: searchPattern } },
+            { travel_document_number1: { [Op.iLike]: searchPattern } },
+            { status: { [Op.iLike]: searchPattern } },
+            { accepted_by: { [Op.iLike]: searchPattern } },
+          ];
+        }
+
+        if (filters.received_opr_guid) {
+          whereConditions.received_opr_guid = filters.received_opr_guid;
+        }
+
+        const startDt = filters.start_date_time?.trim();
+        const endDt = filters.end_date_time?.trim();
+        if (startDt && endDt) {
+          whereConditions.date_time = { [Op.between]: [new Date(`${startDt}T00:00:00.000Z`), new Date(`${endDt}T23:59:59.999Z`)] };
+        } else if (startDt) {
+          whereConditions.date_time = { [Op.gte]: new Date(`${startDt}T00:00:00.000Z`) };
+        } else if (endDt) {
+          whereConditions.date_time = { [Op.lte]: new Date(`${endDt}T23:59:59.999Z`) };
+        }
+
+        if (filters.status !== undefined && filters.status !== null && String(filters.status).trim() !== '') {
+          whereConditions.status = filters.status;
+        }
+      }
+
+      const { rows, count } = await this.refferalLetterRepo.findAndCountAll({
+        where: whereConditions,
+        attributes: this.getOtherLetterAttributes(),
+        include: [
+          {
+            model: Employee,
+            as: 'refferaloperator',
+            attributes: ['guid', 'fullName'],
+          },
+        ],
+        order: [['index_number', 'DESC']],
+        limit: currentLimit,
+        offset: Number(offset),
+        distinct: true,
+      });
+
+      return {
+        status: 200,
+        data: rows,
+        meta: {
+          totalItems: count,
+          totalPages: Math.ceil(count / currentLimit),
+          currentPage: currentPage,
+        },
+        message: this.i18n.t('refferal_letter.listFetched', { lang }),
+      };
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.fetchFailed', { lang }), error);
+    }
+  }
+
+
+  async updateOtherLetter(updateDto: UpdateOtherLetterDto, lang: string) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      const existingLetter = await this.refferalLetterRepo.findOne({
+        where: { guid: updateDto.guid, isRefferal: false },
+        transaction,
+      });
+      if (!existingLetter) {
+        await transaction.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
+      }
+
+      await existingLetter.update({ ...updateDto }, { transaction });
+      await transaction.commit();
+
+      const newLetter = await this.refferalLetterRepo.findOne({
+        where: { guid: updateDto.guid },
+        attributes: this.getOtherLetterAttributes(),
+        include: [
+          {
+            model: Employee,
+            as: 'refferaloperator',
+            attributes: ['guid', 'fullName'],
+          },
+        ],
+      });
+
+      return {
+        status: 200,
+        data: newLetter,
+        message: this.i18n.t('refferal_letter.updated', { lang }),
+      };
+    } catch (error: any) {
+      await transaction.rollback();
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.updateFailed', { lang }), error);
+    }
+  }
+
+  async deleteOtherLetter(guid: string, lang: string) {
+    try {
+      const deleted = await this.refferalLetterRepo.destroy({ where: { guid, isRefferal: false } });
+      if (!deleted) {
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
+      }
+      return successResponse(HttpStatuses.OK, null, this.i18n.t('refferal_letter.deleted', { lang }));
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.deleteFailed', { lang }), error);
+    }
+  }
+
+
+
+
+
+
+  private stripIrrelevantFields(row: any) {
+    const json = row.toJSON ? row.toJSON() : row;
+
+    const refferalOnlyFields = [
+      'application_number',
+      'client_guid',
+      'passport_count',
+      'destination_country',
+      'bgn_departure',
+      'departure_date',
+      'return_date',
+      'price',
+      'currency',
+      'contract_number',
+      'contract_date',
+    ];
+
+    const otherOnlyFields = [
+      'isOne',
+      'travel_document_number1',
+      'total_letter',
+      'date_time',
+      'accepted_by',
+    ];
+
+    if (json.isRefferal) {
+      otherOnlyFields.forEach(field => delete json[field]);
+    } else {
+      refferalOnlyFields.forEach(field => delete json[field]);
+    }
+
+    return json;
+  }
+
+
+
+
+
+  async getLettersByDocumentNumberRange(
+    start_number: number,
+    end_number: number,
+    page: number = 1,
+    limit: number = 10,
+    lang: string = 'tk',
+  ) {
+    try {
+      const currentPage = Math.max(1, Number(page));
+      const currentLimit = Math.max(1, Number(limit));
+      const offset = (currentPage - 1) * currentLimit;
+
+      const start = Number(start_number);
+      const end = Number(end_number);
+
+      const whereConditions: any = {
+        [Op.or]: [
+          this.sequelize.where(
+            this.sequelize.cast(this.sequelize.col('travel_document_number'), 'INTEGER'),
+            { [Op.between]: [start, end] }
+          ),
+          this.sequelize.where(
+            this.sequelize.cast(this.sequelize.col('travel_document_number1'), 'INTEGER'),
+            { [Op.between]: [start, end] }
+          ),
+        ],
+      };
+      const { rows, count } = await this.refferalLetterRepo.findAndCountAll({
+        where: whereConditions,
+        order: [['index_number', 'DESC']],
+        limit: currentLimit,
+        offset: Number(offset),
+        distinct: true,
+      });
+      const allMatchingRows = await this.refferalLetterRepo.findAll({
+        where: whereConditions,
+        attributes: ['isRefferal', 'total_letter'],
+      });
+
+      let total_sum = 0;
+      allMatchingRows.forEach((row: any) => {
+        if (row.isRefferal) {
+          total_sum += 1;
+        } else {
+          total_sum += row.total_letter || 0;
+        }
+      });
+
+      const formattedRows = rows.map(row => this.stripIrrelevantFields(row));
+
+      return {
+        status: 200,
+        data: formattedRows,
+        meta: {
+          totalItems: count,
+          totalPages: Math.ceil(count / currentLimit),
+          currentPage: currentPage,
+          total_sum,
+        },
+        message: this.i18n.t('refferal_letter.listFetched', { lang }),
+      };
+    } catch (error: any) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.fetchFailed', { lang }), error);
     }
   }
 }
