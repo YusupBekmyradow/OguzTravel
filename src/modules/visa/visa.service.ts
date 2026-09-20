@@ -328,6 +328,7 @@ export class VisaService {
         message: this.i18n.t('visa.updated', { lang })
       };
     } catch (error: any) {
+      console.log(error)
       await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('visa.updateFailed', { lang }), error);
     }
