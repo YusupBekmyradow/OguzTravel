@@ -46,7 +46,7 @@ export class Receiving extends Model<Receiving> {
     type: DataType.STRING,
     allowNull: true
   })
-  declare visa_type?: string;
+  declare status?: string;
 
   @Column({
     type: DataType.INTEGER,

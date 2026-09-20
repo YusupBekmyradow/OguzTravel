@@ -3,7 +3,7 @@ import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from
 
 export class CreateTotalCalculationDto {
   @ApiPropertyOptional({ example: 'e1000000-0000-0000-0000-000000000001' })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   declare category_guid?: string;
 

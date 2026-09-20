@@ -101,7 +101,7 @@ export class ReceivingService {
     return {
       guid: jsonItem.guid,
       application_date: jsonItem.application_date,
-      visa_type: jsonItem.visa_type,
+      status: jsonItem.status,
       note: jsonItem.note,
       custom_field_values: jsonItem.custom_field_values || {},
       passport_count: jsonItem.passport_count,
@@ -179,7 +179,7 @@ export class ReceivingService {
       office_guid?: string;
       operator_guid?: string;
       application_date?: string;
-      visa_type?: string;
+      status?: string;
     },
     lang: string = 'tk',
   ) {
@@ -207,13 +207,13 @@ export class ReceivingService {
         conditions.push(`r.application_date::date = :application_date::date`);
         replacements.application_date = query.application_date;
       }
-      if (query.visa_type?.trim()) {
-        conditions.push(`r.visa_type ILIKE :visa_type`);
-        replacements.visa_type = `%${query.visa_type.trim()}%`;
+      if (query.status?.trim()) {
+        conditions.push(`r.status ILIKE :status`);
+        replacements.status= `%${query.status.trim()}%`;
       }
       if (query.search?.trim()) {
         conditions.push(`(
-          r.visa_type ILIKE :search
+          r.status ILIKE :search
           OR r.note ILIKE :search
           OR c."fullName" ILIKE :search
           OR c.phone_number ILIKE :search
@@ -233,7 +233,7 @@ export class ReceivingService {
         SELECT
           r.guid,
           r.application_date,
-          r.visa_type,
+          r.status,
           r.note,
           r.custom_field_values,
           r.passport_count,
