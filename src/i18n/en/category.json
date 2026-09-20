@@ -7,5 +7,6 @@
   "deleted": "Category deleted successfully",
   "deleteFailed": "Failed to delete category. An error occurred.",
   "listFetched": "Category list fetched successfully",
-  "fetchFailed": "Failed to fetch category list. An error occurred."
+  "fetchFailed": "Failed to fetch category list. An error occurred.",
+  "cannotDeleteSystem": "System categories can’t be deleted — sales are linked to them"
 }

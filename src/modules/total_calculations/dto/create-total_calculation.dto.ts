@@ -1,5 +1,7 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+
+export const CASH_TYPES = ['INCOME', 'EXPENSE'] as const;
 
 export class CreateTotalCalculationDto {
   @ApiPropertyOptional({ example: 'e1000000-0000-0000-0000-000000000001' })
@@ -17,13 +19,46 @@ export class CreateTotalCalculationDto {
   @IsOptional()
   declare receiver_opr_guid?: string;
 
-  @ApiProperty({ example: 100.5 })
+  @ApiPropertyOptional({ enum: CASH_TYPES, default: 'EXPENSE' })
+  @IsIn(CASH_TYPES)
+  @IsOptional()
+  declare type?: 'INCOME' | 'EXPENSE';
+
+  @ApiPropertyOptional({ example: 100.5, description: 'Amount of the income / expense' })
   @IsNumber()
-  @IsNotEmpty()
-  declare net_price: number;
+  @IsOptional()
+  declare amount?: number;
+
+  @ApiPropertyOptional({ example: 100.5, description: 'Legacy expense amount — prefer amount + type' })
+  @IsNumber()
+  @IsOptional()
+  declare net_price?: number;
 
   @ApiPropertyOptional({ default: 'USD', example: 'USD' })
   @IsString()
   @IsOptional()
   declare currency?: string;
+
+  @ApiPropertyOptional({ example: 'Kassa kabul etdim' })
+  @IsString()
+  @IsOptional()
+  declare description?: string;
+
+  @ApiPropertyOptional({ example: 'Lebap ofis' })
+  @IsString()
+  @MaxLength(255)
+  @IsOptional()
+  declare giver?: string;
+
+  @ApiPropertyOptional({ example: 'Rowshen' })
+  @IsString()
+  @MaxLength(255)
+  @IsOptional()
+  declare receiver?: string;
+
+  @ApiPropertyOptional({ example: 'Oguztravel' })
+  @IsString()
+  @MaxLength(255)
+  @IsOptional()
+  declare company?: string;
 }
