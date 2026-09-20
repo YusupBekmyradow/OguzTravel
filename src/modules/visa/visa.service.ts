@@ -158,11 +158,19 @@ export class VisaService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('visa.clientNotFound', { lang }));
       }
 
+      const isPaidTrue = createVisaDto.is_paid === true || (createVisaDto.is_paid as any) === 'true';
+      const isStatusRefund = Number(createVisaDto.status) === 3;
+      const finalIsPaid = isStatusRefund ? true : isPaidTrue;
+
       const visa = await this.visaRepository.create(
-        { ...createVisaDto, passport_count: client.passport_count || 1 } as any,
+        {
+          ...createVisaDto,
+          is_paid: finalIsPaid,
+          passport_count: client.passport_count || 1
+        } as any,
         { transaction: t }
       );
-      if (createVisaDto.is_paid === true) {
+      if (isPaidTrue || isStatusRefund) {
         if (Number(createVisaDto.price_tmt) > 0) {
           await this.visaPaymentRepo.create({
             visa_guid: visa.guid,
@@ -244,64 +252,126 @@ export class VisaService {
       const operatorGuid = updateDto.receiver_opr_guid || existingVisa.receiver_opr_guid;
       const newPriceTmt = updateDto.price_tmt !== undefined ? Number(updateDto.price_tmt) : Number(existingVisa.price_tmt);
       const newPriceUsd = updateDto.price_usd !== undefined ? Number(updateDto.price_usd) : Number(existingVisa.price_usd);
-      const newStatus = updateDto.status !== undefined ? updateDto.status : existingVisa.status;
-      const newIsPaid = updateDto.is_paid !== undefined ? updateDto.is_paid : existingVisa.is_paid;
+      const newStatus = updateDto.status !== undefined ? Number(updateDto.status) : Number(existingVisa.status);
 
-      if (newStatus === 3) {
-        await this.visaPaymentRepo.destroy({ where: { visa_guid: existingVisa.guid }, transaction: t });
-      } else if (newIsPaid === true) {
-        for (const { currency, targetPrice } of [
-          { currency: 'TMT', targetPrice: newPriceTmt },
-          { currency: 'USD', targetPrice: newPriceUsd },
-        ]) {
-          if (targetPrice <= 0) continue;
+      const isPaidTrue = updateDto.is_paid === true || (updateDto.is_paid as any) === 'true';
+      const isPaidFalse = updateDto.is_paid === false || (updateDto.is_paid as any) === 'false';
+      const isStatusRefund = newStatus === 3;
 
-          const payments = await this.visaPaymentRepo.findAll({
-            where: { visa_guid: existingVisa.guid, currency },
-            order: [['index_number', 'ASC']],
-            transaction: t,
-          });
+      let updateData: any = { ...updateDto };
 
-          const currentTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-          const diff = Number((targetPrice - currentTotalPaid).toFixed(2));
+      if (isStatusRefund) {
+        // Status 3 (Gaýtarylan / Refund) bolanda:
+        // 1. Öňki bar bolan ähli tölegleri arassalaýarys
+        await this.visaPaymentRepo.destroy({
+          where: { visa_guid: existingVisa.guid },
+          transaction: t
+        });
 
-          if (diff !== 0) {
-            if (payments.length === 0) {
-              await this.visaPaymentRepo.create({
-                visa_guid: existingVisa.guid,
-                amount: targetPrice,
-                currency,
-                payment_date: new Date(),
-                opr_guid: operatorGuid,
-              } as any, { transaction: t });
-            } else if (payments.length === 1) {
-              await payments[0].update({ amount: targetPrice, opr_guid: operatorGuid || payments[0].opr_guid }, { transaction: t });
-            } else if (diff > 0) {
-              const last = payments[payments.length - 1];
-              await last.update({
-                amount: Number((Number(last.amount) + diff).toFixed(2)),
-                opr_guid: operatorGuid || last.opr_guid
-              }, { transaction: t });
-            } else {
-              let amountToReduce = Math.abs(diff);
-              for (let i = payments.length - 1; i >= 0 && amountToReduce > 0; i--) {
-                const p = payments[i];
-                const pAmount = Number(p.amount);
-                if (pAmount <= amountToReduce && i > 0) {
-                  await p.destroy({ transaction: t });
-                  amountToReduce = Number((amountToReduce - pAmount).toFixed(2));
-                } else {
-                  await p.update({ amount: Math.max(0, Number((pAmount - amountToReduce).toFixed(2))), opr_guid: operatorGuid || p.opr_guid }, { transaction: t });
-                  amountToReduce = 0;
+        // 2. Doly baha möçberinde täze tölegler ýazylýar (Airway / Railway / B2B ýaly)
+        if (newPriceTmt > 0) {
+          await this.visaPaymentRepo.create({
+            visa_guid: existingVisa.guid,
+            amount: newPriceTmt,
+            currency: 'TMT',
+            payment_date: new Date(),
+            opr_guid: operatorGuid,
+          } as any, { transaction: t });
+        }
+        if (newPriceUsd > 0) {
+          await this.visaPaymentRepo.create({
+            visa_guid: existingVisa.guid,
+            amount: newPriceUsd,
+            currency: 'USD',
+            payment_date: new Date(),
+            opr_guid: operatorGuid,
+          } as any, { transaction: t });
+        }
+
+        updateData.is_paid = true;
+      } else {
+        // Status 3 däl bolanda:
+        const willBePaid = isPaidTrue || (existingVisa.is_paid === true && !isPaidFalse);
+
+        if (willBePaid) {
+          // Tölenen (is_paid === true)
+          for (const { currency, targetPrice } of [
+            { currency: 'TMT', targetPrice: newPriceTmt },
+            { currency: 'USD', targetPrice: newPriceUsd },
+          ]) {
+            const payments = await this.visaPaymentRepo.findAll({
+              where: { visa_guid: existingVisa.guid, currency },
+              order: [['index_number', 'ASC']],
+              transaction: t,
+            });
+
+            if (targetPrice <= 0) {
+              if (payments.length > 0) {
+                await this.visaPaymentRepo.destroy({
+                  where: { visa_guid: existingVisa.guid, currency },
+                  transaction: t,
+                });
+              }
+              continue;
+            }
+
+            const currentTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+            const diff = Number((targetPrice - currentTotalPaid).toFixed(2));
+
+            if (diff !== 0) {
+              if (payments.length === 0) {
+                await this.visaPaymentRepo.create({
+                  visa_guid: existingVisa.guid,
+                  amount: targetPrice,
+                  currency,
+                  payment_date: new Date(),
+                  opr_guid: operatorGuid,
+                } as any, { transaction: t });
+              } else if (payments.length === 1) {
+                await payments[0].update({
+                  amount: targetPrice,
+                  opr_guid: operatorGuid || payments[0].opr_guid
+                }, { transaction: t });
+              } else if (diff > 0) {
+                const last = payments[payments.length - 1];
+                await last.update({
+                  amount: Number((Number(last.amount) + diff).toFixed(2)),
+                  opr_guid: operatorGuid || last.opr_guid
+                }, { transaction: t });
+              } else {
+                let amountToReduce = Math.abs(diff);
+                for (let i = payments.length - 1; i >= 0 && amountToReduce > 0; i--) {
+                  const p = payments[i];
+                  const pAmount = Number(p.amount);
+                  if (pAmount <= amountToReduce && i > 0) {
+                    await p.destroy({ transaction: t });
+                    amountToReduce = Number((amountToReduce - pAmount).toFixed(2));
+                  } else {
+                    await p.update({
+                      amount: Math.max(0, Number((pAmount - amountToReduce).toFixed(2))),
+                      opr_guid: operatorGuid || p.opr_guid
+                    }, { transaction: t });
+                    amountToReduce = 0;
+                  }
                 }
               }
             }
           }
+          updateData.is_paid = true;
+        } else if (isPaidFalse) {
+          // Kredit (is_paid === false)
+          // Eger öň status 3 (Gaýtarylan) bolup, indi status 3-den kredite geçirilýän bolsa,
+          // gaýtarylan wagty ýazylan awtomatiki tölegi aýyrmaly
+          if (Number(existingVisa.status) === 3) {
+            await this.visaPaymentRepo.destroy({
+              where: { visa_guid: existingVisa.guid },
+              transaction: t,
+            });
+          }
+          updateData.is_paid = false;
         }
-      } else if (newIsPaid === false) {
       }
 
-      let updateData: any = { ...updateDto };
       if (updateDto.client_guid && updateDto.client_guid !== existingVisa.client_guid) {
         const client = await this.clientRepository.findByPk(updateDto.client_guid, { transaction: t });
         if (client) updateData.passport_count = client.passport_count || 1;
