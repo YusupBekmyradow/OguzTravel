@@ -7,5 +7,7 @@
     "createFailed": "Failed to create referral letter. An error occurred.",
     "deleted": "Referral letter deleted successfully",
     "created": "Referral letter created successfully",
-    "fetchFailed": "Failed to fetch referral letter list. An error occurred."
+    "fetchFailed": "Failed to fetch referral letter list. An error occurred.",
+    "invalidRange": "Invalid document number range: digits only, and the end number must not be less than the start.",
+    "rangeOverlap": "These document numbers are already used: {start} - {end}"
 }

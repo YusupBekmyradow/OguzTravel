@@ -7,5 +7,7 @@
     "createFailed": "Ugrukdyryş haty döredilmedi. Ýalňyşlyk ýüze çykdy.",
     "deleted": "Ugrukdyryş haty üstünlikli pozuldy",
     "created": "Ugrukdyryş haty üstünlikli döredildi",
-    "fetchFailed": "Ugrukdyryş hatlarynyň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
+    "fetchFailed": "Ugrukdyryş hatlarynyň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
+    "invalidRange": "ÝH belgisiniň aralygy nädogry: diňe sanlar bolmaly we soňky belgi başlangyçdan kiçi bolmaly däl.",
+    "rangeOverlap": "ÝH belgileri eýýäm ulanylýar: {start} - {end}"
 }

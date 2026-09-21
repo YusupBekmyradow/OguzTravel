@@ -351,11 +351,18 @@ export class RefferalLetterService implements OnModuleInit {
   }
 
   async addOtherLetter(createDto: CreateOtherLetterDto, lang: string) {
+    const range = await this.checkOtherLetterRange(createDto, lang);
+    if ('error' in range) return range.error;
+
     const transaction = await this.sequelize.transaction();
     try {
       const letter = await this.refferalLetterRepo.create(
         {
           ...createDto,
+          isOne: range.isOne,
+          travel_document_number1: range.endNumber,
+          // Derived from the range so the count can never disagree with the numbers.
+          total_letter: range.end - range.start + 1,
           isRefferal: false,
         } as any,
         { transaction }
@@ -480,7 +487,29 @@ export class RefferalLetterService implements OnModuleInit {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
       }
 
-      await existingLetter.update({ ...updateDto }, { transaction });
+      const range = await this.checkOtherLetterRange(
+        {
+          isOne: updateDto.isOne ?? existingLetter.isOne,
+          travel_document_number: updateDto.travel_document_number ?? existingLetter.travel_document_number,
+          travel_document_number1: updateDto.travel_document_number1 ?? existingLetter.travel_document_number1,
+        },
+        lang,
+        existingLetter.guid,
+      );
+      if ('error' in range) {
+        await transaction.rollback();
+        return range.error;
+      }
+
+      await existingLetter.update(
+        {
+          ...updateDto,
+          isOne: range.isOne,
+          travel_document_number1: range.endNumber,
+          total_letter: range.end - range.start + 1,
+        },
+        { transaction },
+      );
       await transaction.commit();
 
       const newLetter = await this.refferalLetterRepo.findOne({
@@ -522,6 +551,62 @@ export class RefferalLetterService implements OnModuleInit {
 
 
 
+
+  /**
+   * Letters whose ÝH number range overlaps [start, end] (both integers). A letter spans
+   * `travel_document_number`..`travel_document_number1` when it is a multi-number other letter,
+   * otherwise only `travel_document_number`. The numbers are strings in the DB, so values that
+   * are not plain digits are skipped instead of breaking the whole query with a cast error.
+   */
+  private documentRangeOverlap(start: number, end: number) {
+    const col = (name: string) => `"RefferalLetter"."${name}"`;
+    const num = (name: string) => `(CASE WHEN ${col(name)} ~ '^[0-9]+$' THEN ${col(name)}::bigint END)`;
+    const rangeEnd = `COALESCE(CASE WHEN ${col('isRefferal')} IS NOT TRUE AND ${col('isOne')} IS NOT TRUE THEN ${num('travel_document_number1')} END, ${num('travel_document_number')})`;
+    return this.sequelize.literal(`(${num('travel_document_number')} <= ${end} AND ${rangeEnd} >= ${start})`);
+  }
+
+  /**
+   * Validates an other letter's number range and that no other letter already uses any of
+   * its numbers. Returns the normalized range, or an error response.
+   */
+  private async checkOtherLetterRange(
+    data: { isOne?: boolean; travel_document_number?: string; travel_document_number1?: string },
+    lang: string,
+    ignoreGuid?: string,
+  ) {
+    const isDigits = (value?: string) => typeof value === 'string' && /^[0-9]+$/.test(value);
+    const hasEnd = !data.isOne && data.travel_document_number1 != null && data.travel_document_number1 !== '';
+    if (!isDigits(data.travel_document_number) || (hasEnd && !isDigits(data.travel_document_number1))) {
+      return { error: errorResponse(HttpStatuses.BAD_REQUEST, this.i18n.t('refferal_letter.invalidRange', { lang })) };
+    }
+    const start = Number(data.travel_document_number);
+    const end = hasEnd ? Number(data.travel_document_number1) : start;
+    if (end < start) {
+      return { error: errorResponse(HttpStatuses.BAD_REQUEST, this.i18n.t('refferal_letter.invalidRange', { lang })) };
+    }
+
+    const conditions: any[] = [this.documentRangeOverlap(start, end)];
+    if (ignoreGuid) conditions.push({ guid: { [Op.ne]: ignoreGuid } });
+    const overlapping = await this.refferalLetterRepo.findOne({
+      where: { [Op.and]: conditions },
+      attributes: ['travel_document_number', 'travel_document_number1', 'isOne', 'isRefferal'],
+    });
+    if (overlapping) {
+      const oStart = overlapping.travel_document_number;
+      const oEnd = !overlapping.isRefferal && !overlapping.isOne && overlapping.travel_document_number1
+        ? overlapping.travel_document_number1
+        : oStart;
+      return {
+        error: errorResponse(
+          HttpStatuses.CONFLICT,
+          this.i18n.t('refferal_letter.rangeOverlap', { lang, args: { start: oStart, end: oEnd } }),
+        ),
+      };
+    }
+    const isOne = start === end;
+    // The original strings are kept so leading zeros (e.g. "0000201") survive.
+    return { start, end, isOne, endNumber: isOne ? '' : (data.travel_document_number1 as string) };
+  }
 
   private stripIrrelevantFields(row: any) {
     const json = row.toJSON ? row.toJSON() : row;
@@ -575,21 +660,20 @@ export class RefferalLetterService implements OnModuleInit {
 
       const start = Number(start_number);
       const end = Number(end_number);
+      if (!Number.isInteger(start) || !Number.isInteger(end) || end < start) {
+        return errorResponse(HttpStatuses.BAD_REQUEST, this.i18n.t('refferal_letter.invalidRange', { lang }));
+      }
 
-      const whereConditions: any = {
-        [Op.or]: [
-          this.sequelize.where(
-            this.sequelize.cast(this.sequelize.col('travel_document_number'), 'INTEGER'),
-            { [Op.between]: [start, end] }
-          ),
-          this.sequelize.where(
-            this.sequelize.cast(this.sequelize.col('travel_document_number1'), 'INTEGER'),
-            { [Op.between]: [start, end] }
-          ),
-        ],
-      };
+      const whereConditions: any = { [Op.and]: [this.documentRangeOverlap(start, end)] };
       const { rows, count } = await this.refferalLetterRepo.findAndCountAll({
         where: whereConditions,
+        include: [
+          {
+            model: Employee,
+            as: 'refferaloperator',
+            attributes: ['guid', 'fullName'],
+          },
+        ],
         order: [['index_number', 'DESC']],
         limit: currentLimit,
         offset: Number(offset),
