@@ -5,7 +5,7 @@ export const CASH_TYPES = ['INCOME', 'EXPENSE'] as const;
 
 export class CreateTotalCalculationDto {
   @ApiPropertyOptional({ example: 'e1000000-0000-0000-0000-000000000001' })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   declare category_guid?: string;
 

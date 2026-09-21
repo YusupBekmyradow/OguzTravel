@@ -29,7 +29,7 @@ export class CreateReceivingDto {
   @ApiProperty({ example: 'Tourist Visa', required: false })
   @IsOptional()
   @IsString()
-  declare visa_type?: string;
+  declare status?: string;
 
   @ApiProperty({
     example: { field_key: 'Hilton_Hotel', field_key1: 5 },

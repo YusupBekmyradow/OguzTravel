@@ -43,11 +43,11 @@ export class ReceivingController {
     @Query('office_guid') office_guid?: string,
     @Query('operator_guid') operator_guid?: string,
     @Query('application_date') application_date?: string,
-    @Query('visa_type') visa_type?: string,
+    @Query('status') status?: string,
     @I18nLang() lang: string = 'tk',
   ) {
     return this.receivingService.findAllReceiving(
-      { page, limit, search, country_guid, office_guid, operator_guid, application_date, visa_type },
+      { page, limit, search, country_guid, office_guid, operator_guid, application_date, status },
       lang,
     );
   }
