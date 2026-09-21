@@ -51,6 +51,18 @@ export class CreateTaskDto {
   @IsOptional()
   declare due_date?: Date;
 
+  @ApiPropertyOptional({ description: 'ISO instant the task starts at' })
+  @Transform(({ value }) => (value === '' ? null : value))
+  @IsDateString()
+  @IsOptional()
+  declare start_date?: Date;
+
+  @ApiPropertyOptional({ description: 'ISO instant the task ends at; mirrored into due_date' })
+  @Transform(({ value }) => (value === '' ? null : value))
+  @IsDateString()
+  @IsOptional()
+  declare end_date?: Date;
+
   @ApiPropertyOptional({
     type: 'array',
     items: { type: 'string', format: 'binary' },

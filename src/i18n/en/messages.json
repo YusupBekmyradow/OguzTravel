@@ -7,5 +7,7 @@
     "createFailed": "Failed to send message. An error occurred.",
     "deleted": "Message deleted successfully",
     "created": "Message sent successfully",
-    "fetchFailed": "Failed to fetch message list. An error occurred."
+    "fetchFailed": "Failed to fetch message list. An error occurred.",
+    "assigneeNotFound": "Some assignees were not found among users",
+    "invalidDateRange": "The start time cannot be after the end time"
 }

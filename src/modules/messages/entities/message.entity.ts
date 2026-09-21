@@ -59,6 +59,19 @@ export class Message extends Model<Message> {
   })
   declare due_date: Date;
 
+  // Task window. `due_date` is kept equal to `end_date` for older clients.
+  @Column({
+    type: DataType.DATE,
+    allowNull: true
+  })
+  declare start_date: Date;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true
+  })
+  declare end_date: Date;
+
   @Column({
     type: DataType.BOOLEAN,
     defaultValue: true,

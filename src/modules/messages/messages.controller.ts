@@ -65,6 +65,12 @@ export class MessagesController {
   @ApiQuery({ name: 'due_from', required: false, description: 'ISO instant, inclusive' })
   @ApiQuery({ name: 'due_to', required: false, description: 'ISO instant, exclusive' })
   @ApiQuery({
+    name: 'date_from',
+    required: false,
+    description: 'ISO instant, inclusive: tasks whose start_date → end_date window overlaps [date_from, date_to)',
+  })
+  @ApiQuery({ name: 'date_to', required: false, description: 'ISO instant, exclusive' })
+  @ApiQuery({
     name: 'cursor',
     required: false,
     description: 'Keyset pagination: send empty for the first page, then meta.nextCursor',
@@ -82,6 +88,8 @@ export class MessagesController {
     @Query('due_from') due_from?: string,
     @Query('due_to') due_to?: string,
     @Query('cursor') cursor?: string,
+    @Query('date_from') date_from?: string,
+    @Query('date_to') date_to?: string,
     @I18nLang() lang: string = 'tk',
   ) {
     return this.messagesService.getAllTasks(
@@ -98,6 +106,8 @@ export class MessagesController {
       due_from,
       due_to,
       cursor,
+      date_from,
+      date_to,
     );
   }
 

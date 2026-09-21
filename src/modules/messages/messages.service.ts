@@ -161,6 +161,8 @@ export class MessagesService {
       title: 't.title',
       status: 't.status',
       due_date: 't.due_date',
+      start_date: 't.start_date',
+      end_date: 't.end_date',
       createdAt: 't."createdAt"',
       priority: `CASE t.priority WHEN 'urgent' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END`,
     };
@@ -184,6 +186,8 @@ export class MessagesService {
     due_from?: string,
     due_to?: string,
     cursor?: string,
+    date_from?: string,
+    date_to?: string,
   ) {
     try {
       const pageNum = Math.max(1, Math.floor(Number(page)) || 1);
@@ -215,6 +219,19 @@ export class MessagesService {
       } else if (due_date) {
         conditions.push(`t.due_date >= CAST(:dueDay AS date) AND t.due_date < CAST(:dueDay AS date) + INTERVAL '1 day'`);
         replacements.dueDay = due_date;
+      }
+      // Date-range filter: tasks whose start_date → end_date window overlaps [date_from, date_to).
+      // A task with only one of the two dates is treated as that single instant; a task with
+      // neither never matches. Either bound may be sent alone.
+      const dateFrom = this.parseInstant(date_from);
+      const dateTo = this.parseInstant(date_to);
+      if (dateFrom) {
+        conditions.push('COALESCE(t.end_date, t.start_date) >= :dateFrom');
+        replacements.dateFrom = dateFrom;
+      }
+      if (dateTo) {
+        conditions.push('COALESCE(t.start_date, t.end_date) < :dateTo');
+        replacements.dateTo = dateTo;
       }
       // Assignee/search filters use EXISTS so they select tasks without trimming the
       // aggregated `assignees` list down to only the matching assignee.
@@ -523,6 +540,20 @@ export class MessagesService {
         return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
       }
       let { assignee_guids, ...taskData } = createDto as any;
+      if (!this.resolveTaskDates(taskData)) {
+        await transaction.rollback();
+        return errorResponse(HttpStatus.BAD_REQUEST, this.i18n.t('messages.invalidDateRange', { lang }));
+      }
+      assignee_guids = Array.isArray(assignee_guids) ? [...new Set(assignee_guids)] : [];
+      const unknownGuids = await this.findUnknownUserGuids(assignee_guids, transaction);
+      if (unknownGuids.length > 0) {
+        await transaction.rollback();
+        return errorResponse(
+          HttpStatus.BAD_REQUEST,
+          this.i18n.t('messages.assigneeNotFound', { lang }),
+          unknownGuids.join(', '),
+        );
+      }
 
       const createdTask = await this.messageRepository.create({
         ...taskData,
@@ -595,6 +626,37 @@ export class MessagesService {
     return [...kept, ...uploaded];
   }
 
+  /**
+   * Normalizes a task's window in place and reports whether it is valid.
+   * - `end_date` sent: `due_date` follows it, so older clients reading `due_date` stay correct.
+   * - only `due_date` sent (older clients): it becomes `end_date`.
+   * - the window is checked against the stored value of whichever side the request omits.
+   */
+  private resolveTaskDates(data: any, current?: { start_date?: Date | null; end_date?: Date | null }): boolean {
+    if (data.end_date !== undefined) {
+      data.due_date = data.end_date;
+    } else if (data.due_date !== undefined) {
+      data.end_date = data.due_date;
+    }
+    const start = data.start_date !== undefined ? data.start_date : current?.start_date;
+    const end = data.end_date !== undefined ? data.end_date : current?.end_date;
+    return !start || !end || new Date(start).getTime() <= new Date(end).getTime();
+  }
+
+  // Returns the guids that don't belong to any user; inserting them would violate
+  // tbl_task_assignees_assignee_guid_fkey and fail the whole request with a 500.
+  private async findUnknownUserGuids(guids: string[], transaction?: any): Promise<string[]> {
+    if (guids.length === 0) return [];
+    const users = await this.userRepository.findAll({
+      attributes: ['guid'],
+      where: { guid: { [Op.in]: guids } },
+      raw: true,
+      transaction,
+    });
+    const existing = new Set(users.map((user) => user.guid));
+    return guids.filter((guid) => !existing.has(guid));
+  }
+
   async updateTask(updateDto: UpdateTaskDto, lang: string = 'tk', uploadedImages: string[] = []) {
     const transaction = await this.sequelize.transaction();
     try {
@@ -610,11 +672,29 @@ export class MessagesService {
       } else if (!Array.isArray(assignee_guids)) {
         assignee_guids = Object.values(assignee_guids);
       }
+      assignee_guids = [...new Set(assignee_guids)];
       const task = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!task) {
         await transaction.rollback();
         this.imagesService.deleteFiles(uploadedImages);
         return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
+      }
+      if (!this.resolveTaskDates(updateData, task)) {
+        await transaction.rollback();
+        this.imagesService.deleteFiles(uploadedImages);
+        return errorResponse(HttpStatus.BAD_REQUEST, this.i18n.t('messages.invalidDateRange', { lang }));
+      }
+      if (shouldReplaceAssignees) {
+        const unknownGuids = await this.findUnknownUserGuids(assignee_guids, transaction);
+        if (unknownGuids.length > 0) {
+          await transaction.rollback();
+          this.imagesService.deleteFiles(uploadedImages);
+          return errorResponse(
+            HttpStatus.BAD_REQUEST,
+            this.i18n.t('messages.assigneeNotFound', { lang }),
+            unknownGuids.join(', '),
+          );
+        }
       }
 
       const currentImages: string[] = Array.isArray(task.images) ? task.images : [];

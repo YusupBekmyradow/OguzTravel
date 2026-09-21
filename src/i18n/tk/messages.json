@@ -7,5 +7,7 @@
     "createFailed": "Habar iberilmedi. Ýalňyşlyk ýüze çykdy.",
     "deleted": "Habar üstünlikli pozuldy",
     "created": "Habar üstünlikli iberildi",
-    "fetchFailed": "Habarlaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
+    "fetchFailed": "Habarlaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
+    "assigneeNotFound": "Käbir ýerine ýetirijiler ulanyjylaryň arasynda tapylmady",
+    "invalidDateRange": "Başlanýan wagty gutarýan wagtyndan soň bolup bilmez"
 }
