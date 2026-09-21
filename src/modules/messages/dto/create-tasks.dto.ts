@@ -45,6 +45,8 @@ export class CreateTaskDto {
   declare status?: number;
 
   @ApiPropertyOptional()
+  // Multipart forms cannot send null, so an empty string means "no due date".
+  @Transform(({ value }) => (value === '' ? null : value))
   @IsDateString()
   @IsOptional()
   declare due_date?: Date;

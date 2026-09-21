@@ -15,6 +15,8 @@ import { Sequelize } from 'sequelize-typescript';
 import { Op, QueryTypes } from 'sequelize';
 import { ImagesService } from '../../common/image-upload/image-upload.module';
 
+const MAX_TASK_PAGE_SIZE = 100;
+
 @Injectable()
 export class MessagesService {
   constructor(
@@ -143,6 +145,31 @@ export class MessagesService {
   }
 
 
+  // `sort` arrives as `<column>_<asc|desc>` (e.g. `due_date_desc`); only whitelisted columns reach SQL.
+  private parseInstant(value?: string): Date | null {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  // `t.guid` is the final tie-breaker so LIMIT/OFFSET pages never repeat or skip rows.
+  private getTaskOrderClause(sort?: string): string {
+    const fallback = 't."createdAt" DESC, t.guid';
+    const match = /^(.+)_(asc|desc)$/i.exec(String(sort || ''));
+    if (!match) return fallback;
+    const columns: Record<string, string> = {
+      title: 't.title',
+      status: 't.status',
+      due_date: 't.due_date',
+      createdAt: 't."createdAt"',
+      priority: `CASE t.priority WHEN 'urgent' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END`,
+    };
+    const column = columns[match[1]];
+    if (!column) return fallback;
+    const direction = match[2].toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    return `${column} ${direction} NULLS LAST, t."createdAt" DESC, t.guid`;
+  }
+
   async getAllTasks(
     page: number = 1,
     limit: number = 10,
@@ -153,10 +180,15 @@ export class MessagesService {
     search?: string,
     assignee_guid?: string,
     lang: string = 'tk',
+    sort?: string,
+    due_from?: string,
+    due_to?: string,
+    cursor?: string,
   ) {
     try {
-      const pageNum = Math.max(1, Number(page) || 1);
-      const limitNum = Math.max(1, Number(limit) || 10);
+      const pageNum = Math.max(1, Math.floor(Number(page)) || 1);
+      // Hard cap so a single request (`?limit=100000`) can't pull the whole table.
+      const limitNum = Math.min(MAX_TASK_PAGE_SIZE, Math.max(1, Math.floor(Number(limit)) || 10));
       const offset = (pageNum - 1) * limitNum;
       const isGrouped = type === true || type === 'true';
 
@@ -171,56 +203,124 @@ export class MessagesService {
         conditions.push('t.status = :status');
         replacements.status = Number(status);
       }
-      if (due_date) {
-        conditions.push('t.due_date BETWEEN :startDate AND :endDate');
-        replacements.startDate = `${due_date} 00:00:00`;
-        replacements.endDate = `${due_date} 23:59:59`;
+      // Preferred: the client's local day as an exact [due_from, due_to) instant range, since
+      // due dates are stored as UTC instants of the user's local midnight. `due_date`
+      // (a UTC calendar day) stays for older clients.
+      const dueFrom = this.parseInstant(due_from);
+      const dueTo = this.parseInstant(due_to);
+      if (dueFrom && dueTo) {
+        conditions.push('t.due_date >= :dueFrom AND t.due_date < :dueTo');
+        replacements.dueFrom = dueFrom;
+        replacements.dueTo = dueTo;
+      } else if (due_date) {
+        conditions.push(`t.due_date >= CAST(:dueDay AS date) AND t.due_date < CAST(:dueDay AS date) + INTERVAL '1 day'`);
+        replacements.dueDay = due_date;
       }
+      // Assignee/search filters use EXISTS so they select tasks without trimming the
+      // aggregated `assignees` list down to only the matching assignee.
       if (assignee_guid) {
-        conditions.push('ta.assignee_guid = :assignee_guid');
+        conditions.push(`EXISTS (
+          SELECT 1 FROM tbl_task_assignees fa
+          WHERE fa.task_guid = t.guid AND fa.assignee_guid = :assignee_guid
+        )`);
         replacements.assignee_guid = assignee_guid;
       }
       if (search) {
         conditions.push(`(
-        t.title ILIKE :search OR 
-        t.description ILIKE :search OR 
-        emp."fullName" ILIKE :search
+        t.title ILIKE :search OR
+        t.description ILIKE :search OR
+        EXISTS (
+          SELECT 1 FROM tbl_task_assignees sa
+          JOIN tbl_users su ON su.guid = sa.assignee_guid
+          JOIN tbl_employees se ON se.guid = su.employee_guid
+          WHERE sa.task_guid = t.guid AND se."fullName" ILIKE :search
+        )
       )`);
         replacements.search = `%${search}%`;
       }
       const whereClause = `WHERE ${conditions.join(' AND ')}`;
-      const baseQuery = `
-      SELECT 
+
+      // Keyset (cursor) mode for infinite scroll: sending `cursor` (empty for the first page)
+      // switches to `ORDER BY index_number DESC` + `index_number < cursor`. Unlike OFFSET the
+      // next page is an index seek (page 1000 costs the same as page 1), and cards moving in
+      // or out of a column never shift later pages. `index_number` is the unique serial.
+      const isKeyset = cursor !== undefined && cursor !== null && !isGrouped;
+      const cursorValue = Number(cursor);
+      const hasCursor = isKeyset && Number.isInteger(cursorValue) && cursorValue > 0;
+
+      // Filter + sort + LIMIT/OFFSET run on bare task rows in the inner query; the assignee /
+      // creator subqueries run only on the page it returns. Without this split Postgres also
+      // evaluates them for every OFFSET-skipped row (measured: page 2000 took >5 min on 200k tasks).
+      const buildTaskSelect = (where: string, order: string, paging = '') => `
+      SELECT
         t.*,
-        COALESCE(
-          JSON_AGG(
-            DISTINCT JSONB_BUILD_OBJECT(
+        COALESCE((
+          SELECT JSON_AGG(
+            JSON_BUILD_OBJECT(
               'guid', u.guid,
               'phone_number', u.phone_number,
               'fullName', emp."fullName"
-            )
-          ) FILTER (WHERE ta.task_guid IS NOT NULL), '[]'
-        ) AS assignees,
-        CASE WHEN adm.guid IS NOT NULL THEN
-          JSON_BUILD_OBJECT(
+            ) ORDER BY emp."fullName"
+          )
+          FROM tbl_task_assignees ta
+          LEFT JOIN tbl_users u ON ta.assignee_guid = u.guid
+          LEFT JOIN tbl_employees emp ON u.employee_guid = emp.guid
+          WHERE ta.task_guid = t.guid
+        ), '[]') AS assignees,
+        (
+          SELECT JSON_BUILD_OBJECT(
             'guid', adm.guid,
             'phone_number', adm.phone_number,
             'role', adm.role,
             'fullName', adm_emp."fullName"
           )
-        ELSE NULL END AS admuser
-      FROM tbl_messages t
-      LEFT JOIN tbl_task_assignees ta ON t.guid = ta.task_guid
-      LEFT JOIN tbl_users u ON ta.assignee_guid = u.guid
-      LEFT JOIN tbl_employees emp ON u.employee_guid = emp.guid
-      LEFT JOIN tbl_users adm ON t.adm_user_guid = adm.guid
-      LEFT JOIN tbl_employees adm_emp ON adm.employee_guid = adm_emp.guid
-      ${whereClause}
-      GROUP BY t.guid, adm.guid, adm_emp.guid
-      ORDER BY t."createdAt" DESC
+          FROM tbl_users adm
+          LEFT JOIN tbl_employees adm_emp ON adm.employee_guid = adm_emp.guid
+          WHERE adm.guid = t.adm_user_guid
+        ) AS admuser
+      FROM (
+        SELECT t.* FROM tbl_messages t
+        ${where}
+        ORDER BY ${order}
+        ${paging}
+      ) t
+      ORDER BY ${order}
     `;
+      const orderClause = this.getTaskOrderClause(sort);
+      const countQuery = `
+      SELECT COUNT(*)::integer AS total
+      FROM tbl_messages t
+      ${whereClause}
+    `;
+
+      if (isKeyset) {
+        const keysetWhere = hasCursor ? `${whereClause} AND t.index_number < :cursor` : whereClause;
+        // One extra row tells whether another page exists without a COUNT per page;
+        // the total (column badge) is only computed for the first page.
+        const [rows, countResult]: [any[], any[] | null] = await Promise.all([
+          this.sequelize.query(buildTaskSelect(keysetWhere, 't.index_number DESC', 'LIMIT :limitPlusOne'), {
+            replacements: { ...replacements, cursor: cursorValue, limitPlusOne: limitNum + 1 },
+            type: QueryTypes.SELECT,
+          }),
+          hasCursor ? null : this.sequelize.query(countQuery, { replacements, type: QueryTypes.SELECT }),
+        ]);
+        const hasMore = rows.length > limitNum;
+        const pageRows = hasMore ? rows.slice(0, limitNum) : rows;
+        return {
+          status: 200,
+          data: pageRows,
+          meta: {
+            itemCount: pageRows.length,
+            itemsPerPage: limitNum,
+            nextCursor: hasMore ? pageRows[pageRows.length - 1].index_number : null,
+            ...(countResult && { totalItems: countResult[0]?.total || 0 }),
+          },
+          message: this.i18n.t('messages.listFetched', { lang }),
+        };
+      }
+
       if (isGrouped) {
-        const allTasks: any[] = await this.sequelize.query(baseQuery, {
+        const allTasks: any[] = await this.sequelize.query(buildTaskSelect(whereClause, orderClause), {
           replacements,
           type: QueryTypes.SELECT,
         });
@@ -235,16 +335,11 @@ export class MessagesService {
           message: this.i18n.t('messages.listFetched', { lang }),
         };
       }
-      const countQuery = `
-      SELECT COUNT(DISTINCT t.guid)::integer AS total
-      FROM tbl_messages t
-      LEFT JOIN tbl_task_assignees ta ON t.guid = ta.task_guid
-      LEFT JOIN tbl_users u ON ta.assignee_guid = u.guid
-      LEFT JOIN tbl_employees emp ON u.employee_guid = emp.guid
-      ${whereClause}
-    `;
       const [rows, countResult]: [any[], any[]] = await Promise.all([
-        this.sequelize.query(`${baseQuery} LIMIT :limit OFFSET :offset`, { replacements, type: QueryTypes.SELECT }),
+        this.sequelize.query(buildTaskSelect(whereClause, orderClause, 'LIMIT :limit OFFSET :offset'), {
+          replacements,
+          type: QueryTypes.SELECT,
+        }),
         this.sequelize.query(countQuery, { replacements, type: QueryTypes.SELECT }),
       ]);
       const count = countResult[0]?.total || 0;
@@ -487,10 +582,27 @@ export class MessagesService {
     }
   }
 
-  async updateTask(updateDto: UpdateTaskDto, lang: string = 'tk') {
+  /**
+   * Resolves the task's final image list. Client-sent paths are only trusted when they already
+   * belong to the task (`keep_images` ∩ current), so a request can never point at foreign files.
+   * - `keep_images` sent: kept paths + uploads.
+   * - only uploads (legacy clients): uploads replace everything.
+   * - neither: images untouched (`null`).
+   */
+  private resolveTaskImages(current: string[], keepImages: string[] | undefined, uploaded: string[]): string[] | null {
+    if (keepImages === undefined && uploaded.length === 0) return null;
+    const kept = keepImages ? keepImages.filter((path) => current.includes(path)) : [];
+    return [...kept, ...uploaded];
+  }
+
+  async updateTask(updateDto: UpdateTaskDto, lang: string = 'tk', uploadedImages: string[] = []) {
     const transaction = await this.sequelize.transaction();
     try {
-      let { guid, assignee_guids, images, ...updateData } = updateDto as any;
+      // `images` from the body is ignored: new files only arrive as uploads (`uploadedImages`).
+      let { guid, assignee_guids, images: _ignoredImages, keep_images, ...updateData } = updateDto as any;
+      // Only a request that sends `assignee_guids` replaces the assignees; a partial update
+      // (e.g. a status change from the board) must leave them untouched.
+      const shouldReplaceAssignees = assignee_guids !== undefined;
       if (!assignee_guids) {
         assignee_guids = [];
       } else if (typeof assignee_guids === 'string') {
@@ -501,20 +613,22 @@ export class MessagesService {
       const task = await this.messageRepository.findOne({ where: { guid }, transaction });
       if (!task) {
         await transaction.rollback();
+        this.imagesService.deleteFiles(uploadedImages);
         return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
       }
 
-      if (images && images.length > 0 && task.images && Array.isArray(task.images)) {
-        this.imagesService.deleteFiles(task.images);
-        updateData.images = images.map((file: any) => file.path || file);
-      }
+      const currentImages: string[] = Array.isArray(task.images) ? task.images : [];
+      const nextImages = this.resolveTaskImages(currentImages, keep_images, uploadedImages);
+      if (nextImages) updateData.images = nextImages;
 
       await this.messageRepository.update(updateData, {
         where: { guid }, transaction
       });
 
-      await this.taskAssigneeRepository.destroy({ where: { task_guid: guid }, transaction });
-      if (assignee_guids.length > 0) {
+      if (shouldReplaceAssignees) {
+        await this.taskAssigneeRepository.destroy({ where: { task_guid: guid }, transaction });
+      }
+      if (shouldReplaceAssignees && assignee_guids.length > 0) {
         const assigneeRecords = assignee_guids.map((user_guid: string) => ({
           task_guid: guid,
           assignee_guid: user_guid,
@@ -523,6 +637,12 @@ export class MessagesService {
         await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
       }
       await transaction.commit();
+
+      // Files are removed only after the commit, and only those no longer referenced.
+      if (nextImages) {
+        this.imagesService.deleteFiles(currentImages.filter((path) => !nextImages.includes(path)));
+      }
+
       const updatedTask = await this.findMessageByGuid(guid);
       if (!updatedTask) {
         return errorResponse(HttpStatus.NOT_FOUND, this.i18n.t('messages.notFound', { lang }));
@@ -534,6 +654,8 @@ export class MessagesService {
       };
     } catch (error: any) {
       await transaction.rollback();
+      // The uploads were saved before the transaction; don't leave them orphaned on disk.
+      this.imagesService.deleteFiles(uploadedImages);
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.updateFailed', { lang }), error);
     }
   }

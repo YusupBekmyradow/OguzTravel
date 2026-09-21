@@ -61,6 +61,14 @@ export class MessagesController {
   @ApiQuery({ name: 'priority', required: false, example: 'urgent' })
   @ApiQuery({ name: 'due_date', required: false })
   @ApiQuery({ name: 'assignee_guid', required: false })
+  @ApiQuery({ name: 'sort', required: false, example: 'due_date_desc' })
+  @ApiQuery({ name: 'due_from', required: false, description: 'ISO instant, inclusive' })
+  @ApiQuery({ name: 'due_to', required: false, description: 'ISO instant, exclusive' })
+  @ApiQuery({
+    name: 'cursor',
+    required: false,
+    description: 'Keyset pagination: send empty for the first page, then meta.nextCursor',
+  })
   async getAllTasks(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
@@ -70,6 +78,10 @@ export class MessagesController {
     @Query('due_date') due_date?: string,
     @Query('search') search?: string,
     @Query('assignee_guid') assignee_guid?: string,
+    @Query('sort') sort?: string,
+    @Query('due_from') due_from?: string,
+    @Query('due_to') due_to?: string,
+    @Query('cursor') cursor?: string,
     @I18nLang() lang: string = 'tk',
   ) {
     return this.messagesService.getAllTasks(
@@ -82,6 +94,10 @@ export class MessagesController {
       search,
       assignee_guid,
       lang,
+      sort,
+      due_from,
+      due_to,
+      cursor,
     );
   }
 
@@ -146,11 +162,8 @@ export class MessagesController {
     @UploadedFiles() files: Express.Multer.File[],
     @I18nLang() lang: string = 'tk',
   ) {
-    if (files && files.length > 0) {
-      const savedImages = await this.imagesService.saveImages(files);
-      updateDto.images = savedImages;
-    }
-    return this.messagesService.updateTask(updateDto, lang);
+    const uploadedImages = files && files.length > 0 ? await this.imagesService.saveImages(files) : [];
+    return this.messagesService.updateTask(updateDto, lang, uploadedImages);
   }
 
   @Delete('/delete-notificOrmessage')
