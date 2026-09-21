@@ -578,7 +578,7 @@ export class TotalCalculationsService implements OnModuleInit {
           ) THEN
             ALTER TABLE tbl_total_calculations ADD COLUMN category_guid UUID;
           END IF;
-        END $;
+        END $$;
       `);
 
       // -------------------------------------------------------------
