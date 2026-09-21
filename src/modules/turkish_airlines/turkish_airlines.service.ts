@@ -48,6 +48,7 @@ export class TurkishAirlinesService {
       raw_data AS (
           SELECT 
               d.flight_date,
+              o.guid AS office_guid,
               o."fullName" AS full_name,
               o."shortName" AS shortName,
               COALESCE(SUM(t.base_fare), 0) AS base_fare,
@@ -55,22 +56,23 @@ export class TurkishAirlinesService {
           FROM tbl_offices AS o
           CROSS JOIN date_series AS d
           LEFT JOIN tbl_turkish_airlines AS t ON t.office_guid = o.guid AND DATE(t.datetime) = d.flight_date
-          GROUP BY d.flight_date, o."fullName", o."shortName"
+          GROUP BY d.flight_date, o.guid, o."fullName", o."shortName"
       )
       SELECT 
-        (SELECT json_agg(r) FROM (SELECT TO_CHAR(flight_date, 'DD') AS datetime, full_name, shortname, base_fare AS base_fare_sum, quoted_price AS quoted_price_sum FROM raw_data ORDER BY flight_date, shortname) r) AS data,
+        (SELECT json_agg(r) FROM (SELECT TO_CHAR(flight_date, 'DD') AS datetime, office_guid, full_name, shortname, base_fare AS base_fare_sum, quoted_price AS quoted_price_sum FROM raw_data ORDER BY flight_date, shortname) r) AS data,
         
         (SELECT json_agg(d) FROM (SELECT TO_CHAR(flight_date, 'DD') AS datetime, SUM(base_fare) AS daily_total_base, SUM(quoted_price) AS daily_total_quoted FROM raw_data GROUP BY flight_date ORDER BY flight_date) d) AS "dailyTotals",
         
         (SELECT json_agg(f) FROM (
             SELECT 
+                office_guid,
                 full_name,
                 shortName,
                 SUM(base_fare) AS total_base, 
                 SUM(quoted_price) AS total_quoted,
                 (SUM(quoted_price) - SUM(base_fare)) AS profit
             FROM raw_data 
-          GROUP BY full_name, shortName
+          GROUP BY office_guid, full_name, shortName
         ) f) AS footer,
         
         (SELECT json_build_object(
