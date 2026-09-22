@@ -27,17 +27,18 @@ export class Report extends Model<Report> {
   })
   declare name: string;
 
+  // ÝH serials are strings so their leading zeros survive ("0000001").
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.STRING(20),
     allowNull: false,
   })
-  declare start_yh_number: number;
+  declare start_yh_number: string;
 
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.STRING(20),
     allowNull: false,
   })
-  declare end_yh_number: number;
+  declare end_yh_number: string;
 
   @Column({
     type: DataType.INTEGER,
