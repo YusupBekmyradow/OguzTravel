@@ -6,7 +6,7 @@ import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
-import { QueryTypes } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 
 @Injectable()
 export class ReportService {
@@ -23,11 +23,117 @@ export class ReportService {
     return Number(result?.total || 0);
   }
 
+
+
+  private async checkReportRange(
+    data: { start_yh_number?: string; end_yh_number?: string },
+    lang: string,
+    ignoreGuid?: string,
+    transaction?: any,
+  ) {
+    const isDigits = (value?: string) => typeof value === 'string' && /^[0-9]{1,20}$/.test(value);
+
+    if (!isDigits(data.start_yh_number) || !isDigits(data.end_yh_number)) {
+      const errorMsg = lang === 'ru'
+        ? 'Введен неверный или пересекающийся диапазон'
+        : lang === 'en'
+          ? 'Invalid or malformed number range provided'
+          : 'Ýalňyş ýa-da kesişýän aralyk girizildi';
+      return { error: errorResponse(HttpStatuses.BAD_REQUEST, errorMsg) };
+    }
+
+    const start = BigInt(data.start_yh_number!);
+    const end = BigInt(data.end_yh_number!);
+
+    if (end < start) {
+      const errorMsg = lang === 'ru'
+        ? 'Введен неверный или пересекающийся диапазон'
+        : lang === 'en'
+          ? 'Invalid or malformed number range provided'
+          : 'Ýalňyş ýa-da kesişýän aralyk girizildi';
+      return { error: errorResponse(HttpStatuses.BAD_REQUEST, errorMsg) };
+    }
+
+    const conditions: any[] = [
+      {
+        [Op.and]: [
+          { start_yh_number: { [Op.lte]: data.end_yh_number } },
+          { end_yh_number: { [Op.gte]: data.start_yh_number } },
+        ],
+      },
+    ];
+
+    if (ignoreGuid) {
+      conditions.push({ guid: { [Op.ne]: ignoreGuid } });
+    }
+
+    const overlapping = await this.reportRepository.findOne({
+      where: { [Op.and]: conditions },
+      attributes: ['start_yh_number', 'end_yh_number'],
+      transaction,
+      lock: transaction ? transaction.LOCK.UPDATE : false,
+    });
+
+    if (overlapping) {
+      let message = '';
+      try {
+        message = await this.i18n.t('report.rangeOverlap', { lang });
+      } catch (e) {
+        message = '';
+      }
+      if (!message || message === 'report.rangeOverlap') {
+        if (lang === 'ru') {
+          message = `Введенный диапазон (${overlapping.start_yh_number} - ${overlapping.end_yh_number}) уже пересекается с другим отчетом!`;
+        } else if (lang === 'en') {
+          message = `The entered range (${overlapping.start_yh_number} - ${overlapping.end_yh_number}) overlaps with an existing report!`;
+        } else {
+          message = `Girilen aralyk (${overlapping.start_yh_number} - ${overlapping.end_yh_number}) eýýäm başga bir hasabat bilen kesişýär!`;
+        }
+      } else {
+        message = message
+          .replace('{start}', overlapping.start_yh_number)
+          .replace('{end}', overlapping.end_yh_number);
+      }
+
+      return {
+        error: errorResponse(HttpStatuses.CONFLICT, message),
+      };
+    }
+
+    const total_letter = Number(end - start + 1n);
+    return { start_yh_number: data.start_yh_number!, end_yh_number: data.end_yh_number!, total_letter };
+  }
+
+
+
+
+
   async addReport(createReportDto: CreateReportDto, lang: string = 'tk') {
+    const transaction = await this.reportRepository.sequelize!.transaction();
     try {
-      const report = await this.reportRepository.create({
-        ...createReportDto,
-      } as any);
+      const rangeCheck = await this.checkReportRange(
+        {
+          start_yh_number: createReportDto.start_yh_number,
+          end_yh_number: createReportDto.end_yh_number,
+        },
+        lang,
+        undefined,
+        transaction,
+      );
+
+      if ('error' in rangeCheck) {
+        await transaction.rollback();
+        return rangeCheck.error;
+      }
+
+      const report = await this.reportRepository.create(
+        {
+          ...createReportDto,
+          total_letter: rangeCheck.total_letter,
+        } as any,
+        { transaction },
+      );
+      await transaction.commit();
       const total_report_count = await this.getTotalReportCount();
 
       return {
@@ -39,6 +145,7 @@ export class ReportService {
         total_report_count,
       };
     } catch (error: any) {
+      await transaction.rollback();
       return errorResponse(
         HttpStatuses.INTERNAL_SERVER_ERROR,
         this.i18n.t('report.createFailed', { lang }),
@@ -46,6 +153,77 @@ export class ReportService {
       );
     }
   }
+
+
+
+  async updateReport(updateReportDto: UpdateReportDto, lang: string = 'tk') {
+    const transaction = await this.reportRepository.sequelize!.transaction();
+    try {
+      const { guid, ...updateData } = updateReportDto;
+      const report = await this.reportRepository.findOne({
+        where: { guid },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!report) {
+        await transaction.rollback();
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('report.notFound', { lang }));
+      }
+
+      const targetStart = updateData.start_yh_number ?? report.start_yh_number;
+      const targetEnd = updateData.end_yh_number ?? report.end_yh_number;
+
+      const rangeCheck = await this.checkReportRange(
+        {
+          start_yh_number: targetStart,
+          end_yh_number: targetEnd,
+        },
+        lang,
+        guid,
+        transaction,
+      );
+
+      if ('error' in rangeCheck) {
+        await transaction.rollback();
+        return rangeCheck.error;
+      }
+
+      await report.update(
+        {
+          ...updateData,
+          start_yh_number: rangeCheck.start_yh_number,
+          end_yh_number: rangeCheck.end_yh_number,
+          total_letter: rangeCheck.total_letter,
+        },
+        { transaction },
+      );
+      await transaction.commit();
+
+      const [updatedReport, total_report_count] = await Promise.all([
+        this.reportRepository.findOne({ where: { guid } }),
+        this.getTotalReportCount(),
+      ]);
+
+      return {
+        ...successResponse(
+          HttpStatuses.OK,
+          updatedReport,
+          this.i18n.t('report.updated', { lang }),
+        ),
+        total_report_count,
+      };
+    } catch (error: any) {
+      await transaction.rollback();
+      return errorResponse(
+        HttpStatuses.INTERNAL_SERVER_ERROR,
+        this.i18n.t('report.updateFailed', { lang }),
+        error,
+      );
+    }
+  }
+
+
 
   async getAllReports(
     page: number = 1,
@@ -122,39 +300,6 @@ export class ReportService {
     }
   }
 
-  async updateReport(updateReportDto: UpdateReportDto, lang: string = 'tk') {
-    try {
-      const { guid, ...updateData } = updateReportDto;
-      const report = await this.reportRepository.findOne({ where: { guid } });
-      if (!report) {
-        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('report.notFound', { lang }));
-      }
-
-      await this.reportRepository.update(updateData as any, {
-        where: { guid },
-      });
-
-      const [updatedReport, total_report_count] = await Promise.all([
-        this.reportRepository.findOne({ where: { guid } }),
-        this.getTotalReportCount(),
-      ]);
-
-      return {
-        ...successResponse(
-          HttpStatuses.OK,
-          updatedReport,
-          this.i18n.t('report.updated', { lang }),
-        ),
-        total_report_count,
-      };
-    } catch (error: any) {
-      return errorResponse(
-        HttpStatuses.INTERNAL_SERVER_ERROR,
-        this.i18n.t('report.updateFailed', { lang }),
-        error,
-      );
-    }
-  }
 
   async deleteReport(guid: string, lang: string = 'tk') {
     try {

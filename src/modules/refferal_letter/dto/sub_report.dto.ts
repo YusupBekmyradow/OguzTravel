@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, ValidateIf } from "class-validator";
 
 export class CreateOtherLetterDto {
   @ApiProperty()
@@ -14,6 +14,7 @@ export class CreateOtherLetterDto {
   declare travel_document_number: string;
 
   @ApiPropertyOptional()
+  @ValidateIf((o) => o.isOne === false)
   @IsString()
   @IsOptional()
   declare travel_document_number1: string;

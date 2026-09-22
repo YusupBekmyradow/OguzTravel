@@ -351,17 +351,19 @@ export class RefferalLetterService implements OnModuleInit {
   }
 
   async addOtherLetter(createDto: CreateOtherLetterDto, lang: string) {
-    const range = await this.checkOtherLetterRange(createDto, lang);
-    if ('error' in range) return range.error;
-
     const transaction = await this.sequelize.transaction();
     try {
+      const range = await this.checkOtherLetterRange(createDto, lang, undefined, transaction);
+      if ('error' in range) {
+        await transaction.rollback();
+        return range.error;
+      }
+
       const letter = await this.refferalLetterRepo.create(
         {
           ...createDto,
           isOne: range.isOne,
           travel_document_number1: range.endNumber,
-          // Derived from the range so the count can never disagree with the numbers.
           total_letter: range.end - range.start + 1,
           isRefferal: false,
         } as any,
@@ -552,12 +554,7 @@ export class RefferalLetterService implements OnModuleInit {
 
 
 
-  /**
-   * Letters whose ÝH number range overlaps [start, end] (both integers). A letter spans
-   * `travel_document_number`..`travel_document_number1` when it is a multi-number other letter,
-   * otherwise only `travel_document_number`. The numbers are strings in the DB, so values that
-   * are not plain digits are skipped instead of breaking the whole query with a cast error.
-   */
+
   private documentRangeOverlap(start: number, end: number) {
     const col = (name: string) => `"RefferalLetter"."${name}"`;
     const num = (name: string) => `(CASE WHEN ${col(name)} ~ '^[0-9]+$' THEN ${col(name)}::bigint END)`;
@@ -565,22 +562,24 @@ export class RefferalLetterService implements OnModuleInit {
     return this.sequelize.literal(`(${num('travel_document_number')} <= ${end} AND ${rangeEnd} >= ${start})`);
   }
 
-  /**
-   * Validates an other letter's number range and that no other letter already uses any of
-   * its numbers. Returns the normalized range, or an error response.
-   */
+
+
   private async checkOtherLetterRange(
     data: { isOne?: boolean; travel_document_number?: string; travel_document_number1?: string },
     lang: string,
     ignoreGuid?: string,
+    transaction?: any,
   ) {
     const isDigits = (value?: string) => typeof value === 'string' && /^[0-9]+$/.test(value);
     const hasEnd = !data.isOne && data.travel_document_number1 != null && data.travel_document_number1 !== '';
+
     if (!isDigits(data.travel_document_number) || (hasEnd && !isDigits(data.travel_document_number1))) {
       return { error: errorResponse(HttpStatuses.BAD_REQUEST, this.i18n.t('refferal_letter.invalidRange', { lang })) };
     }
+
     const start = Number(data.travel_document_number);
     const end = hasEnd ? Number(data.travel_document_number1) : start;
+
     if (end < start) {
       return { error: errorResponse(HttpStatuses.BAD_REQUEST, this.i18n.t('refferal_letter.invalidRange', { lang })) };
     }
@@ -590,7 +589,10 @@ export class RefferalLetterService implements OnModuleInit {
     const overlapping = await this.refferalLetterRepo.findOne({
       where: { [Op.and]: conditions },
       attributes: ['travel_document_number', 'travel_document_number1', 'isOne', 'isRefferal'],
+      transaction,
+      lock: transaction ? transaction.LOCK.UPDATE : false,
     });
+
     if (overlapping) {
       const oStart = overlapping.travel_document_number;
       const oEnd = !overlapping.isRefferal && !overlapping.isOne && overlapping.travel_document_number1
@@ -604,9 +606,12 @@ export class RefferalLetterService implements OnModuleInit {
       };
     }
     const isOne = start === end;
-    // The original strings are kept so leading zeros (e.g. "0000201") survive.
     return { start, end, isOne, endNumber: isOne ? '' : (data.travel_document_number1 as string) };
   }
+
+
+
+
 
   private stripIrrelevantFields(row: any) {
     const json = row.toJSON ? row.toJSON() : row;

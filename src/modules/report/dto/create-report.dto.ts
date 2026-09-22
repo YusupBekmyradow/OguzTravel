@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsOptional, IsString, Matches } from 'class-validator';
 
-// ÝH serials: digits only, leading zeros kept, width varies up to 20.
 const YH_NUMBER = /^[0-9]{1,20}$/;
 
 export class CreateReportDto {
