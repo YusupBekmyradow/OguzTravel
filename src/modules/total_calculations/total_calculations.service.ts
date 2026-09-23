@@ -25,6 +25,7 @@ export const SYSTEM_CATEGORIES = {
   TRANSLATION: 'e1000000-0000-0000-0000-000000000009',
   REFERRAL_LETTER: 'e1000000-0000-0000-0000-000000000010',
   CAFETERIA: 'e1000000-0000-0000-0000-000000000011',
+  SALARY: 'e1000000-0000-0000-0000-000000000012',
 };
 
 @Injectable()
@@ -59,6 +60,7 @@ export class TotalCalculationsService implements OnModuleInit {
         { guid: SYSTEM_CATEGORIES.TRANSLATION, name: { tk: 'Terjime', ru: 'Перевод', en: 'Translation' } },
         { guid: SYSTEM_CATEGORIES.REFERRAL_LETTER, name: { tk: 'Ugur haty', ru: 'Направление', en: 'Referral Letter' } },
         { guid: SYSTEM_CATEGORIES.CAFETERIA, name: { tk: 'Kafe', ru: 'Кафе', en: 'Cafeteria' } },
+        { guid: SYSTEM_CATEGORIES.SALARY, name: { tk: 'Işgärler', ru: 'Сотрудники', en: 'Employees' } },
       ];
 
       for (const item of defaults) {

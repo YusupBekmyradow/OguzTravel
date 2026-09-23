@@ -122,12 +122,12 @@ export class Railway extends Model<Railway> {
     })
     declare note?: string;
 
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: false,
-    defaultValue: 1
-  })
-  declare is_paid: number;
+    @Column({
+        type: DataType.INTEGER,
+        allowNull: false,
+        defaultValue: 1
+    })
+    declare is_paid: number;
 
     @BelongsTo(() => Employee, {
         foreignKey: 'opr_guid',

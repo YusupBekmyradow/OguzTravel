@@ -10,6 +10,8 @@ import { GenerateSalaryMonthDto, LockSalaryMonthDto, MarkSalaryPaidDto } from '.
 import { Employee } from '../employee/entities/employee.entity';
 import { User } from '../user/entities/user.entity';
 import { Office } from '../office/entities/office.entity';
+import { TotalCalculation } from '../total_calculations/entities/total_calculation.entity';
+import { SYSTEM_CATEGORIES } from '../total_calculations/total_calculations.service';
 import { errorResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { UserType } from '../../enums/enums';
@@ -101,6 +103,7 @@ export class SalaryService implements OnModuleInit {
     @InjectModel(SalaryMonth) private salaryMonthRepo: typeof SalaryMonth,
     @InjectModel(User) private userRepo: typeof User,
     @InjectModel(Employee) private employeeRepo: typeof Employee,
+    @InjectModel(TotalCalculation) private totalCalculationModel: typeof TotalCalculation,
     private readonly i18n: I18nService,
   ) { }
 
@@ -114,10 +117,22 @@ export class SalaryService implements OnModuleInit {
         this.logger.log(`Added column tbl_salary.${name}`);
       }
     }
+    try {
+      const monthTable = await queryInterface.describeTable('tbl_salary_period');
+      if (!monthTable['salary_calc_guid']) {
+        await queryInterface.addColumn('tbl_salary_period', 'salary_calc_guid', {
+          type: DataTypes.UUID,
+          allowNull: true,
+        });
+        this.logger.log('Added column tbl_salary_period.salary_calc_guid');
+      }
+    } catch (e) {
+      this.logger.error('Error adding salary_calc_guid to tbl_salary_period:', e);
+    }
   }
 
 
- 
+
   private async resolveScope(userPayload: any): Promise<SalaryScope> {
     const directGuid = userPayload?.employee_guid || userPayload?.guid || userPayload?.id;
     const isAdmin = String(userPayload?.role || '').toLowerCase() === UserType.ADMIN.toLowerCase();
@@ -638,6 +653,7 @@ export class SalaryService implements OnModuleInit {
           is_locked: false,
           locked_at: null,
           lockedBy: null,
+          salary_calc_guid: null,
           can_lock: Boolean(officeGuid),
         },
         message: await this.i18n.translate('salary.fetchSuccess', { lang }),
@@ -654,13 +670,15 @@ export class SalaryService implements OnModuleInit {
       const officeGuid = scope.allOffices ? dto.office_guid : scope.officeGuid;
       if (!officeGuid) return this.noOfficeError(lang);
 
-      const values = {
-        is_locked: dto.is_locked,
-        locked_at: dto.is_locked ? new Date() : null,
-        locked_by_guid: dto.is_locked ? scope.employeeGuid : null,
-      };
-      const paidCount = await this.salaryRepo.sequelize!.transaction(async (transaction) => {
+      const { settled, salaryCalcGuid } = await this.salaryRepo.sequelize!.transaction(async (transaction) => {
         let settled = 0;
+        let salaryCalcGuid: string | null = null;
+
+        const existing = await this.salaryMonthRepo.findOne({
+          where: { month: dto.month, office_guid: officeGuid },
+          transaction,
+        });
+
         if (dto.is_locked) {
           const employees = await this.employeeRepo.findAll({
             where: { office_guid: officeGuid, is_active: true },
@@ -685,15 +703,76 @@ export class SalaryService implements OnModuleInit {
               },
             );
           }
+
+          let totalAmount = 0;
+          if (employeeGuids.length > 0) {
+            const summaryRow: any = await this.salaryRepo.findOne({
+              where: {
+                month: dto.month,
+                employee_guid: employeeGuids,
+              },
+              attributes: [
+                [fn('COALESCE', fn('SUM', col('total_amount')), 0), 'total_amount'],
+              ],
+              raw: true,
+              transaction,
+            });
+            totalAmount = round2(Number(summaryRow?.total_amount || 0));
+          }
+
+          if (existing?.salary_calc_guid) {
+            await this.totalCalculationModel.destroy({
+              where: { guid: existing.salary_calc_guid },
+              transaction,
+            });
+          }
+
+          const calcRecord = await this.totalCalculationModel.create(
+            {
+              category_guid: SYSTEM_CATEGORIES.SALARY,
+              net_price: totalAmount,
+              sale_price: 0,
+              currency: 'TMT',
+              profit: 0,
+              credit_price: 0,
+              datetime: new Date(),
+              receiver_opr_guid: scope.employeeGuid,
+              office_guid: officeGuid,
+              is_manual: false,
+              source: 'PROJECT',
+              description: `${dto.month} aýlygy`,
+            } as any,
+            { transaction },
+          );
+
+          salaryCalcGuid = calcRecord.guid;
+        } else {
+          if (existing?.salary_calc_guid) {
+            await this.totalCalculationModel.destroy({
+              where: { guid: existing.salary_calc_guid },
+              transaction,
+            });
+          }
+          salaryCalcGuid = null;
         }
 
-        const existing = await this.salaryMonthRepo.findOne({
-          where: { month: dto.month, office_guid: officeGuid },
-          transaction,
-        });
-        if (existing) await existing.update(values as any, { transaction });
-        else await this.salaryMonthRepo.create({ month: dto.month, office_guid: officeGuid, ...values } as any, { transaction });
-        return settled;
+        const values = {
+          is_locked: dto.is_locked,
+          locked_at: dto.is_locked ? new Date() : null,
+          locked_by_guid: dto.is_locked ? scope.employeeGuid : null,
+          salary_calc_guid: salaryCalcGuid,
+        };
+
+        if (existing) {
+          await existing.update(values as any, { transaction });
+        } else {
+          await this.salaryMonthRepo.create(
+            { month: dto.month, office_guid: officeGuid, ...values } as any,
+            { transaction },
+          );
+        }
+
+        return { settled, salaryCalcGuid };
       });
 
       const status = await this.salaryMonthRepo.findOne({
@@ -702,13 +781,13 @@ export class SalaryService implements OnModuleInit {
       });
       const messageKey = !dto.is_locked
         ? 'salary.unlockSuccess'
-        : paidCount > 0
+        : settled > 0
           ? 'salary.lockPaidSuccess'
           : 'salary.lockSuccess';
       return {
         status: 200,
-        data: status ? { ...status.get({ plain: true }), paid_count: paidCount } : status,
-        message: await this.i18n.translate(messageKey, { lang, args: { count: paidCount } }),
+        data: status ? { ...status.get({ plain: true }), paid_count: settled } : status,
+        message: await this.i18n.translate(messageKey, { lang, args: { count: settled } }),
       };
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('salary.lockFailed', { lang }), error);

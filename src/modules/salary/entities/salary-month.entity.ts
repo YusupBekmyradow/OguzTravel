@@ -64,4 +64,10 @@ export class SalaryMonth extends Model<SalaryMonth> {
     onUpdate: 'SET NULL',
   })
   declare lockedBy: Employee;
+
+  @Column({
+    type: DataType.UUID,
+    allowNull: true,
+  })
+  declare salary_calc_guid?: string | null;
 }
