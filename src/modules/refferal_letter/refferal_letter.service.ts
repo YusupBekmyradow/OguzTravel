@@ -118,6 +118,21 @@ export class RefferalLetterService implements OnModuleInit {
   async addRefferalLetter(createDto: CreateRefferalLetterDto, lang: string) {
     const transaction = await this.sequelize.transaction();
     try {
+      const rangeCheck = await this.checkOtherLetterRange(
+        {
+          isOne: true,
+          travel_document_number: createDto.travel_document_number,
+        },
+        lang,
+        undefined,
+        transaction,
+      );
+
+      if ('error' in rangeCheck) {
+        await transaction.rollback();
+        return rangeCheck.error;
+      }
+
       const client = await this.clientRepository.findByPk(createDto.client_guid, {
         attributes: ['guid', 'passport_count'],
         transaction
@@ -127,6 +142,8 @@ export class RefferalLetterService implements OnModuleInit {
         {
           ...createDto,
           isRefferal: true,
+          isOne: true,
+          total_letter: 1,
           passport_count: client ? (client.passport_count || 1) : 1,
         } as any,
         { transaction }
@@ -265,11 +282,31 @@ export class RefferalLetterService implements OnModuleInit {
   async updateRefferalLetter(updateDto: UpdateRefferalLetterDto, lang: string) {
     const transaction = await this.sequelize.transaction();
     try {
-      const existingLetter = await this.refferalLetterRepo.findByPk(updateDto.guid, { transaction });
+      const existingLetter = await this.refferalLetterRepo.findByPk(updateDto.guid, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
       if (!existingLetter) {
         await transaction.rollback();
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('refferal_letter.notFound', { lang }));
       }
+      const targetDocNumber = updateDto.travel_document_number ?? existingLetter.travel_document_number;
+      if (targetDocNumber) {
+        const rangeCheck = await this.checkOtherLetterRange(
+          {
+            isOne: true,
+            travel_document_number: targetDocNumber,
+          },
+          lang,
+          existingLetter.guid,
+          transaction,
+        );
+        if ('error' in rangeCheck) {
+          await transaction.rollback();
+          return rangeCheck.error;
+        }
+      }
+
       let updateData: any = { ...updateDto };
       if (updateDto.client_guid && updateDto.client_guid !== existingLetter.client_guid) {
         const client = await this.clientRepository.findByPk(updateDto.client_guid, {
@@ -497,6 +534,7 @@ export class RefferalLetterService implements OnModuleInit {
         },
         lang,
         existingLetter.guid,
+        transaction,
       );
       if ('error' in range) {
         await transaction.rollback();
