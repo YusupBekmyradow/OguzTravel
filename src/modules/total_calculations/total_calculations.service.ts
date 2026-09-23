@@ -1894,7 +1894,7 @@ export class TotalCalculationsService implements OnModuleInit {
           "updatedAt" = NOW();
       `);
 
-      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation, Referral Letter, Cafeteria we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');
+      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation, Referral Letter, Aylyk, Cafeteria we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');
     } catch (error) {
       console.error('❌ Total Calculations trigger döredilende ýalňyşlyk:', error);
     }
