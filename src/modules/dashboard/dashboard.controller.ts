@@ -4,7 +4,6 @@ import { I18nLang } from 'nestjs-i18n';
 import { DashboardService } from './dashboard.service';
 import { DashboardFilterDto } from './dto/dashboard-filter.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { PermissionsGuard } from '../../guards/permissions.guard';
 
 @ApiTags('Dashboard')
 @ApiBearerAuth('bearerAuth')
@@ -23,4 +22,24 @@ export class DashboardController {
     return this.dashboardService.getSummary(filters, req?.user, lang);
   }
 
+  @Get('/get-by-category')
+  @ApiOperation({})
+  async getByCategory(
+    @Query() filters: DashboardFilterDto,
+    @Req() req: any,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.dashboardService.getByCategory(filters, req?.user, lang);
+  }
+
+
+  @Get('/get-by-operator')
+  @ApiOperation({})
+  async getByOperator(
+    @Query() filters: DashboardFilterDto,
+    @Req() req: any,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.dashboardService.getByOperator(filters, req?.user, lang);
+  }
 }

@@ -9,34 +9,17 @@ import { UserType } from '../../enums/enums';
 import { errorResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 
-const round2 = (val: number | string | null | undefined): number => {
-  const num = Number(val) || 0;
-  return Math.round(num * 100) / 100;
+const r2 = (v: any) => Math.round((Number(v) || 0) * 100) / 100;
+const pct = (cur: number, prev: number) => (prev === 0 ? (cur === 0 ? 0 : 100) : r2(((cur - prev) / Math.abs(prev)) * 100));
+const fmtDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const prevMonth = (d: Date) => {
+  const p = new Date(d);
+  p.setDate(1);
+  p.setMonth(p.getMonth() - 1);
+  p.setDate(Math.min(d.getDate(), new Date(p.getFullYear(), p.getMonth() + 1, 0).getDate()));
+  return p;
 };
-
-const calcPercentChange = (current: number, previous: number): number => {
-  if (previous === 0) {
-    return current === 0 ? 0 : 100;
-  }
-  return round2(((current - previous) / Math.abs(previous)) * 100);
-};
-
-const formatDate = (d: Date): string => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
-
-const shiftOneMonthBack = (date: Date): Date => {
-  const d = new Date(date);
-  const currentDay = d.getDate();
-  d.setDate(1);
-  d.setMonth(d.getMonth() - 1);
-  const daysInPrevMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  d.setDate(Math.min(currentDay, daysInPrevMonth));
-  return d;
-};
+const parseJson = (v: any) => (typeof v === 'object' && v !== null ? v : (() => { try { return JSON.parse(v); } catch { return { tk: v, ru: v, en: v }; } })());
 
 @Injectable()
 export class DashboardService {
@@ -48,242 +31,261 @@ export class DashboardService {
     @InjectModel(User) private readonly userRepo: typeof User,
   ) { }
 
-  private async resolveScopeOffice(userPayload: any, requestedOffice?: string): Promise<string | null> {
-    if (requestedOffice) return requestedOffice;
+  private async resolveOffice(userPayload: any, officeFilter?: string): Promise<string | null> {
+    if (officeFilter) return officeFilter;
+    if (String(userPayload?.role || '').toLowerCase() === UserType.ADMIN.toLowerCase()) return null;
 
-    const isAdmin = String(userPayload?.role || '').toLowerCase() === UserType.ADMIN.toLowerCase();
-    if (isAdmin) return null;
+    const id = userPayload?.employee_guid || userPayload?.guid || userPayload?.id;
+    if (!id) return null;
 
-    const directGuid = userPayload?.employee_guid || userPayload?.guid || userPayload?.id;
-    if (directGuid) {
-      const emp = await this.employeeRepo.findByPk(directGuid, { attributes: ['office_guid'] });
-      if (emp?.office_guid) return emp.office_guid;
+    const emp = await this.employeeRepo.findByPk(id, { attributes: ['office_guid'] });
+    if (emp?.office_guid) return emp.office_guid;
 
-      const user = await this.userRepo.findByPk(directGuid, { attributes: ['employee_guid'] });
-      if (user?.employee_guid) {
-        const userEmp = await this.employeeRepo.findByPk(user.employee_guid, { attributes: ['office_guid'] });
-        if (userEmp?.office_guid) return userEmp.office_guid;
-      }
+    const user = await this.userRepo.findByPk(id, { attributes: ['employee_guid'] });
+    if (user?.employee_guid) {
+      const uEmp = await this.employeeRepo.findByPk(user.employee_guid, { attributes: ['office_guid'] });
+      if (uEmp?.office_guid) return uEmp.office_guid;
     }
     return null;
+  }
+
+  private resolveDates(filters: DashboardFilterDto) {
+    const now = new Date();
+    const start = filters.start_date
+      ? (filters.start_date.length === 10 ? `${filters.start_date} 00:00:00` : filters.start_date)
+      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01 00:00:00`;
+    const end = filters.end_date
+      ? (filters.end_date.length === 10 ? `${filters.end_date} 23:59:59.999` : filters.end_date)
+      : now.toISOString();
+    return { start, end, startObj: new Date(start), endObj: new Date(end) };
+  }
+
+  private buildWhere(startDate: string, endDate: string, officeGuid?: string | null, currency?: string, prefix = '') {
+    const conds = [`tc.datetime >= :${prefix}startDate`, `tc.datetime <= :${prefix}endDate`];
+    const rp: Record<string, any> = { [`${prefix}startDate`]: startDate, [`${prefix}endDate`]: endDate };
+
+    if (officeGuid) {
+      conds.push(`tc.office_guid = :${prefix}office_guid`);
+      rp[`${prefix}office_guid`] = officeGuid;
+    }
+    if (currency?.trim()) {
+      conds.push(`UPPER(TRIM(tc.currency)) = :${prefix}currency`);
+      rp[`${prefix}currency`] = currency.trim().toUpperCase();
+    }
+    return { where: `WHERE ${conds.join(' AND ')}`, rp };
+  }
+
+  private sql<T = any>(query: string, replacements: Record<string, any>): Promise<T[]> {
+    return this.sequelize.query<any>(query, { replacements, type: QueryTypes.SELECT });
+  }
+
+  private sumSql(where: string) {
+    return `
+      SELECT UPPER(TRIM(tc.currency)) AS currency,
+        COALESCE(SUM(tc.net_price), 0)::numeric(14,2)    AS expense,
+        COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)   AS income,
+        COALESCE(SUM(tc.profit), 0)::numeric(14,2)       AS profit,
+        COALESCE(SUM(tc.credit_price), 0)::numeric(14,2) AS credit
+      FROM tbl_total_calculations tc ${where}
+      GROUP BY UPPER(TRIM(tc.currency))`;
+  }
+
+
+
+  async getSummary(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
+    try {
+      const officeGuid = await this.resolveOffice(userPayload, filters.office_guid);
+      const { start, end, startObj, endObj } = this.resolveDates(filters);
+
+      const prevStart = `${fmtDate(prevMonth(startObj))} 00:00:00`;
+      const prevEnd = `${fmtDate(prevMonth(endObj))} 23:59:59.999`;
+
+      const { where: curWhere, rp: curRp } = this.buildWhere(start, end, officeGuid, filters.currency);
+      const { where: prevWhere, rp: prevRp } = this.buildWhere(prevStart, prevEnd, officeGuid, filters.currency, 'p_');
+
+      const chartQ = `
+        SELECT TO_CHAR(tc.datetime, 'YYYY-MM-DD') AS date,
+          UPPER(TRIM(tc.currency)) AS currency,
+          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)    AS expense,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)   AS income,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)       AS profit,
+          COALESCE(SUM(tc.credit_price), 0)::numeric(14,2) AS credit
+        FROM tbl_total_calculations tc ${curWhere}
+        GROUP BY TO_CHAR(tc.datetime, 'YYYY-MM-DD'), UPPER(TRIM(tc.currency))
+        ORDER BY date ASC`;
+
+      const [curRows, prevRows, chartRows]: [any[], any[], any[]] = await Promise.all([
+        this.sql(this.sumSql(curWhere), curRp),
+        this.sql(this.sumSql(prevWhere), prevRp),
+        this.sql(chartQ, curRp),
+      ]);
+
+      const toMap = (rows: any[]) =>
+        new Map(rows.map((r) => [r.currency, { expense: r2(r.expense), income: r2(r.income), profit: r2(r.profit), credit: r2(r.credit) }]));
+      const curMap = toMap(curRows);
+      const prevMap = toMap(prevRows);
+      const zero = { expense: 0, income: 0, profit: 0, credit: 0 };
+
+      const card = (field: 'expense' | 'income' | 'credit' | 'profit', cur: string) => {
+        const total = (curMap.get(cur) || zero)[field];
+        const previous = (prevMap.get(cur) || zero)[field];
+        return { total, previous, change_amount: r2(total - previous), change_percent: pct(total, previous) };
+      };
+
+      const cards = Object.fromEntries(
+        (['expense', 'income', 'credit', 'profit'] as const).map((f) => [f, { USD: card(f, 'USD'), TMT: card(f, 'TMT') }])
+      );
+
+      const dailyMap = new Map(chartRows.map((r) => [`${r.date}_${r.currency}`, { expense: r2(r.expense), income: r2(r.income), profit: r2(r.profit), credit: r2(r.credit) }]));
+      const chart: any[] = [];
+      const cursor = new Date(startObj); cursor.setHours(0, 0, 0, 0);
+      const endCursor = new Date(endObj); endCursor.setHours(23, 59, 59, 999);
+
+      while (cursor <= endCursor) {
+        const d = fmtDate(cursor);
+        for (const cur of ['USD', 'TMT']) {
+          const v = dailyMap.get(`${d}_${cur}`) || zero;
+          chart.push({ date: d, currency: cur, ...v });
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+
+      return { status: 200, data: { cards, chart }, message: 'Dashboard maglumatlary üstünlikli alyndy' };
+    } catch (e: any) {
+      this.logger.error('getSummary error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Dashboard maglumatlaryny alyp bolmady', e);
+    }
   }
 
 
 
 
-  async getSummary(filters: DashboardFilterDto, userPayload: any, lang: string = 'tk') {
+  async getByCategory(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
     try {
-      const officeGuid = await this.resolveScopeOffice(userPayload, filters.office_guid);
-      const now = new Date();
-      let startDateStr: string;
-      let endDateStr: string;
-      let startDateObj: Date;
-      let endDateObj: Date;
+      const officeGuid = await this.resolveOffice(userPayload, filters.office_guid);
+      const { start, end } = this.resolveDates(filters);
+      const { where, rp } = this.buildWhere(start, end, officeGuid, filters.currency);
 
-      if (filters.start_date) {
-        startDateStr = filters.start_date.length === 10
-          ? `${filters.start_date} 00:00:00`
-          : filters.start_date;
-        startDateObj = new Date(startDateStr);
-      } else {
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        startDateStr = `${y}-${m}-01 00:00:00`;
-        startDateObj = new Date(startDateStr);
-      }
-      if (filters.end_date) {
-        endDateStr = filters.end_date.length === 10
-          ? `${filters.end_date} 23:59:59.999`
-          : filters.end_date;
-        endDateObj = new Date(endDateStr);
-      } else {
-        endDateStr = now.toISOString();
-        endDateObj = now;
-      }
-      const prevStartDateObj = shiftOneMonthBack(startDateObj);
-      const prevEndDateObj = shiftOneMonthBack(endDateObj);
-
-      const prevStartDateStr = `${formatDate(prevStartDateObj)} 00:00:00`;
-      const prevEndDateStr = `${formatDate(prevEndDateObj)} 23:59:59.999`;
-
-      const currentConditions: string[] = ['tc.datetime >= :startDate', 'tc.datetime <= :endDate'];
-      const currentReplacements: Record<string, any> = {
-        startDate: startDateStr,
-        endDate: endDateStr,
-      };
-
-      const prevConditions: string[] = ['tc.datetime >= :prevStartDate', 'tc.datetime <= :prevEndDate'];
-      const prevReplacements: Record<string, any> = {
-        prevStartDate: prevStartDateStr,
-        prevEndDate: prevEndDateStr,
-      };
-
-      if (officeGuid) {
-        currentConditions.push('tc.office_guid = :office_guid');
-        currentReplacements.office_guid = officeGuid;
-
-        prevConditions.push('tc.office_guid = :prev_office_guid');
-        prevReplacements.prev_office_guid = officeGuid;
-      }
-
-      const currentWhere = `WHERE ${currentConditions.join(' AND ')}`;
-      const prevWhere = `WHERE ${prevConditions.join(' AND ')}`;
-
-      const currentQuery = `
-        SELECT
-          UPPER(TRIM(tc.currency))                         AS currency,
-          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)    AS expense,
-          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)   AS income,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)       AS profit,
-          COALESCE(SUM(tc.credit_price), 0)::numeric(14,2) AS credit
+      const sql = `
+        SELECT cat.guid AS category_guid, cat.name AS category_name,
+          COUNT(tc.guid)::int AS count,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)  AS income,
+          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)   AS expense,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)      AS profit,
+          CASE WHEN COALESCE(SUM(tc.sale_price), 0) = 0 THEN 0
+            ELSE ROUND((COALESCE(SUM(tc.profit), 0) / NULLIF(SUM(tc.sale_price), 0)) * 100, 1)
+          END AS margin_percent
         FROM tbl_total_calculations tc
-        ${currentWhere}
-        GROUP BY UPPER(TRIM(tc.currency))
-      `;
+        LEFT JOIN tbl_categories cat ON cat.guid = tc.category_guid
+        ${where}
+        GROUP BY cat.guid, cat.name
+        ORDER BY income DESC`;
 
-      const prevQuery = `
-        SELECT
-          UPPER(TRIM(tc.currency))                         AS currency,
-          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)    AS expense,
-          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)   AS income,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)       AS profit,
-          COALESCE(SUM(tc.credit_price), 0)::numeric(14,2) AS credit
-        FROM tbl_total_calculations tc
-        ${prevWhere}
-        GROUP BY UPPER(TRIM(tc.currency))
-      `;
+      const countSql = `
+        SELECT COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS income,
+               COALESCE(SUM(tc.net_price), 0)::numeric(14,2)  AS expense,
+               COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit,
+               COUNT(tc.guid)::int                            AS count
+        FROM tbl_total_calculations tc ${where}`;
 
-      const chartQuery = `
-        SELECT
-          TO_CHAR(tc.datetime, 'YYYY-MM-DD')               AS date,
-          UPPER(TRIM(tc.currency))                         AS currency,
-          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)    AS expense,
-          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)   AS income,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)       AS profit,
-          COALESCE(SUM(tc.credit_price), 0)::numeric(14,2) AS credit
-        FROM tbl_total_calculations tc
-        ${currentWhere}
-        GROUP BY TO_CHAR(tc.datetime, 'YYYY-MM-DD'), UPPER(TRIM(tc.currency))
-        ORDER BY date ASC
-      `;
-
-      const [currentRows, prevRows, chartRows] = await Promise.all([
-        this.sequelize.query<any>(currentQuery, {
-          replacements: currentReplacements,
-          type: QueryTypes.SELECT,
-        }),
-        this.sequelize.query<any>(prevQuery, {
-          replacements: prevReplacements,
-          type: QueryTypes.SELECT,
-        }),
-        this.sequelize.query<any>(chartQuery, {
-          replacements: currentReplacements,
-          type: QueryTypes.SELECT,
-        }),
+      const [rows, totals]: [any[], any[]] = await Promise.all([
+        this.sql(sql, rp),
+        this.sql(countSql, rp),
       ]);
 
-      const curMap = (rows: any[]) => {
-        const map = new Map<string, any>();
-        rows.forEach((r) => {
-          map.set(r.currency, {
-            expense: round2(r.expense),
-            income: round2(r.income),
-            profit: round2(r.profit),
-            credit: round2(r.credit),
-          });
-        });
-        return map;
-      };
+      const tot = totals[0] || {};
+      const totalIncome = r2(tot.income);
+      const totalExpense = r2(tot.expense);
+      const totalProfit = r2(tot.profit);
+      const totalCount = Number(tot.count) || 0;
+      const totalMargin = totalIncome > 0 ? r2((totalProfit / totalIncome) * 100) : 0;
 
-      const curTotals = curMap(currentRows);
-      const prevTotals = curMap(prevRows);
-
-      const buildCardCurrency = (field: 'expense' | 'income' | 'credit' | 'profit', cur: string) => {
-        const empty = { expense: 0, income: 0, profit: 0, credit: 0 };
-        const cRow = curTotals.get(cur) || empty;
-        const pRow = prevTotals.get(cur) || empty;
-
-        const total = round2(cRow[field]);
-        const previous = round2(pRow[field]);
-        const change_amount = round2(total - previous);
-        const change_percent = calcPercentChange(total, previous);
-
+      const items = rows.map((r) => {
+        const income = r2(r.income);
         return {
-          total,
-          previous,
-          change_amount,
-          change_percent,
+          category_guid: r.category_guid,
+          category_name: parseJson(r.category_name),
+          count: Number(r.count) || 0,
+          income,
+          expense: r2(r.expense),
+          profit: r2(r.profit),
+          margin_percent: r2(r.margin_percent),
+          share_percent: totalIncome > 0 ? r2((income / totalIncome) * 100) : 0,
         };
-      };
-
-      const cards = {
-        expense: {
-          USD: buildCardCurrency('expense', 'USD'),
-          TMT: buildCardCurrency('expense', 'TMT'),
-        },
-        income: {
-          USD: buildCardCurrency('income', 'USD'),
-          TMT: buildCardCurrency('income', 'TMT'),
-        },
-        credit: {
-          USD: buildCardCurrency('credit', 'USD'),
-          TMT: buildCardCurrency('credit', 'TMT'),
-        },
-        profit: {
-          USD: buildCardCurrency('profit', 'USD'),
-          TMT: buildCardCurrency('profit', 'TMT'),
-        },
-      };
-
-      const dailyMap = new Map<string, any>();
-      chartRows.forEach((r) => {
-        dailyMap.set(`${r.date}_${r.currency}`, {
-          expense: round2(r.expense),
-          income: round2(r.income),
-          profit: round2(r.profit),
-          credit: round2(r.credit),
-        });
       });
-      const chartList: any[] = [];
-      const cursor = new Date(startDateObj);
-      cursor.setHours(0, 0, 0, 0);
-
-      const targetEnd = new Date(endDateObj);
-      targetEnd.setHours(23, 59, 59, 999);
-
-      const currencies = ['USD', 'TMT'];
-
-      while (cursor <= targetEnd) {
-        const dStr = formatDate(cursor);
-        for (const cur of currencies) {
-          const val = dailyMap.get(`${dStr}_${cur}`) || { expense: 0, income: 0, profit: 0, credit: 0 };
-          chartList.push({
-            date: dStr,
-            currency: cur,
-            expense: val.expense,
-            income: val.income,
-            profit: val.profit,
-            credit: val.credit,
-          });
-        }
-        cursor.setDate(cursor.getDate() + 1);
-      }
 
       return {
         status: 200,
         data: {
-          cards,
-          chart: chartList,
+          items,
+          total: { count: totalCount, income: totalIncome, expense: totalExpense, profit: totalProfit, margin_percent: totalMargin },
         },
-        message: 'Dashboard maglumatlary üstünlikli alyndy',
+        message: 'Hyzmatlar boýunça maglumatlar alyndy',
       };
-    } catch (error: any) {
-      this.logger.error('Error fetching dashboard summary:', error);
-      return errorResponse(
-        HttpStatuses.INTERNAL_SERVER_ERROR,
-        'Dashboard maglumatlaryny alyp bolmady',
-        error,
-      );
+    } catch (e: any) {
+      this.logger.error('getByCategory error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Hyzmatlar boýunça maglumatlaryny alyp bolmady', e);
+    }
+  }
+
+
+
+
+
+  async getByOperator(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
+    try {
+      const officeGuid = await this.resolveOffice(userPayload, filters.office_guid);
+      const { start, end } = this.resolveDates(filters);
+      const { where, rp } = this.buildWhere(start, end, officeGuid, filters.currency);
+
+      const sql = `
+        SELECT emp.guid AS operator_guid, emp."fullName" AS operator_name,
+          COUNT(tc.guid)::int AS count,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)  AS income,
+          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)   AS expense,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)      AS profit
+        FROM tbl_total_calculations tc
+        LEFT JOIN tbl_employees emp ON emp.guid = tc.receiver_opr_guid
+        ${where}
+        GROUP BY emp.guid, emp."fullName"
+        ORDER BY income DESC`;
+
+      const countSql = `
+        SELECT COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS income,
+               COUNT(tc.guid)::int                            AS count
+        FROM tbl_total_calculations tc ${where}`;
+
+      const [rows, totals]: [any[], any[]] = await Promise.all([
+        this.sql(sql, rp),
+        this.sql(countSql, rp),
+      ]);
+
+      const tot = totals[0] || {};
+      const totalIncome = r2(tot.income);
+      const totalCount = Number(tot.count) || 0;
+
+      const items = rows.map((r, i) => {
+        const income = r2(r.income);
+        return {
+          rank: i + 1,
+          operator_guid: r.operator_guid,
+          operator_name: r.operator_name,
+          count: Number(r.count) || 0,
+          income,
+          expense: r2(r.expense),
+          profit: r2(r.profit),
+          share_percent: totalIncome > 0 ? r2((income / totalIncome) * 100) : 0,
+        };
+      });
+
+      return {
+        status: 200,
+        data: { items, total: { count: totalCount, income: totalIncome } },
+        message: 'Operatorlar boýunça maglumatlar alyndy',
+      };
+    } catch (e: any) {
+      this.logger.error('getByOperator error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Operatorlar boýunça maglumatlaryny alyp bolmady', e);
     }
   }
 }
