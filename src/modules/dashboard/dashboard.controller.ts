@@ -6,14 +6,13 @@ import { DashboardFilterDto } from './dto/dashboard-filter.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Dashboard')
-@ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+// @ApiBearerAuth('bearerAuth')
+// @UseGuards(JwtAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) { }
 
   @Get('/get-summary')
-  @ApiOperation({})
   async getSummary(
     @Query() filters: DashboardFilterDto,
     @Req() req: any,
@@ -22,24 +21,14 @@ export class DashboardController {
     return this.dashboardService.getSummary(filters, req?.user, lang);
   }
 
-  @Get('/get-by-category')
-  @ApiOperation({})
-  async getByCategory(
-    @Query() filters: DashboardFilterDto,
-    @Req() req: any,
-    @I18nLang() lang: string = 'tk',
-  ) {
-    return this.dashboardService.getByCategory(filters, req?.user, lang);
+
+  @Get('/get-operators-rating')
+  async getOperatorsRating(@Query() filters: DashboardFilterDto, @Req() req: any) {
+    return this.dashboardService.getOperatorsRating(filters, req.user);
   }
 
-
-  @Get('/get-by-operator')
-  @ApiOperation({})
-  async getByOperator(
-    @Query() filters: DashboardFilterDto,
-    @Req() req: any,
-    @I18nLang() lang: string = 'tk',
-  ) {
-    return this.dashboardService.getByOperator(filters, req?.user, lang);
+  @Get('/get-categories-rating')
+  async getCategoryRating(@Query() filters: DashboardFilterDto, @Req() req: any) {
+    return this.dashboardService.getCategoryRating(filters, req.user);
   }
 }

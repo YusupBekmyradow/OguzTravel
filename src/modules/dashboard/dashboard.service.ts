@@ -19,7 +19,6 @@ const prevMonth = (d: Date) => {
   p.setDate(Math.min(d.getDate(), new Date(p.getFullYear(), p.getMonth() + 1, 0).getDate()));
   return p;
 };
-const parseJson = (v: any) => (typeof v === 'object' && v !== null ? v : (() => { try { return JSON.parse(v); } catch { return { tk: v, ru: v, en: v }; } })());
 
 @Injectable()
 export class DashboardService {
@@ -31,79 +30,65 @@ export class DashboardService {
     @InjectModel(User) private readonly userRepo: typeof User,
   ) { }
 
-  private async resolveOffice(userPayload: any, officeFilter?: string): Promise<string | null> {
-    if (officeFilter) return officeFilter;
-    if (String(userPayload?.role || '').toLowerCase() === UserType.ADMIN.toLowerCase()) return null;
-
-    const id = userPayload?.employee_guid || userPayload?.guid || userPayload?.id;
-    if (!id) return null;
-
-    const emp = await this.employeeRepo.findByPk(id, { attributes: ['office_guid'] });
-    if (emp?.office_guid) return emp.office_guid;
-
-    const user = await this.userRepo.findByPk(id, { attributes: ['employee_guid'] });
-    if (user?.employee_guid) {
-      const uEmp = await this.employeeRepo.findByPk(user.employee_guid, { attributes: ['office_guid'] });
-      if (uEmp?.office_guid) return uEmp.office_guid;
-    }
-    return null;
-  }
-
-  private resolveDates(filters: DashboardFilterDto) {
-    const now = new Date();
-    const start = filters.start_date
-      ? (filters.start_date.length === 10 ? `${filters.start_date} 00:00:00` : filters.start_date)
-      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01 00:00:00`;
-    const end = filters.end_date
-      ? (filters.end_date.length === 10 ? `${filters.end_date} 23:59:59.999` : filters.end_date)
-      : now.toISOString();
-    return { start, end, startObj: new Date(start), endObj: new Date(end) };
-  }
-
-  private buildWhere(startDate: string, endDate: string, officeGuid?: string | null, currency?: string, prefix = '') {
-    const conds = [`tc.datetime >= :${prefix}startDate`, `tc.datetime <= :${prefix}endDate`];
-    const rp: Record<string, any> = { [`${prefix}startDate`]: startDate, [`${prefix}endDate`]: endDate };
-
-    if (officeGuid) {
-      conds.push(`tc.office_guid = :${prefix}office_guid`);
-      rp[`${prefix}office_guid`] = officeGuid;
-    }
-    if (currency?.trim()) {
-      conds.push(`UPPER(TRIM(tc.currency)) = :${prefix}currency`);
-      rp[`${prefix}currency`] = currency.trim().toUpperCase();
-    }
-    return { where: `WHERE ${conds.join(' AND ')}`, rp };
-  }
-
-  private sql<T = any>(query: string, replacements: Record<string, any>): Promise<T[]> {
-    return this.sequelize.query<any>(query, { replacements, type: QueryTypes.SELECT });
-  }
-
-  private sumSql(where: string) {
-    return `
-      SELECT UPPER(TRIM(tc.currency)) AS currency,
-        COALESCE(SUM(tc.net_price), 0)::numeric(14,2)    AS expense,
-        COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)   AS income,
-        COALESCE(SUM(tc.profit), 0)::numeric(14,2)       AS profit,
-        COALESCE(SUM(tc.credit_price), 0)::numeric(14,2) AS credit
-      FROM tbl_total_calculations tc ${where}
-      GROUP BY UPPER(TRIM(tc.currency))`;
-  }
-
-
-
   async getSummary(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
     try {
-      const officeGuid = await this.resolveOffice(userPayload, filters.office_guid);
-      const { start, end, startObj, endObj } = this.resolveDates(filters);
+      // --- office ---
+      let officeGuid: string | null = filters.office_guid || null;
+      if (!officeGuid) {
+        const isAdmin = String(userPayload?.role || '').toLowerCase() === UserType.ADMIN.toLowerCase();
+        officeGuid = isAdmin ? null : (userPayload?.office_guid || null);
+      }
+
+      // --- dates ---
+      const now = new Date();
+      const start = filters.start_date
+        ? (filters.start_date.length === 10 ? `${filters.start_date} 00:00:00` : filters.start_date)
+        : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01 00:00:00`;
+      const end = filters.end_date
+        ? (filters.end_date.length === 10 ? `${filters.end_date} 23:59:59.999` : filters.end_date)
+        : now.toISOString();
+      const startObj = new Date(start);
+      const endObj = new Date(end);
 
       const prevStart = `${fmtDate(prevMonth(startObj))} 00:00:00`;
       const prevEnd = `${fmtDate(prevMonth(endObj))} 23:59:59.999`;
 
-      const { where: curWhere, rp: curRp } = this.buildWhere(start, end, officeGuid, filters.currency);
-      const { where: prevWhere, rp: prevRp } = this.buildWhere(prevStart, prevEnd, officeGuid, filters.currency, 'p_');
+      // --- current period WHERE ---
+      const curConds = [`tc.datetime >= :startDate`, `tc.datetime <= :endDate`];
+      const curRp: Record<string, any> = { startDate: start, endDate: end };
+      if (officeGuid) {
+        curConds.push(`tc.office_guid = :officeGuid`);
+        curRp.officeGuid = officeGuid;
+      }
+      if (filters.currency?.trim()) {
+        curConds.push(`UPPER(TRIM(tc.currency)) = :currency`);
+        curRp.currency = filters.currency.trim().toUpperCase();
+      }
+      const curWhere = `WHERE ${curConds.join(' AND ')}`;
 
-      const chartQ = `
+      // --- previous period WHERE ---
+      const prevConds = [`tc.datetime >= :p_startDate`, `tc.datetime <= :p_endDate`];
+      const prevRp: Record<string, any> = { p_startDate: prevStart, p_endDate: prevEnd };
+      if (officeGuid) {
+        prevConds.push(`tc.office_guid = :p_officeGuid`);
+        prevRp.p_officeGuid = officeGuid;
+      }
+      if (filters.currency?.trim()) {
+        prevConds.push(`UPPER(TRIM(tc.currency)) = :p_currency`);
+        prevRp.p_currency = filters.currency.trim().toUpperCase();
+      }
+      const prevWhere = `WHERE ${prevConds.join(' AND ')}`;
+
+      const sumQuery = (where: string) => `
+        SELECT UPPER(TRIM(tc.currency)) AS currency,
+          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)    AS expense,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)   AS income,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)       AS profit,
+          COALESCE(SUM(tc.credit_price), 0)::numeric(14,2) AS credit
+        FROM tbl_total_calculations tc ${where}
+        GROUP BY UPPER(TRIM(tc.currency))`;
+
+      const chartQuery = `
         SELECT TO_CHAR(tc.datetime, 'YYYY-MM-DD') AS date,
           UPPER(TRIM(tc.currency)) AS currency,
           COALESCE(SUM(tc.net_price), 0)::numeric(14,2)    AS expense,
@@ -115,9 +100,9 @@ export class DashboardService {
         ORDER BY date ASC`;
 
       const [curRows, prevRows, chartRows]: [any[], any[], any[]] = await Promise.all([
-        this.sql(this.sumSql(curWhere), curRp),
-        this.sql(this.sumSql(prevWhere), prevRp),
-        this.sql(chartQ, curRp),
+        this.sequelize.query<any>(sumQuery(curWhere), { replacements: curRp, type: QueryTypes.SELECT }),
+        this.sequelize.query<any>(sumQuery(prevWhere), { replacements: prevRp, type: QueryTypes.SELECT }),
+        this.sequelize.query<any>(chartQuery, { replacements: curRp, type: QueryTypes.SELECT }),
       ]);
 
       const toMap = (rows: any[]) =>
@@ -160,142 +145,187 @@ export class DashboardService {
 
 
 
-  async getByCategory(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
+  async getOperatorsRating(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
     try {
-      const officeGuid = await this.resolveOffice(userPayload, filters.office_guid);
-      const { start, end } = this.resolveDates(filters);
-      const { where, rp } = this.buildWhere(start, end, officeGuid, filters.currency);
 
-      const sql = `
-        SELECT
-          cat.guid                                                        AS category_guid,
-          cat.name                                                        AS category_name,
-          tc.category                                                     AS fallback_category,
-          COUNT(tc.guid)::int                                             AS count,
-          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)                 AS income,
-          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)                  AS expense,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)                     AS profit,
-          CASE WHEN COALESCE(SUM(tc.sale_price), 0) = 0 THEN 0
-            ELSE ROUND((COALESCE(SUM(tc.profit), 0) / NULLIF(SUM(tc.sale_price), 0)) * 100, 1)
-          END                                                             AS margin_percent
+      let officeGuid: string | null = filters.office_guid || null;
+      if (!officeGuid) {
+        const isAdmin = String(userPayload?.role || '').toLowerCase() === UserType.ADMIN.toLowerCase();
+        officeGuid = isAdmin ? null : (userPayload?.office_guid || null);
+      }
+
+      const start = filters.start_date
+        ? (filters.start_date.length === 10 ? `${filters.start_date} 00:00:00` : filters.start_date)
+        : null;
+      const end = filters.end_date
+        ? (filters.end_date.length === 10 ? `${filters.end_date} 23:59:59.999` : filters.end_date)
+        : null;
+
+
+      const conds = [`tc.receiver_opr_guid IS NOT NULL`];
+      const rp: Record<string, any> = {};
+
+      if (start) {
+        conds.push(`tc.datetime >= :startDate`);
+        rp.startDate = start;
+      }
+      if (end) {
+        conds.push(`tc.datetime <= :endDate`);
+        rp.endDate = end;
+      }
+      if (officeGuid) {
+        conds.push(`tc.office_guid = :officeGuid`);
+        rp.officeGuid = officeGuid;
+      }
+      if (filters.currency?.trim()) {
+        conds.push(`UPPER(TRIM(tc.currency)) = :currency`);
+        rp.currency = filters.currency.trim().toUpperCase();
+      }
+      const where = `WHERE ${conds.join(' AND ')}`;
+
+      const query = `
+        SELECT tc.receiver_opr_guid AS operator_guid,
+          e."fullName" AS operator_name,
+          UPPER(TRIM(tc.currency)) AS currency,
+          COUNT(*)::int AS count,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS sale,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit
         FROM tbl_total_calculations tc
-        LEFT JOIN tbl_categories cat ON cat.guid = tc.category_guid
+        LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
         ${where}
-        GROUP BY cat.guid, cat.name, tc.category
-        ORDER BY income DESC`;
+        GROUP BY tc.receiver_opr_guid, e."fullName", UPPER(TRIM(tc.currency))
+        ORDER BY sale DESC`;
 
-      const rows = await this.sql(sql, rp);
-      const totalIncome = r2(rows.reduce((sum, r) => sum + (Number(r.income) || 0), 0));
+      const rows: any[] = await this.sequelize.query<any>(query, { replacements: rp, type: QueryTypes.SELECT });
 
-      const items = rows.map((r) => {
-        const income = r2(r.income);
-        const parsedName = parseJson(r.category_name);
-        const category_name = parsedName || {
-          tk: r.fallback_category || 'Beýlekiler',
-          ru: r.fallback_category || 'Другие',
-          en: r.fallback_category || 'Other',
-        };
+      const totalByCurrency = new Map<string, number>();
+      for (const r of rows) {
+        totalByCurrency.set(r.currency, (totalByCurrency.get(r.currency) || 0) + Number(r.count));
+      }
 
+      const data = rows.map((r) => {
+        const totalCount = totalByCurrency.get(r.currency) || 0;
         return {
-          category_guid: r.category_guid,
-          category_name,
-          count: Number(r.count) || 0,
-          income,
-          expense: r2(r.expense),
+          operator_guid: r.operator_guid,
+          operator_name: r.operator_name || 'Näbelli',
+          currency: r.currency,
+          count: Number(r.count),
+          percent: totalCount === 0 ? 0 : r2((Number(r.count) * 100) / totalCount),
+          sale: r2(r.sale),
           profit: r2(r.profit),
-          margin_percent: r2(r.margin_percent),
-          share_percent: totalIncome > 0 ? r2((income / totalIncome) * 100) : 0,
         };
       });
 
-      const totalCount = items.reduce((sum, it) => sum + it.count, 0);
-      const totalExpense = r2(items.reduce((sum, it) => sum + it.expense, 0));
-      const totalProfit = r2(items.reduce((sum, it) => sum + it.profit, 0));
-      const totalMargin = totalIncome > 0 ? r2((totalProfit / totalIncome) * 100) : 0;
-
-      return {
-        status: 200,
-        data: {
-          items,
-          total: {
-            count: totalCount,
-            income: totalIncome,
-            expense: totalExpense,
-            profit: totalProfit,
-            margin_percent: totalMargin,
-          },
-        },
-        message: 'Hyzmatlar boýunça maglumatlar alyndy',
-      };
+      return { status: 200, data, message: 'Operatorlaryň reýtingi üstünlikli alyndy' };
     } catch (e: any) {
-      this.logger.error('getByCategory error:', e);
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Hyzmatlar boýunça maglumatlaryny alyp bolmady', e);
+      this.logger.error('getOperatorsRating error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Operatorlaryň reýtingini alyp bolmady', e);
     }
   }
 
-  async getByOperator(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
+
+
+
+  async getCategoryRating(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
     try {
-      const officeGuid = await this.resolveOffice(userPayload, filters.office_guid);
-      const { start, end } = this.resolveDates(filters);
-      const { where, rp } = this.buildWhere(start, end, officeGuid, filters.currency);
+      let officeGuid: string | null = filters.office_guid || null;
+      if (!officeGuid) {
+        const isAdmin = String(userPayload?.role || '').toLowerCase() === UserType.ADMIN.toLowerCase();
+        officeGuid = isAdmin ? null : (userPayload?.office_guid || null);
+      }
 
-      const sql = `
-        SELECT
-          emp.guid                                                        AS operator_guid,
-          emp."fullName"                                                  AS operator_name,
-          COUNT(tc.guid)::int                                             AS count,
-          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)                 AS income,
-          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)                  AS expense,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)                     AS profit,
-          CASE WHEN COALESCE(SUM(tc.sale_price), 0) = 0 THEN 0
-            ELSE ROUND((COALESCE(SUM(tc.profit), 0) / NULLIF(SUM(tc.sale_price), 0)) * 100, 1)
-          END                                                             AS margin_percent
+      const start = filters.start_date
+        ? (filters.start_date.length === 10 ? `${filters.start_date} 00:00:00` : filters.start_date)
+        : null;
+      const end = filters.end_date
+        ? (filters.end_date.length === 10 ? `${filters.end_date} 23:59:59.999` : filters.end_date)
+        : null;
+
+      const conds = [`tc.category_guid IS NOT NULL`];
+      const rp: Record<string, any> = {};
+
+      if (start) {
+        conds.push(`tc.datetime >= :startDate`);
+        rp.startDate = start;
+      }
+      if (end) {
+        conds.push(`tc.datetime <= :endDate`);
+        rp.endDate = end;
+      }
+      if (officeGuid) {
+        conds.push(`tc.office_guid = :officeGuid`);
+        rp.officeGuid = officeGuid;
+      }
+      if (filters.currency?.trim()) {
+        conds.push(`UPPER(TRIM(tc.currency)) = :currency`);
+        rp.currency = filters.currency.trim().toUpperCase();
+      }
+      const where = `WHERE ${conds.join(' AND ')}`;
+
+      const query = `
+        SELECT tc.category_guid AS category_guid,
+          c.name AS category_name,
+          c.index_number AS index_number,
+          UPPER(TRIM(tc.currency)) AS currency,
+          COUNT(*)::int AS count,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS sale,
+          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)  AS cost,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit
         FROM tbl_total_calculations tc
-        INNER JOIN tbl_employees emp ON emp.guid = tc.receiver_opr_guid
+        LEFT JOIN tbl_categories c ON c.guid = tc.category_guid
         ${where}
-        GROUP BY emp.guid, emp."fullName"
-        ORDER BY income DESC`;
+        GROUP BY tc.category_guid, c.name, c.index_number, UPPER(TRIM(tc.currency))
+        ORDER BY sale DESC`;
 
-      const rows = await this.sql(sql, rp);
-      const totalIncome = r2(rows.reduce((sum, r) => sum + (Number(r.income) || 0), 0));
+      const rows: any[] = await this.sequelize.query<any>(query, { replacements: rp, type: QueryTypes.SELECT });
 
-      const items = rows.map((r, i) => {
-        const income = r2(r.income);
+      const totalCountByCurrency = new Map<string, number>();
+      for (const r of rows) {
+        totalCountByCurrency.set(r.currency, (totalCountByCurrency.get(r.currency) || 0) + Number(r.count));
+      }
+
+      const marja = (profit: number, sale: number) => (sale === 0 ? 0 : r2((profit / sale) * 100));
+
+      const data = rows.map((r) => {
+        const totalCount = totalCountByCurrency.get(r.currency) || 0;
+        const nameObj = typeof r.category_name === 'string' ? JSON.parse(r.category_name) : r.category_name;
+        const sale = r2(r.sale);
+        const profit = r2(r.profit);
         return {
-          rank: i + 1,
-          operator_guid: r.operator_guid,
-          operator_name: r.operator_name,
-          count: Number(r.count) || 0,
-          income,
-          expense: r2(r.expense),
-          profit: r2(r.profit),
-          margin_percent: r2(r.margin_percent),
-          share_percent: totalIncome > 0 ? r2((income / totalIncome) * 100) : 0,
+          category_guid: r.category_guid,
+          category_name: nameObj?.[lang] || nameObj?.tk || 'Näbelli',
+          currency: r.currency,
+          count: Number(r.count),
+          percent: totalCount === 0 ? 0 : r2((Number(r.count) * 100) / totalCount),
+          sale,
+          cost: r2(r.cost),
+          profit,
+          marja: marja(profit, sale),
         };
       });
 
-      const totalCount = items.reduce((sum, it) => sum + it.count, 0);
-      const totalExpense = r2(items.reduce((sum, it) => sum + it.expense, 0));
-      const totalProfit = r2(items.reduce((sum, it) => sum + it.profit, 0));
-      const totalMargin = totalIncome > 0 ? r2((totalProfit / totalIncome) * 100) : 0;
+      const totals = new Map<string, { count: number; sale: number; cost: number; profit: number }>();
+      for (const r of data) {
+        const t = totals.get(r.currency) || { count: 0, sale: 0, cost: 0, profit: 0 };
+        t.count += r.count;
+        t.sale += r.sale;
+        t.cost += r.cost;
+        t.profit += r.profit;
+        totals.set(r.currency, t);
+      }
+      const sum = Array.from(totals.entries()).map(([currency, t]) => ({
+        currency,
+        count: t.count,
+        sale: r2(t.sale),
+        cost: r2(t.cost),
+        profit: r2(t.profit),
+        marja: marja(t.profit, t.sale),
+      }));
 
-      return {
-        status: 200,
-        data: {
-          items,
-          total: {
-            count: totalCount,
-            income: totalIncome,
-            expense: totalExpense,
-            profit: totalProfit,
-            margin_percent: totalMargin,
-          },
-        },
-        message: 'Operatorlar boýunça maglumatlar alyndy',
-      };
+      return { status: 200, data, sum, message: 'Kategoriýa boýunça statistika üstünlikli alyndy' };
     } catch (e: any) {
-      this.logger.error('getByOperator error:', e);
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Operatorlar boýunça maglumatlaryny alyp bolmady', e);
+      this.logger.error('getCategoryRating error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Kategoriýa statistikasyny alyp bolmady', e);
     }
   }
 }
