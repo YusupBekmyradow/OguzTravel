@@ -55,7 +55,7 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
 
   @Column({
     type: DataType.TIME,
-    allowNull: false
+    allowNull: true
   })
   declare completed_time: string;
 
@@ -68,13 +68,13 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
 
   @Column({
     type: DataType.INTEGER,
-    allowNull: false
+    allowNull: true
   })
   declare completed_page_count: number;
 
   @Column({
     type: DataType.DATEONLY,
-    allowNull: false
+    allowNull: true
   })
   declare completed_day: Date;
 

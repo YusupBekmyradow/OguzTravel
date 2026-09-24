@@ -34,21 +34,21 @@ export class CreateGeneralTranslationDto {
   @IsNotEmpty()
   declare source_to_target: string;
 
-  @ApiProperty({ example: '14:30' })
+  @ApiPropertyOptional({ example: '14:30' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  declare completed_time: string;
+  declare completed_time?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsNumber()
-  @IsNotEmpty()
   @IsPositive()
-  declare completed_page_count: number;
+  declare completed_page_count?: number;
 
-  @ApiProperty({ example: '2026-07-18' })
+  @ApiPropertyOptional({ example: '2026-07-18' })
+  @IsOptional()
   @IsDateString()
-  @IsNotEmpty()
-  declare completed_day: Date;
+  declare completed_day?: Date;
 
   @ApiProperty()
   @IsUUID()
