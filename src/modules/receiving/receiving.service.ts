@@ -252,7 +252,7 @@ export class ReceivingService {
           c."passportCountryOfIssue",
           c.passport_count AS client_passport_count,
           c."passportHistory",
-          e."fullName" AS operator_fullName,
+          e."fullName" AS "operator_fullName",
           o."fullName" AS office_full_name,
           o."shortName" AS office_short_name,
           co.name AS country_name
