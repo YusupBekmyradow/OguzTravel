@@ -12,8 +12,18 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 const r2 = (v: any) => Math.round((Number(v) || 0) * 100) / 100;
 const pct = (cur: number, prev: number) =>
   prev === 0 ? (cur === 0 ? 0 : 100) : r2(((cur - prev) / Math.abs(prev)) * 100);
-const marja = (profit: number, sale: number) => (sale === 0 ? 0 : r2((profit / sale) * 100));
 const fmtDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+const parseJson = (v: any): any => {
+  if (!v) return null;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch { return { tk: v, ru: v, en: v }; }
+};
+
+const localized = (v: any, lang: string): string => {
+  const o = parseJson(v);
+  return o?.[lang] || o?.tk || 'Näbelli';
+};
 
 function parseDates(filters: DashboardFilterDto) {
   const now = new Date();
@@ -103,10 +113,7 @@ function buildChartBuckets(startObj: Date, endObj: Date, granularity: Granularit
   if (granularity === 'month') {
     const cursor = new Date(startObj.getFullYear(), startObj.getMonth(), 1);
     while (cursor <= endObj) {
-      buckets.push({
-        date: fmtDate(cursor),
-        label: `${pad2(cursor.getMonth() + 1)}.${cursor.getFullYear()}`,
-      });
+      buckets.push({ date: fmtDate(cursor), label: `${pad2(cursor.getMonth() + 1)}.${cursor.getFullYear()}` });
       cursor.setMonth(cursor.getMonth() + 1);
     }
   } else if (granularity === 'week') {
@@ -114,19 +121,13 @@ function buildChartBuckets(startObj: Date, endObj: Date, granularity: Granularit
     const dayOfWeek = (cursor.getDay() + 6) % 7;
     cursor.setDate(cursor.getDate() - dayOfWeek);
     while (cursor <= endObj) {
-      buckets.push({
-        date: fmtDate(cursor),
-        label: `${pad2(cursor.getDate())}.${pad2(cursor.getMonth() + 1)}`,
-      });
+      buckets.push({ date: fmtDate(cursor), label: `${pad2(cursor.getDate())}.${pad2(cursor.getMonth() + 1)}` });
       cursor.setDate(cursor.getDate() + 7);
     }
   } else {
     const cursor = new Date(startObj.getFullYear(), startObj.getMonth(), startObj.getDate());
     while (cursor <= endObj) {
-      buckets.push({
-        date: fmtDate(cursor),
-        label: `${pad2(cursor.getDate())}.${pad2(cursor.getMonth() + 1)}`,
-      });
+      buckets.push({ date: fmtDate(cursor), label: `${pad2(cursor.getDate())}.${pad2(cursor.getMonth() + 1)}` });
       cursor.setDate(cursor.getDate() + 1);
     }
   }
@@ -140,8 +141,6 @@ export class DashboardService {
 
   constructor(private readonly sequelize: Sequelize) { }
 
-
-  
   async getSummary(filters: GetSummaryFilterDto, userPayload: any, lang = 'tk') {
     try {
       const officeGuid = resolveOfficeGuid(filters, userPayload);
@@ -202,22 +201,11 @@ export class DashboardService {
       for (const b of buckets) {
         for (const cur of currencies) {
           const val = chartMap.get(`${b.date}_${cur}`) || zero;
-          chart.push({
-            label: b.label,
-            currency: cur,
-            expense: r2(val.expense),
-            income: r2(val.income),
-            profit: r2(val.profit),
-            credit: r2(val.credit),
-          });
+          chart.push({ label: b.label, currency: cur, expense: r2(val.expense), income: r2(val.income), profit: r2(val.profit), credit: r2(val.credit) });
         }
       }
 
-      return {
-        status: 200,
-        data: { cards, chart, granularity },
-        message: 'Dashboard maglumatlary üstünlikli alyndy',
-      };
+      return { status: 200, data: { cards, chart, granularity }, message: 'Dashboard maglumatlary üstünlikli alyndy' };
     } catch (e: any) {
       this.logger.error('getSummary error:', e);
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Dashboard maglumatlaryny alyp bolmady', e);
@@ -226,8 +214,8 @@ export class DashboardService {
 
 
 
-
-  async getOperatorsRating(filters: DashboardFilterDto, userPayload: any) {
+  
+  async getOperatorsRating(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
     try {
       const officeGuid = resolveOfficeGuid(filters, userPayload);
       const { startStr, endStr } = filters.start_date || filters.end_date ? parseDates(filters) : { startStr: null, endStr: null };
@@ -239,7 +227,11 @@ export class DashboardService {
           UPPER(TRIM(tc.currency)) AS currency,
           COUNT(*)::int AS count,
           COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS sale,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit,
+          ROUND(
+            COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (PARTITION BY UPPER(TRIM(tc.currency))), 0),
+            2
+          ) AS percent
         FROM tbl_total_calculations tc
         LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
         ${where}
@@ -248,23 +240,15 @@ export class DashboardService {
 
       const rows: any[] = await this.sequelize.query<any>(query, { replacements: rp, type: QueryTypes.SELECT });
 
-      const totalByCurrency = new Map<string, number>();
-      for (const r of rows) {
-        totalByCurrency.set(r.currency, (totalByCurrency.get(r.currency) || 0) + Number(r.count));
-      }
-
-      const data = rows.map((r) => {
-        const total = totalByCurrency.get(r.currency) || 0;
-        return {
-          operator_guid: r.operator_guid,
-          operator_name: r.operator_name || 'Näbelli',
-          currency: r.currency,
-          count: Number(r.count),
-          percent: total === 0 ? 0 : r2((Number(r.count) * 100) / total),
-          sale: r2(r.sale),
-          profit: r2(r.profit),
-        };
-      });
+      const data = rows.map((r) => ({
+        operator_guid: r.operator_guid,
+        operator_name: r.operator_name || 'Näbelli',
+        currency: r.currency,
+        count: Number(r.count),
+        percent: r2(r.percent),
+        sale: r2(r.sale),
+        profit: r2(r.profit),
+      }));
 
       return { status: 200, data, message: 'Operatorlaryň reýtingi üstünlikli alyndy' };
     } catch (e: any) {
@@ -272,6 +256,7 @@ export class DashboardService {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Operatorlaryň reýtingini alyp bolmady', e);
     }
   }
+
 
 
 
@@ -290,7 +275,20 @@ export class DashboardService {
           COUNT(*)::int AS count,
           COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS sale,
           COALESCE(SUM(tc.net_price), 0)::numeric(14,2)  AS cost,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit,
+          ROUND(
+            CASE WHEN COALESCE(SUM(tc.sale_price), 0) = 0 THEN 0
+            ELSE COALESCE(SUM(tc.profit), 0) * 100.0 / SUM(tc.sale_price) END,
+            2
+          ) AS marja,
+          ROUND(
+            COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (PARTITION BY UPPER(TRIM(tc.currency))), 0),
+            2
+          ) AS percent,
+          SUM(COUNT(*)) OVER (PARTITION BY UPPER(TRIM(tc.currency)))                                        AS total_count,
+          SUM(COALESCE(SUM(tc.sale_price), 0)) OVER (PARTITION BY UPPER(TRIM(tc.currency)))::numeric(14,2)  AS total_sale,
+          SUM(COALESCE(SUM(tc.net_price), 0)) OVER (PARTITION BY UPPER(TRIM(tc.currency)))::numeric(14,2)   AS total_cost,
+          SUM(COALESCE(SUM(tc.profit), 0)) OVER (PARTITION BY UPPER(TRIM(tc.currency)))::numeric(14,2)      AS total_profit
         FROM tbl_total_calculations tc
         LEFT JOIN tbl_categories c ON c.guid = tc.category_guid
         ${where}
@@ -299,53 +297,108 @@ export class DashboardService {
 
       const rows: any[] = await this.sequelize.query<any>(query, { replacements: rp, type: QueryTypes.SELECT });
 
-      const totalByCur = new Map<string, number>();
+      const data = rows.map((r) => ({
+        category_guid: r.category_guid,
+        category_name: localized(r.category_name, lang),
+        currency: r.currency,
+        count: Number(r.count),
+        percent: r2(r.percent),
+        sale: r2(r.sale),
+        cost: r2(r.cost),
+        profit: r2(r.profit),
+        marja: r2(r.marja),
+      }));
+
+      const sumMap = new Map<string, { count: number; sale: number; cost: number; profit: number }>();
       for (const r of rows) {
-        totalByCur.set(r.currency, (totalByCur.get(r.currency) || 0) + Number(r.count));
+        if (!sumMap.has(r.currency)) {
+          sumMap.set(r.currency, {
+            count: Number(r.total_count),
+            sale: r2(r.total_sale),
+            cost: r2(r.total_cost),
+            profit: r2(r.total_profit),
+          });
+        }
       }
-
-      const totals = new Map<string, { count: number; sale: number; cost: number; profit: number }>();
-
-      const data = rows.map((r) => {
-        const total = totalByCur.get(r.currency) || 0;
-        const nameObj = typeof r.category_name === 'string' ? JSON.parse(r.category_name) : r.category_name;
-        const sale = r2(r.sale);
-        const cost = r2(r.cost);
-        const profit = r2(r.profit);
-
-        const curTotals = totals.get(r.currency) || { count: 0, sale: 0, cost: 0, profit: 0 };
-        curTotals.count += Number(r.count);
-        curTotals.sale += sale;
-        curTotals.cost += cost;
-        curTotals.profit += profit;
-        totals.set(r.currency, curTotals);
-
-        return {
-          category_guid: r.category_guid,
-          category_name: nameObj?.[lang] || nameObj?.tk || 'Näbelli',
-          currency: r.currency,
-          count: Number(r.count),
-          percent: total === 0 ? 0 : r2((Number(r.count) * 100) / total),
-          sale,
-          cost,
-          profit,
-          marja: marja(profit, sale),
-        };
-      });
-
-      const sum = Array.from(totals.entries()).map(([currency, t]) => ({
+      const sum = Array.from(sumMap.entries()).map(([currency, t]) => ({
         currency,
         count: t.count,
-        sale: r2(t.sale),
-        cost: r2(t.cost),
-        profit: r2(t.profit),
-        marja: marja(t.profit, t.sale),
+        sale: t.sale,
+        cost: t.cost,
+        profit: t.profit,
+        marja: t.sale === 0 ? 0 : r2((t.profit / t.sale) * 100),
       }));
 
       return { status: 200, data, sum, message: 'Kategoriýa boýunça statistika üstünlikli alyndy' };
     } catch (e: any) {
       this.logger.error('getCategoryRating error:', e);
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Kategoriýa statistikasyny alyp bolmady', e);
+    }
+  }
+
+
+
+
+  async getOfficesRating(filters: GetSummaryFilterDto, userPayload: any, lang = 'tk') {
+    try {
+      const officeGuid = resolveOfficeGuid(filters, userPayload);
+      const { startStr, endStr } = parseDates(filters);
+
+      const rp: Record<string, any> = { startDate: startStr, endDate: endStr };
+      const officeCond = officeGuid ? `AND tc.office_guid = :officeGuid` : '';
+      if (officeGuid) rp.officeGuid = officeGuid;
+
+      const query = `
+        SELECT
+          o.guid AS office_guid,
+          o."fullName" AS office_name,
+          o."shortName" AS office_short_name,
+          COUNT(*)::int AS count,
+          SUM(CASE WHEN UPPER(TRIM(tc.currency)) = 'USD' THEN tc.sale_price ELSE 0 END)::numeric(14,2) AS income_usd,
+          SUM(CASE WHEN UPPER(TRIM(tc.currency)) = 'TMT' THEN tc.sale_price ELSE 0 END)::numeric(14,2) AS income_tmt,
+          SUM(CASE WHEN UPPER(TRIM(tc.currency)) = 'USD' THEN tc.net_price ELSE 0 END)::numeric(14,2)  AS expense_usd,
+          SUM(CASE WHEN UPPER(TRIM(tc.currency)) = 'TMT' THEN tc.net_price ELSE 0 END)::numeric(14,2)  AS expense_tmt,
+          SUM(CASE WHEN UPPER(TRIM(tc.currency)) = 'USD' THEN tc.profit ELSE 0 END)::numeric(14,2)     AS profit_usd,
+          SUM(CASE WHEN UPPER(TRIM(tc.currency)) = 'TMT' THEN tc.profit ELSE 0 END)::numeric(14,2)     AS profit_tmt,
+          ROUND(
+            SUM(CASE WHEN UPPER(TRIM(tc.currency)) = 'USD' THEN tc.sale_price ELSE 0 END) * 100.0
+              / NULLIF(SUM(SUM(CASE WHEN UPPER(TRIM(tc.currency)) = 'USD' THEN tc.sale_price ELSE 0 END)) OVER (), 0),
+            2
+          ) AS percent
+        FROM tbl_total_calculations tc
+        JOIN tbl_offices o ON o.guid = tc.office_guid
+        WHERE tc.office_guid IS NOT NULL
+          AND tc.datetime >= :startDate AND tc.datetime <= :endDate
+          ${officeCond}
+        GROUP BY o.guid, o."fullName", o."shortName"
+        ORDER BY income_usd DESC`;
+
+      const rows: any[] = await this.sequelize.query<any>(query, { replacements: rp, type: QueryTypes.SELECT });
+
+      const data = rows.map((r) => ({
+        office_guid: r.office_guid,
+        office_name: localized(r.office_name, lang),
+        office_short_name: localized(r.office_short_name, lang),
+        count: Number(r.count),
+        percent: r2(r.percent),
+        income: { USD: r2(r.income_usd), TMT: r2(r.income_tmt) },
+        expense: { USD: r2(r.expense_usd), TMT: r2(r.expense_tmt) },
+        profit: { USD: r2(r.profit_usd), TMT: r2(r.profit_tmt) },
+      }));
+
+      const jemi = data.reduce(
+        (acc, o) => ({
+          income: { USD: r2(acc.income.USD + o.income.USD), TMT: r2(acc.income.TMT + o.income.TMT) },
+          expense: { USD: r2(acc.expense.USD + o.expense.USD), TMT: r2(acc.expense.TMT + o.expense.TMT) },
+          profit: { USD: r2(acc.profit.USD + o.profit.USD), TMT: r2(acc.profit.TMT + o.profit.TMT) },
+        }),
+        { income: { USD: 0, TMT: 0 }, expense: { USD: 0, TMT: 0 }, profit: { USD: 0, TMT: 0 } },
+      );
+
+      return { status: 200, data, jemi, message: 'Ofisleriň netijesi üstünlikli alyndy' };
+    } catch (e: any) {
+      this.logger.error('getOfficesRating error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Ofisleriň netijesini alyp bolmady', e);
     }
   }
 }

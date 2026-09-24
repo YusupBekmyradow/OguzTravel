@@ -2,12 +2,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class DashboardFilterDto {
-  @ApiPropertyOptional({ example: '2026-09-01' })
+  @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   declare start_date?: string;
 
-  @ApiPropertyOptional({ example: '2026-09-23' })
+  @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   declare end_date?: string;
@@ -17,15 +17,15 @@ export class DashboardFilterDto {
   @IsOptional()
   declare office_guid?: string;
 
-  @ApiPropertyOptional({ example: 'USD', description: 'USD or TMT' })
+  @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   declare currency?: string;
 }
 
-// Diňe getSummary üçin:
+
 export class GetSummaryFilterDto extends DashboardFilterDto {
-  @ApiPropertyOptional({ example: 'week', enum: ['day', 'week', 'month'], description: 'Chart grouping: day, week, or month' })
+  @ApiPropertyOptional({ example: 'week', enum: ['day', 'week', 'month'] })
   @IsIn(['day', 'week', 'month'])
   @IsOptional()
   declare group_by?: 'day' | 'week' | 'month';

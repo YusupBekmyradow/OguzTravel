@@ -12,7 +12,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) { }
 
-  @ApiOperation({ summary: 'Get financial summary cards and dynamic trend chart' })
+
   @Get('/get-summary')
   async getSummary(
     @Query() filters: GetSummaryFilterDto,
@@ -22,13 +22,12 @@ export class DashboardController {
     return this.dashboardService.getSummary(filters, req?.user, lang);
   }
 
-  @ApiOperation({ summary: 'Get operator sales and performance rating' })
   @Get('/get-operators-rating')
   async getOperatorsRating(@Query() filters: DashboardFilterDto, @Req() req: any) {
     return this.dashboardService.getOperatorsRating(filters, req?.user);
   }
 
-  @ApiOperation({ summary: 'Get category sales and margin statistics' })
+
   @Get('/get-categories-rating')
   async getCategoryRating(
     @Query() filters: DashboardFilterDto,
@@ -36,6 +35,11 @@ export class DashboardController {
     @I18nLang() lang: string = 'tk',
   ) {
     return this.dashboardService.getCategoryRating(filters, req?.user, lang);
+  }
+
+  @Get('/offices-rating')
+  async getOfficesRating(@Query() filters: GetSummaryFilterDto, @Req() req: any, @I18nLang() lang: string = 'tk',) {
+    return this.dashboardService.getOfficesRating(filters, req.user, lang);
   }
 }
 
