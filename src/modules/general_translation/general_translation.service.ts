@@ -32,6 +32,18 @@ export class GeneralTranslationService implements OnModuleInit {
     } catch (e) {
       // Ignore if table doesn't exist yet or already altered
     }
+
+    // The completion fields are optional: a translation can be registered before it is done.
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_general_translations"
+        ALTER COLUMN "completed_time" DROP NOT NULL,
+        ALTER COLUMN "completed_page_count" DROP NOT NULL,
+        ALTER COLUMN "completed_day" DROP NOT NULL;
+      `);
+    } catch (e) {
+      // Ignore if table doesn't exist yet
+    }
   }
 
   private getIncludes() {
