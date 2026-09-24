@@ -167,44 +167,38 @@ export class DashboardService {
       const { where, rp } = this.buildWhere(start, end, officeGuid, filters.currency);
 
       const sql = `
-        SELECT cat.guid AS category_guid, cat.name AS category_name,
-          COUNT(tc.guid)::int AS count,
-          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)  AS income,
-          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)   AS expense,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)      AS profit,
+        SELECT
+          cat.guid                                                        AS category_guid,
+          cat.name                                                        AS category_name,
+          tc.category                                                     AS fallback_category,
+          COUNT(tc.guid)::int                                             AS count,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)                 AS income,
+          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)                  AS expense,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)                     AS profit,
           CASE WHEN COALESCE(SUM(tc.sale_price), 0) = 0 THEN 0
             ELSE ROUND((COALESCE(SUM(tc.profit), 0) / NULLIF(SUM(tc.sale_price), 0)) * 100, 1)
-          END AS margin_percent
+          END                                                             AS margin_percent
         FROM tbl_total_calculations tc
         LEFT JOIN tbl_categories cat ON cat.guid = tc.category_guid
         ${where}
-        GROUP BY cat.guid, cat.name
+        GROUP BY cat.guid, cat.name, tc.category
         ORDER BY income DESC`;
 
-      const countSql = `
-        SELECT COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS income,
-               COALESCE(SUM(tc.net_price), 0)::numeric(14,2)  AS expense,
-               COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit,
-               COUNT(tc.guid)::int                            AS count
-        FROM tbl_total_calculations tc ${where}`;
-
-      const [rows, totals]: [any[], any[]] = await Promise.all([
-        this.sql(sql, rp),
-        this.sql(countSql, rp),
-      ]);
-
-      const tot = totals[0] || {};
-      const totalIncome = r2(tot.income);
-      const totalExpense = r2(tot.expense);
-      const totalProfit = r2(tot.profit);
-      const totalCount = Number(tot.count) || 0;
-      const totalMargin = totalIncome > 0 ? r2((totalProfit / totalIncome) * 100) : 0;
+      const rows = await this.sql(sql, rp);
+      const totalIncome = r2(rows.reduce((sum, r) => sum + (Number(r.income) || 0), 0));
 
       const items = rows.map((r) => {
         const income = r2(r.income);
+        const parsedName = parseJson(r.category_name);
+        const category_name = parsedName || {
+          tk: r.fallback_category || 'Beýlekiler',
+          ru: r.fallback_category || 'Другие',
+          en: r.fallback_category || 'Other',
+        };
+
         return {
           category_guid: r.category_guid,
-          category_name: parseJson(r.category_name),
+          category_name,
           count: Number(r.count) || 0,
           income,
           expense: r2(r.expense),
@@ -214,11 +208,22 @@ export class DashboardService {
         };
       });
 
+      const totalCount = items.reduce((sum, it) => sum + it.count, 0);
+      const totalExpense = r2(items.reduce((sum, it) => sum + it.expense, 0));
+      const totalProfit = r2(items.reduce((sum, it) => sum + it.profit, 0));
+      const totalMargin = totalIncome > 0 ? r2((totalProfit / totalIncome) * 100) : 0;
+
       return {
         status: 200,
         data: {
           items,
-          total: { count: totalCount, income: totalIncome, expense: totalExpense, profit: totalProfit, margin_percent: totalMargin },
+          total: {
+            count: totalCount,
+            income: totalIncome,
+            expense: totalExpense,
+            profit: totalProfit,
+            margin_percent: totalMargin,
+          },
         },
         message: 'Hyzmatlar boýunça maglumatlar alyndy',
       };
@@ -228,10 +233,6 @@ export class DashboardService {
     }
   }
 
-
-
-
-
   async getByOperator(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
     try {
       const officeGuid = await this.resolveOffice(userPayload, filters.office_guid);
@@ -239,30 +240,24 @@ export class DashboardService {
       const { where, rp } = this.buildWhere(start, end, officeGuid, filters.currency);
 
       const sql = `
-        SELECT emp.guid AS operator_guid, emp."fullName" AS operator_name,
-          COUNT(tc.guid)::int AS count,
-          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)  AS income,
-          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)   AS expense,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)      AS profit
+        SELECT
+          emp.guid                                                        AS operator_guid,
+          emp."fullName"                                                  AS operator_name,
+          COUNT(tc.guid)::int                                             AS count,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2)                 AS income,
+          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)                  AS expense,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2)                     AS profit,
+          CASE WHEN COALESCE(SUM(tc.sale_price), 0) = 0 THEN 0
+            ELSE ROUND((COALESCE(SUM(tc.profit), 0) / NULLIF(SUM(tc.sale_price), 0)) * 100, 1)
+          END                                                             AS margin_percent
         FROM tbl_total_calculations tc
-        LEFT JOIN tbl_employees emp ON emp.guid = tc.receiver_opr_guid
+        INNER JOIN tbl_employees emp ON emp.guid = tc.receiver_opr_guid
         ${where}
         GROUP BY emp.guid, emp."fullName"
         ORDER BY income DESC`;
 
-      const countSql = `
-        SELECT COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS income,
-               COUNT(tc.guid)::int                            AS count
-        FROM tbl_total_calculations tc ${where}`;
-
-      const [rows, totals]: [any[], any[]] = await Promise.all([
-        this.sql(sql, rp),
-        this.sql(countSql, rp),
-      ]);
-
-      const tot = totals[0] || {};
-      const totalIncome = r2(tot.income);
-      const totalCount = Number(tot.count) || 0;
+      const rows = await this.sql(sql, rp);
+      const totalIncome = r2(rows.reduce((sum, r) => sum + (Number(r.income) || 0), 0));
 
       const items = rows.map((r, i) => {
         const income = r2(r.income);
@@ -274,13 +269,28 @@ export class DashboardService {
           income,
           expense: r2(r.expense),
           profit: r2(r.profit),
+          margin_percent: r2(r.margin_percent),
           share_percent: totalIncome > 0 ? r2((income / totalIncome) * 100) : 0,
         };
       });
 
+      const totalCount = items.reduce((sum, it) => sum + it.count, 0);
+      const totalExpense = r2(items.reduce((sum, it) => sum + it.expense, 0));
+      const totalProfit = r2(items.reduce((sum, it) => sum + it.profit, 0));
+      const totalMargin = totalIncome > 0 ? r2((totalProfit / totalIncome) * 100) : 0;
+
       return {
         status: 200,
-        data: { items, total: { count: totalCount, income: totalIncome } },
+        data: {
+          items,
+          total: {
+            count: totalCount,
+            income: totalIncome,
+            expense: totalExpense,
+            profit: totalProfit,
+            margin_percent: totalMargin,
+          },
+        },
         message: 'Operatorlar boýunça maglumatlar alyndy',
       };
     } catch (e: any) {
