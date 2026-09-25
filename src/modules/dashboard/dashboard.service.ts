@@ -3,7 +3,7 @@ import { Sequelize } from 'sequelize-typescript';
 import { QueryTypes } from 'sequelize';
 import { DashboardFilterDto, GetSummaryFilterDto } from './dto/dashboard-filter.dto';
 import { UserType } from '../../enums/enums';
-import { errorResponse } from '../../helpers/responseFunctions';
+import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { SYSTEM_CATEGORIES } from '../total_calculations/total_calculations.service';
 
@@ -585,6 +585,301 @@ export class DashboardService {
     } catch (e: any) {
       this.logger.error('getOfficesRating error:', e);
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Ofisleriň netijesini alyp bolmady', e);
+    }
+  }
+
+  async getOneOffices(
+    filters: { start_date?: string; end_date?: string; currency?: string },
+    lang: string = 'tk',
+  ) {
+    try {
+      let whereClauses: string[] = [];
+      let replacements: any = { lang };
+      if (filters.start_date && filters.end_date) {
+        whereClauses.push(`tc.datetime BETWEEN :start_date AND :end_date`);
+        replacements.start_date = filters.start_date;
+        replacements.end_date = filters.end_date;
+      } else if (filters.start_date) {
+        whereClauses.push(`tc.datetime >= :start_date`);
+        replacements.start_date = filters.start_date;
+      } else if (filters.end_date) {
+        whereClauses.push(`tc.datetime <= :end_date`);
+        replacements.end_date = filters.end_date;
+      }
+      if (filters.currency) {
+        whereClauses.push(`tc.currency = :currency`);
+        replacements.currency = filters.currency;
+      }
+      const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+      const query = `
+        WITH ranked_offices AS (
+          SELECT 
+            tc.currency,
+            tc.office_guid, 
+            SUM(tc.profit) AS total_profit,
+            o."fullName"->>:lang AS office_name,
+            o."shortName"->>:lang AS office_short_name,
+            ROW_NUMBER() OVER (PARTITION BY tc.currency ORDER BY SUM(tc.profit) DESC) as rn
+          FROM tbl_total_calculations tc
+          LEFT JOIN tbl_offices o ON tc.office_guid = o.guid
+          ${whereSql}
+          GROUP BY tc.currency, tc.office_guid, o."fullName", o."shortName"
+        )
+        SELECT currency, office_guid, total_profit, office_name, office_short_name
+        FROM ranked_offices
+        WHERE rn = 1;
+      `;
+      const [results] = await this.sequelize.query(query, {
+        replacements,
+      });
+      return successResponse(HttpStatuses.OK, results, 'successfully');
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'error', error,
+      );
+    }
+  }
+
+
+
+  async getStatusAnalytics(
+    filters: DashboardFilterDto,
+  ) {
+    try {
+      let whereClauses: string[] = [];
+      let replacements: any = {};
+      if (filters.start_date && filters.end_date) {
+        whereClauses.push(`datetime BETWEEN :start_date AND :end_date`);
+        replacements.start_date = `${filters.start_date} 00:00:00`;
+        replacements.end_date = `${filters.end_date} 23:59:59`;
+      } else if (filters.start_date) {
+        whereClauses.push(`datetime >= :start_date`);
+        replacements.start_date = `${filters.start_date} 00:00:00`;
+      } else if (filters.end_date) {
+        whereClauses.push(`datetime <= :end_date`);
+        replacements.end_date = `${filters.end_date} 23:59:59`;
+      }
+      if (filters.currency) {
+        whereClauses.push(`UPPER(TRIM(currency)) = :currency`);
+        replacements.currency = filters.currency.trim().toUpperCase();
+      }
+      if (filters.office_guid) {
+        whereClauses.push(`office_guid = :office_guid`);
+        replacements.office_guid = filters.office_guid;
+      }
+      const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+      const query = `
+        WITH stats AS (
+          SELECT 
+            UPPER(TRIM(COALESCE(currency, 'OTHER'))) AS currency_key,
+            COALESCE(status, 'NULL') AS status_key,
+            COUNT(*)::int AS count_sales,
+            COALESCE(SUM(sale_price), 0)::numeric(14,2) AS total_sale_price,
+            COALESCE(SUM(credit_price), 0)::numeric(14,2) AS total_credit_price
+          FROM tbl_total_calculations
+          ${whereSql}
+          GROUP BY UPPER(TRIM(COALESCE(currency, 'OTHER'))), COALESCE(status, 'NULL')
+        ),
+        currency_aggregates AS (
+          SELECT 
+            currency_key, 
+            SUM(count_sales) AS overall_count,
+            MAX(total_credit_price) AS grand_total_credit_price
+          FROM stats 
+          GROUP BY currency_key
+        )
+        SELECT 
+          s.currency_key,
+          s.status_key,
+          s.count_sales,
+          s.total_sale_price,
+          ca.grand_total_credit_price,
+          ROUND((s.count_sales * 100.0) / NULLIF(ca.overall_count, 0), 2) AS percentage
+        FROM stats s
+        JOIN currency_aggregates ca ON s.currency_key = ca.currency_key
+        ORDER BY s.currency_key, s.count_sales DESC;
+      `;
+      const rows: any = await this.sequelize.query(query, {
+        replacements,
+        type: QueryTypes.SELECT,
+      });
+
+      const targetCurrencies = filters.currency
+        ? [filters.currency.trim().toUpperCase()]
+        : ['USD', 'TMT'];
+      const defaultStatuses = ['paid', 'NULL', 'notpaid', 'REFUND'];
+      const formattedData: any = {};
+      for (const cur of targetCurrencies) {
+        formattedData[cur] = {
+          total_credit_price: "0.00",
+          data: defaultStatuses.map(status => ({
+            status_key: status,
+            count_sales: 0,
+            total_sale_price: "0.00",
+            percentage: "0.00"
+          }))
+        };
+      }
+      rows.forEach((r: any) => {
+        if (!formattedData[r.currency_key]) {
+          formattedData[r.currency_key] = {
+            total_credit_price: "0.00",
+            data: defaultStatuses.map(status => ({
+              status_key: status,
+              count_sales: 0,
+              total_sale_price: "0.00",
+              percentage: "0.00"
+            }))
+          };
+        }
+        formattedData[r.currency_key].total_credit_price = r.grand_total_credit_price;
+        const existingStatus = formattedData[r.currency_key].data.find((item: any) => item.status_key === r.status_key);
+        if (existingStatus) {
+          existingStatus.count_sales = r.count_sales;
+          existingStatus.total_sale_price = r.total_sale_price;
+          existingStatus.percentage = r.percentage || "0.00";
+        } else {
+          formattedData[r.currency_key].data.push({
+            status_key: r.status_key,
+            count_sales: r.count_sales,
+            total_sale_price: r.total_sale_price,
+            percentage: r.percentage || "0.00",
+          });
+        }
+      });
+      return successResponse(HttpStatuses.OK, formattedData, 'successfully');
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'error', error);
+    }
+  }
+
+  /**
+   * One category in detail: per-currency totals against the previous range,
+   * plus chart buckets. Same sale rules as getSummary (refunds left out).
+   */
+  async getCategoryDetailAnalytics(categoryGuid: string, filters: GetSummaryFilterDto, userPayload: any) {
+    try {
+      const cur = resolveRange(filters);
+      if (!cur) return invalidRange();
+      const prev = resolvePrevRange(filters, cur);
+      if (!prev) return invalidRange();
+      const granularity = resolveGranularity(filters, cur);
+      const officeGuid = await this.resolveOfficeGuid(filters, userPayload);
+      if (officeGuid === undefined) return noOffice();
+      const currencies = filters.currency?.trim() ? [filters.currency.trim().toUpperCase()] : CURRENCIES;
+
+      const rp: Record<string, any> = { granularity, catGuid: categoryGuid };
+      const conds = baseConds(officeGuid, filters.currency, rp);
+      conds.push('tc.category_guid = :catGuid', NOT_REFUND);
+      const curCond = rangeCond(cur, 'cur', rp);
+      const prevCond = rangeCond(prev, 'prev', rp);
+
+      const [totalRows, chartRows] = await Promise.all([
+        this.select(`
+          SELECT CASE WHEN ${curCond} THEN 'cur' ELSE 'prev' END AS period,
+            ${CURRENCY} AS currency,
+            COUNT(*)::int AS count,
+            COALESCE(SUM(tc.sale_price), 0) AS sale,
+            COALESCE(SUM(tc.profit), 0) AS profit,
+            COALESCE(SUM(tc.credit_price), 0) AS credit
+          FROM tbl_total_calculations tc
+          WHERE ${conds.join(' AND ')} AND (${curCond} OR ${prevCond})
+          GROUP BY 1, 2`, rp),
+        this.select(`
+          SELECT TO_CHAR(DATE_TRUNC(:granularity, tc.datetime AT TIME ZONE :tz), 'YYYY-MM-DD') AS bucket,
+            ${CURRENCY} AS currency,
+            COALESCE(SUM(tc.sale_price), 0) AS sale,
+            COALESCE(SUM(tc.profit), 0) AS profit
+          FROM tbl_total_calculations tc
+          WHERE ${conds.join(' AND ')} AND ${curCond}
+          GROUP BY 1, 2`, rp),
+      ]);
+
+      const buckets = buildBuckets(cur, granularity);
+      const chartMap = new Map(chartRows.map((r) => [`${r.bucket}_${r.currency}`, r]));
+      const currenciesData = Object.fromEntries(currencies.map((c) => {
+        const now = totalRows.find((r) => r.period === 'cur' && r.currency === c);
+        const before = totalRows.find((r) => r.period === 'prev' && r.currency === c);
+        const count = now?.count || 0;
+        const total = Number(now?.sale) || 0;
+        const profit = Number(now?.profit) || 0;
+        const previous = Number(before?.sale) || 0;
+        return [c, {
+          summary: {
+            total_count_sales: count,
+            total_sale_price: r2(total),
+            previous_sale_price: r2(previous),
+            change_percent: pct(total, previous),
+            profit: r2(profit),
+            profit_percent: total === 0 ? 0 : r2((profit * 100) / total),
+            avg_sale_price: count === 0 ? 0 : r2(total / count),
+            credit_price: r2(now?.credit),
+          },
+          chart: buckets.map((b) => {
+            const v = chartMap.get(`${b.key}_${c}`);
+            return { label: b.label, date: b.key, sale: r2(v?.sale), profit: r2(v?.profit) };
+          }),
+        }];
+      }));
+
+      return {
+        status: 200,
+        data: {
+          category_guid: categoryGuid,
+          granularity,
+          range: { start: cur.start, end: cur.end, prev_start: prev.start, prev_end: prev.end },
+          currencies: currenciesData,
+        },
+        message: 'Kategori detallary üstünlikli alyndy',
+      };
+    } catch (e: any) {
+      this.logger.error('getCategoryDetailAnalytics error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Kategoriýa detallaryny alyp bolmady', e);
+    }
+  }
+
+  /** Top 10 operators of one category, per currency, in the current range. */
+  async getTopOperators(categoryGuid: string, filters: DashboardFilterDto, userPayload: any) {
+    try {
+      const range = resolveRange(filters);
+      if (!range) return invalidRange();
+      const officeGuid = await this.resolveOfficeGuid(filters, userPayload);
+      if (officeGuid === undefined) return noOffice();
+      const currencies = filters.currency?.trim() ? [filters.currency.trim().toUpperCase()] : CURRENCIES;
+
+      const rp: Record<string, any> = { catGuid: categoryGuid };
+      const conds = baseConds(officeGuid, filters.currency, rp);
+      conds.push('tc.category_guid = :catGuid', rangeCond(range, 'cur', rp), NOT_REFUND);
+
+      const rows = await this.select(`
+        SELECT * FROM (
+          SELECT ${CURRENCY} AS currency,
+            COALESCE(e."fullName", 'Näbelli') AS operator_name,
+            COUNT(*)::int AS count_sales,
+            COALESCE(SUM(tc.sale_price), 0) AS total_sale_price,
+            COALESCE(SUM(tc.profit), 0) AS total_profit,
+            ROW_NUMBER() OVER (PARTITION BY ${CURRENCY} ORDER BY SUM(tc.sale_price) DESC NULLS LAST)::int AS rank
+          FROM tbl_total_calculations tc
+          LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
+          WHERE ${conds.join(' AND ')}
+          GROUP BY ${CURRENCY}, tc.receiver_opr_guid, e."fullName"
+        ) t
+        WHERE rank <= 10
+        ORDER BY rank`, rp);
+
+      const data = Object.fromEntries(currencies.map((c) => [c, rows
+        .filter((r) => r.currency === c)
+        .map((r) => ({
+          rank: r.rank,
+          operator_name: r.operator_name,
+          count_sales: r.count_sales,
+          total_sale_price: r2(r.total_sale_price),
+          total_profit: r2(r.total_profit),
+        }))]));
+
+      return { status: 200, data, message: 'Iň köp satany operatorlar üstünlikli alyndy' };
+    } catch (e: any) {
+      this.logger.error('getTopOperators error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Operatorlary alyp bolmady', e);
     }
   }
 }
