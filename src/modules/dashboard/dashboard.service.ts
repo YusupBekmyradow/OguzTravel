@@ -3,8 +3,9 @@ import { Sequelize } from 'sequelize-typescript';
 import { QueryTypes } from 'sequelize';
 import { DashboardFilterDto, GetSummaryFilterDto } from './dto/dashboard-filter.dto';
 import { UserType } from '../../enums/enums';
-import { errorResponse } from '../../helpers/responseFunctions';
+import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
+
 
 type Granularity = 'day' | 'week' | 'month';
 
@@ -138,7 +139,6 @@ function buildChartBuckets(startObj: Date, endObj: Date, granularity: Granularit
 @Injectable()
 export class DashboardService {
   private readonly logger = new Logger(DashboardService.name);
-
   constructor(private readonly sequelize: Sequelize) { }
 
   async getSummary(filters: GetSummaryFilterDto, userPayload: any, lang = 'tk') {
@@ -214,7 +214,7 @@ export class DashboardService {
 
 
 
-  
+
   async getOperatorsRating(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
     try {
       const officeGuid = resolveOfficeGuid(filters, userPayload);
@@ -399,6 +399,61 @@ export class DashboardService {
     } catch (e: any) {
       this.logger.error('getOfficesRating error:', e);
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Ofisleriň netijesini alyp bolmady', e);
+    }
+  }
+
+
+
+
+
+  async getOneOffices(
+    filters: { start_date?: string; end_date?: string; currency?: string },
+    lang: string = 'tk',
+  ) {
+    try {
+      let whereClauses: string[] = [];
+      let replacements: any = { lang };
+      if (filters.start_date && filters.end_date) {
+        whereClauses.push(`tc.datetime BETWEEN :start_date AND :end_date`);
+        replacements.start_date = filters.start_date;
+        replacements.end_date = filters.end_date;
+      } else if (filters.start_date) {
+        whereClauses.push(`tc.datetime >= :start_date`);
+        replacements.start_date = filters.start_date;
+      } else if (filters.end_date) {
+        whereClauses.push(`tc.datetime <= :end_date`);
+        replacements.end_date = filters.end_date;
+      }
+      if (filters.currency) {
+        whereClauses.push(`tc.currency = :currency`);
+        replacements.currency = filters.currency;
+      }
+      const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+      const query = `
+        WITH ranked_offices AS (
+          SELECT 
+            tc.currency,
+            tc.office_guid, 
+            SUM(tc.profit) AS total_profit,
+            o."fullName"->>:lang AS office_name,
+            o."shortName"->>:lang AS office_short_name,
+            ROW_NUMBER() OVER (PARTITION BY tc.currency ORDER BY SUM(tc.profit) DESC) as rn
+          FROM tbl_total_calculations tc
+          LEFT JOIN tbl_offices o ON tc.office_guid = o.guid
+          ${whereSql}
+          GROUP BY tc.currency, tc.office_guid, o."fullName", o."shortName"
+        )
+        SELECT currency, office_guid, total_profit, office_name, office_short_name
+        FROM ranked_offices
+        WHERE rn = 1;
+      `;
+      const [results] = await this.sequelize.query(query, {
+        replacements,
+      });
+      return successResponse(HttpStatuses.OK, results, 'successfully');
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'error', error,
+      );
     }
   }
 }

@@ -1,5 +1,5 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { I18nLang } from 'nestjs-i18n';
 import { DashboardService } from './dashboard.service';
 import { DashboardFilterDto, GetSummaryFilterDto } from './dto/dashboard-filter.dto';
@@ -40,6 +40,19 @@ export class DashboardController {
   @Get('/offices-rating')
   async getOfficesRating(@Query() filters: DashboardFilterDto, @Req() req: any, @I18nLang() lang: string = 'tk',) {
     return this.dashboardService.getOfficesRating(filters, req.user, lang);
+  }
+
+
+
+  @ApiQuery({ name: 'start_date', required: false, type: String })
+  @ApiQuery({ name: 'end_date', required: false, type: String })
+  @ApiQuery({ name: 'currency', required: false, type: String })
+  @Get('/one-offices')
+  async getOneOffices(
+    @Query() filters: { start_date?: string; end_date?: string; currency?: string },
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.dashboardService.getOneOffices(filters, lang);
   }
 }
 
