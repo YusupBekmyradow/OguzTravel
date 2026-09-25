@@ -8,7 +8,12 @@ import { User } from '../user/entities/user.entity';
 import { Office } from '../office/entities/office.entity';
 import { errorResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Transaction dates are compared as local (Ashgabat) calendar days, end day included. */
+const LOCAL_DAY = `("Cafeteria"."date" AT TIME ZONE 'Asia/Ashgabat')::date`;
+const CURRENCIES = ['TMT', 'USD'];
 import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
@@ -43,13 +48,12 @@ export class CafeteriaService {
     if (filters.search?.trim()) {
       where.description = { [Op.iLike]: `%${filters.search.trim()}%` };
     }
-    if (filters.start_date && filters.end_date) {
-      where.date = { [Op.between]: [filters.start_date, filters.end_date] };
-    } else if (filters.start_date) {
-      where.date = { [Op.gte]: filters.start_date };
-    } else if (filters.end_date) {
-      where.date = { [Op.lte]: filters.end_date };
-    }
+    const and: any[] = [];
+    const start = filters.start_date?.slice(0, 10);
+    const end = filters.end_date?.slice(0, 10);
+    if (start && DATE_RE.test(start)) and.push(Sequelize.literal(`${LOCAL_DAY} >= ${this.cafeteriaRepo.sequelize!.escape(start)}`));
+    if (end && DATE_RE.test(end)) and.push(Sequelize.literal(`${LOCAL_DAY} <= ${this.cafeteriaRepo.sequelize!.escape(end)}`));
+    if (and.length) where[Op.and] = and;
     if (filters.type !== undefined && filters.type !== null && filters.type !== '') {
       where.type = String(filters.type) === 'true';
     }
@@ -137,22 +141,46 @@ export class CafeteriaService {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('cafeteria.fetchFailed', { lang }), error);
     }
   }
+  /**
+   * Income, expense and balance per currency: TMT and USD are never added
+   * together. The top-level totals are the TMT ones (what older clients show).
+   */
   async getSummary(
     filters?: { search?: string; start_date?: string; end_date?: string; type?: boolean | string; office_guid?: string },
     lang: string = 'tk',
   ) {
     try {
-      const where = this.buildWhereConditions(filters);
-      const incomeRaw = await this.cafeteriaRepo.sum('amount', { where: { ...where, type: true } });
-      const expenseRaw = await this.cafeteriaRepo.sum('amount', { where: { ...where, type: false } });
+      const currencyExpr = Sequelize.literal(`UPPER(TRIM("Cafeteria"."currency"))`);
+      const rows = (await this.cafeteriaRepo.findAll({
+        attributes: [
+          [currencyExpr, 'currency'],
+          'type',
+          [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('amount')), 0), 'total'],
+        ],
+        where: this.buildWhereConditions(filters),
+        group: [currencyExpr as any, 'type'],
+        raw: true,
+      })) as unknown as { currency: string; type: boolean; total: string }[];
 
-      const totalIncome = Number(Number(incomeRaw || 0).toFixed(2));
-      const totalExpense = Number(Number(expenseRaw || 0).toFixed(2));
-      const balance = Number((totalIncome - totalExpense).toFixed(2));
+      const round = (v: number) => Number(v.toFixed(2));
+      const byCurrency: Record<string, { totalIncome: number; totalExpense: number; balance: number }> = {};
+      for (const c of [...CURRENCIES, ...rows.map((r) => r.currency).filter((c) => c && !CURRENCIES.includes(c))]) {
+        byCurrency[c] = { totalIncome: 0, totalExpense: 0, balance: 0 };
+      }
+      for (const r of rows) {
+        const t = byCurrency[r.currency || 'TMT'];
+        if (r.type) t.totalIncome += Number(r.total) || 0;
+        else t.totalExpense += Number(r.total) || 0;
+      }
+      for (const t of Object.values(byCurrency)) {
+        t.totalIncome = round(t.totalIncome);
+        t.totalExpense = round(t.totalExpense);
+        t.balance = round(t.totalIncome - t.totalExpense);
+      }
 
       return {
         status: 200,
-        data: { totalIncome, totalExpense, balance },
+        data: { ...byCurrency.TMT, currencies: byCurrency },
         message: await this.i18n.translate('cafeteria.summarySuccess', { lang }),
       };
     } catch (error: any) {

@@ -43,9 +43,11 @@ export class RefferalLetterService implements OnModuleInit {
           END IF;
           -- BGN arrival, next to BGN departure
           ALTER TABLE "tbl_refferal_letter" ADD COLUMN IF NOT EXISTS "bgn_arrival" VARCHAR;
-        END $;
+        END $$;
       `);
     } catch (e) {
+      // Without these columns every list query fails, so make it visible.
+      console.error('tbl_refferal_letter column migration failed:', e);
     }
   }
 
