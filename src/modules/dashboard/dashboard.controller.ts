@@ -38,7 +38,7 @@ export class DashboardController {
   }
 
   @Get('/offices-rating')
-  async getOfficesRating(@Query() filters: GetSummaryFilterDto, @Req() req: any, @I18nLang() lang: string = 'tk',) {
+  async getOfficesRating(@Query() filters: DashboardFilterDto, @Req() req: any, @I18nLang() lang: string = 'tk',) {
     return this.dashboardService.getOfficesRating(filters, req.user, lang);
   }
 }

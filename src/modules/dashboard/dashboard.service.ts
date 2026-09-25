@@ -339,7 +339,7 @@ export class DashboardService {
 
 
 
-  async getOfficesRating(filters: GetSummaryFilterDto, userPayload: any, lang = 'tk') {
+  async getOfficesRating(filters: DashboardFilterDto, userPayload: any, lang = 'tk') {
     try {
       const officeGuid = resolveOfficeGuid(filters, userPayload);
       const { startStr, endStr } = parseDates(filters);
