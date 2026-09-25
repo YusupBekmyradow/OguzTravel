@@ -54,5 +54,14 @@ export class DashboardController {
   ) {
     return this.dashboardService.getOneOffices(filters, lang);
   }
+
+
+  @Get('/status-analytics')
+  async getStatusAnalytics(
+    @Query() filters: DashboardFilterDto,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.dashboardService.getStatusAnalytics(filters, lang);
+  }
 }
 

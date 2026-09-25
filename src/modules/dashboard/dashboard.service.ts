@@ -456,4 +456,104 @@ export class DashboardService {
       );
     }
   }
+
+
+
+  async getStatusAnalytics(
+    filters: DashboardFilterDto,
+    lang: string = 'tk',
+  ) {
+    try {
+      let whereClauses: string[] = [];
+      let replacements: any = {};
+      if (filters.start_date && filters.end_date) {
+        whereClauses.push(`datetime BETWEEN :start_date AND :end_date`);
+        replacements.start_date = `${filters.start_date} 00:00:00`;
+        replacements.end_date = `${filters.end_date} 23:59:59`;
+      } else if (filters.start_date) {
+        whereClauses.push(`datetime >= :start_date`);
+        replacements.start_date = `${filters.start_date} 00:00:00`;
+      } else if (filters.end_date) {
+        whereClauses.push(`datetime <= :end_date`);
+        replacements.end_date = `${filters.end_date} 23:59:59`;
+      }
+      if (filters.currency) {
+        whereClauses.push(`currency = :currency`);
+        replacements.currency = filters.currency;
+      }
+      if (filters.office_guid) {
+        whereClauses.push(`office_guid = :office_guid`);
+        replacements.office_guid = filters.office_guid;
+      }
+      const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+      const groupQuery = `
+        WITH stats AS (
+          SELECT 
+            COALESCE(currency, 'OTHER') AS currency_key,
+            COALESCE(status, 'NULL') AS status_key,
+            COUNT(*) AS count_sales,
+            SUM(sale_price) AS total_sale_price
+          FROM tbl_total_calculations
+          ${whereSql}
+          GROUP BY COALESCE(currency, 'OTHER'), COALESCE(status, 'NULL')
+        ),
+        currency_totals AS (
+          SELECT currency_key, SUM(count_sales) AS overall_count 
+          FROM stats 
+          GROUP BY currency_key
+        )
+        SELECT 
+          s.currency_key,
+          s.status_key,
+          s.count_sales,
+          s.total_sale_price,
+          ROUND((s.count_sales * 100.0) / NULLIF(ct.overall_count, 0), 2) AS percentage
+        FROM stats s
+        JOIN currency_totals ct ON s.currency_key = ct.currency_key
+        ORDER BY s.currency_key, s.count_sales DESC;
+      `;
+      const totalQuery = `
+        SELECT 
+          COALESCE(currency, 'OTHER') AS currency_key,
+          COUNT(*) AS grand_total_count_sales,
+          SUM(sale_price) AS grand_total_sale_price,
+          SUM(credit_price) AS grand_total_credit_price
+        FROM tbl_total_calculations
+        ${whereSql}
+        GROUP BY COALESCE(currency, 'OTHER');
+      `;
+      const [groupResults] = await this.sequelize.query(groupQuery, { replacements });
+      const [totalResults] = await this.sequelize.query(totalQuery, { replacements });
+      
+      const formattedData: any = {};
+      
+      totalResults.forEach((t: any) => {
+        formattedData[t.currency_key] = {
+          total_count_sales: t.grand_total_count_sales, 
+          total_sale_price: t.grand_total_sale_price,
+          total_credit_price: t.grand_total_credit_price,
+          data: []
+        };
+      });
+      groupResults.forEach((g: any) => {
+        if (!formattedData[g.currency_key]) {
+          formattedData[g.currency_key] = {
+            total_count_sales: 0,
+            total_sale_price: 0,
+            total_credit_price: 0,
+            data: []
+          };
+        }
+        formattedData[g.currency_key].data.push({
+          status_key: g.status_key,
+          count_sales: g.count_sales,
+          total_sale_price: g.total_sale_price,
+          percentage: g.percentage
+        });
+      });
+      return successResponse(HttpStatuses.OK, formattedData, 'successfully');
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'error', error);
+    }
+  }
 }
