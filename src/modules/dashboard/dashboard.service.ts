@@ -461,7 +461,6 @@ export class DashboardService {
 
   async getStatusAnalytics(
     filters: DashboardFilterDto,
-    lang: string = 'tk',
   ) {
     try {
       let whereClauses: string[] = [];
@@ -478,27 +477,31 @@ export class DashboardService {
         replacements.end_date = `${filters.end_date} 23:59:59`;
       }
       if (filters.currency) {
-        whereClauses.push(`currency = :currency`);
-        replacements.currency = filters.currency;
+        whereClauses.push(`UPPER(TRIM(currency)) = :currency`);
+        replacements.currency = filters.currency.trim().toUpperCase();
       }
       if (filters.office_guid) {
         whereClauses.push(`office_guid = :office_guid`);
         replacements.office_guid = filters.office_guid;
       }
       const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
-      const groupQuery = `
+      const query = `
         WITH stats AS (
           SELECT 
-            COALESCE(currency, 'OTHER') AS currency_key,
+            UPPER(TRIM(COALESCE(currency, 'OTHER'))) AS currency_key,
             COALESCE(status, 'NULL') AS status_key,
-            COUNT(*) AS count_sales,
-            SUM(sale_price) AS total_sale_price
+            COUNT(*)::int AS count_sales,
+            COALESCE(SUM(sale_price), 0)::numeric(14,2) AS total_sale_price,
+            COALESCE(SUM(credit_price), 0)::numeric(14,2) AS total_credit_price
           FROM tbl_total_calculations
           ${whereSql}
-          GROUP BY COALESCE(currency, 'OTHER'), COALESCE(status, 'NULL')
+          GROUP BY UPPER(TRIM(COALESCE(currency, 'OTHER'))), COALESCE(status, 'NULL')
         ),
-        currency_totals AS (
-          SELECT currency_key, SUM(count_sales) AS overall_count 
+        currency_aggregates AS (
+          SELECT 
+            currency_key, 
+            SUM(count_sales) AS overall_count,
+            MAX(total_credit_price) AS grand_total_credit_price
           FROM stats 
           GROUP BY currency_key
         )
@@ -507,49 +510,59 @@ export class DashboardService {
           s.status_key,
           s.count_sales,
           s.total_sale_price,
-          ROUND((s.count_sales * 100.0) / NULLIF(ct.overall_count, 0), 2) AS percentage
+          ca.grand_total_credit_price,
+          ROUND((s.count_sales * 100.0) / NULLIF(ca.overall_count, 0), 2) AS percentage
         FROM stats s
-        JOIN currency_totals ct ON s.currency_key = ct.currency_key
+        JOIN currency_aggregates ca ON s.currency_key = ca.currency_key
         ORDER BY s.currency_key, s.count_sales DESC;
       `;
-      const totalQuery = `
-        SELECT 
-          COALESCE(currency, 'OTHER') AS currency_key,
-          COUNT(*) AS grand_total_count_sales,
-          SUM(sale_price) AS grand_total_sale_price,
-          SUM(credit_price) AS grand_total_credit_price
-        FROM tbl_total_calculations
-        ${whereSql}
-        GROUP BY COALESCE(currency, 'OTHER');
-      `;
-      const [groupResults] = await this.sequelize.query(groupQuery, { replacements });
-      const [totalResults] = await this.sequelize.query(totalQuery, { replacements });
-
-      const formattedData: any = {};
-
-      totalResults.forEach((t: any) => {
-        formattedData[t.currency_key] = {
-          total_count_sales: t.grand_total_count_sales,
-          total_sale_price: t.grand_total_sale_price,
-          total_credit_price: t.grand_total_credit_price,
-          data: []
-        };
+      const rows: any = await this.sequelize.query(query, {
+        replacements,
+        type: QueryTypes.SELECT,
       });
-      groupResults.forEach((g: any) => {
-        if (!formattedData[g.currency_key]) {
-          formattedData[g.currency_key] = {
-            total_count_sales: 0,
-            total_sale_price: 0,
-            total_credit_price: 0,
-            data: []
+
+      const targetCurrencies = filters.currency
+        ? [filters.currency.trim().toUpperCase()]
+        : ['USD', 'TMT'];
+      const defaultStatuses = ['paid', 'NULL', 'notpaid', 'REFUND'];
+      const formattedData: any = {};
+      for (const cur of targetCurrencies) {
+        formattedData[cur] = {
+          total_credit_price: "0.00",
+          data: defaultStatuses.map(status => ({
+            status_key: status,
+            count_sales: 0,
+            total_sale_price: "0.00",
+            percentage: "0.00"
+          }))
+        };
+      }
+      rows.forEach((r: any) => {
+        if (!formattedData[r.currency_key]) {
+          formattedData[r.currency_key] = {
+            total_credit_price: "0.00",
+            data: defaultStatuses.map(status => ({
+              status_key: status,
+              count_sales: 0,
+              total_sale_price: "0.00",
+              percentage: "0.00"
+            }))
           };
         }
-        formattedData[g.currency_key].data.push({
-          status_key: g.status_key,
-          count_sales: g.count_sales,
-          total_sale_price: g.total_sale_price,
-          percentage: g.percentage
-        });
+        formattedData[r.currency_key].total_credit_price = r.grand_total_credit_price;
+        const existingStatus = formattedData[r.currency_key].data.find((item: any) => item.status_key === r.status_key);
+        if (existingStatus) {
+          existingStatus.count_sales = r.count_sales;
+          existingStatus.total_sale_price = r.total_sale_price;
+          existingStatus.percentage = r.percentage || "0.00";
+        } else {
+          formattedData[r.currency_key].data.push({
+            status_key: r.status_key,
+            count_sales: r.count_sales,
+            total_sale_price: r.total_sale_price,
+            percentage: r.percentage || "0.00",
+          });
+        }
       });
       return successResponse(HttpStatuses.OK, formattedData, 'successfully');
     } catch (error) {
@@ -674,7 +687,6 @@ export class DashboardService {
     try {
       const officeGuid = filters.office_guid || null;
       const { startStr, endStr } = parseDates(filters);
-
       const extraConditions = categoryGuid ? [`tc.category_guid = :catGuid`] : [];
       const { where, rp } = buildWhere(startStr, endStr, officeGuid, filters.currency, extraConditions, 'op_');
 

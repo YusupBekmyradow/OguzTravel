@@ -56,12 +56,11 @@ export class DashboardController {
   }
 
 
-  @Get('/status-analytics')
+  @Get('/admin-status-analytics')
   async getStatusAnalytics(
     @Query() filters: DashboardFilterDto,
-    @I18nLang() lang: string = 'tk',
   ) {
-    return this.dashboardService.getStatusAnalytics(filters, lang);
+    return this.dashboardService.getStatusAnalytics(filters);
   }
 
 
