@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { I18nLang } from 'nestjs-i18n';
 import { DashboardService } from './dashboard.service';
@@ -62,6 +62,25 @@ export class DashboardController {
     @I18nLang() lang: string = 'tk',
   ) {
     return this.dashboardService.getStatusAnalytics(filters, lang);
+  }
+
+
+  @Get('category-detail/:guid')
+  async getCategoryDetailAnalytics(
+    @Param('guid') guid: string,
+    @Query() filters: DashboardFilterDto
+  ) {
+    return await this.dashboardService.getCategoryDetailAnalytics(
+      guid,
+      filters,
+    );
+  }
+
+  @Get('category-detail/:guid/top-operators')
+  async getCategoryTopOperators(
+    @Param('guid') guid: string,
+    @Query() filters: DashboardFilterDto) {
+    return await this.dashboardService.getTopOperators(guid, filters);
   }
 }
 

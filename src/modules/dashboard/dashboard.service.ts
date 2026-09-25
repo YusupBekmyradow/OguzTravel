@@ -524,12 +524,12 @@ export class DashboardService {
       `;
       const [groupResults] = await this.sequelize.query(groupQuery, { replacements });
       const [totalResults] = await this.sequelize.query(totalQuery, { replacements });
-      
+
       const formattedData: any = {};
-      
+
       totalResults.forEach((t: any) => {
         formattedData[t.currency_key] = {
-          total_count_sales: t.grand_total_count_sales, 
+          total_count_sales: t.grand_total_count_sales,
           total_sale_price: t.grand_total_sale_price,
           total_credit_price: t.grand_total_credit_price,
           data: []
@@ -554,6 +554,178 @@ export class DashboardService {
       return successResponse(HttpStatuses.OK, formattedData, 'successfully');
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'error', error);
+    }
+  }
+
+
+  async getCategoryDetailAnalytics(
+    categoryGuid: string,
+    filters: DashboardFilterDto,
+    lang: string = 'tk',
+  ) {
+    try {
+      const officeGuid = filters.office_guid || null;
+      const { startStr, endStr, startObj, endObj, diffDays } = parseDates(filters);
+      const granularity = resolveGranularity(filters, diffDays);
+      const { prevStart, prevEnd } = resolvePrevDates(startObj, endObj, granularity);
+      const { where: curWhere, rp: curRp } = buildWhere(startStr, endStr, officeGuid, filters.currency, [`tc.category_guid = :catGuid`], 'cur_');
+      const { where: prevWhere, rp: prevRp } = buildWhere(prevStart, prevEnd, officeGuid, filters.currency, [`tc.category_guid = :catGuid`], 'prev_');
+      curRp.catGuid = categoryGuid;
+      prevRp.catGuid = categoryGuid;
+      const summarySql = `
+        SELECT 
+          UPPER(TRIM(tc.currency)) AS currency,
+          COUNT(*)::int AS count_sales,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS total_sale_price,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2) AS profit,
+          COALESCE(SUM(tc.credit_price), 0)::numeric(14,2) AS credit_price,
+          COALESCE(AVG(tc.sale_price), 0)::numeric(14,2) AS avg_sale_price
+        FROM tbl_total_calculations tc
+        ${curWhere}
+        GROUP BY UPPER(TRIM(tc.currency))
+      `;
+
+      const prevSummarySql = `
+        SELECT 
+          UPPER(TRIM(tc.currency)) AS currency,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS total_sale_price
+        FROM tbl_total_calculations tc
+        ${prevWhere}
+        GROUP BY UPPER(TRIM(tc.currency))
+      `;
+      const chartSql = `
+        SELECT 
+          TO_CHAR(DATE_TRUNC('${granularity}', tc.datetime), 'YYYY-MM-DD') AS date,
+          UPPER(TRIM(tc.currency)) AS currency,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS sale,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2) AS profit
+        FROM tbl_total_calculations tc
+        ${curWhere}
+        GROUP BY 1, 2
+        ORDER BY 1 ASC
+      `;
+      const [summaryRows, prevSummaryRows, chartRows] = await Promise.all([
+        this.sequelize.query<any>(summarySql, { replacements: curRp, type: QueryTypes.SELECT }),
+        this.sequelize.query<any>(prevSummarySql, { replacements: prevRp, type: QueryTypes.SELECT }),
+        this.sequelize.query<any>(chartSql, { replacements: curRp, type: QueryTypes.SELECT }),
+      ]);
+      const prevMap = new Map(prevSummaryRows.map(r => [r.currency, Number(r.total_sale_price)]));
+      const chartMap = new Map(chartRows.map(r => [`${r.date}_${r.currency}`, r]));
+      const buckets = buildChartBuckets(startObj, endObj, granularity);
+      const currencies = filters.currency?.trim() ? [filters.currency.trim().toUpperCase()] : ['USD', 'TMT'];
+      const currenciesData: any = {};
+      for (const cur of currencies) {
+        const curSummary = summaryRows.find(r => r.currency === cur) || {
+          count_sales: 0,
+          total_sale_price: 0,
+          profit: 0,
+          credit_price: 0,
+          avg_sale_price: 0,
+        };
+        const total = Number(curSummary.total_sale_price);
+        const previous = prevMap.get(cur) || 0;
+        const changePercent = pct(total, previous);
+        const curChart: any[] = [];
+        for (const b of buckets) {
+          const val = chartMap.get(`${b.date}_${cur}`) || { sale: 0, profit: 0 };
+          curChart.push({
+            label: b.label,
+            date: b.date,
+            sale: r2(val.sale),
+            profit: r2(val.profit),
+          });
+        }
+        currenciesData[cur] = {
+          summary: {
+            total_count_sales: curSummary.count_sales,
+            total_sale_price: r2(total),
+            previous_sale_price: r2(previous),
+            change_percent: changePercent,
+            profit: r2(curSummary.profit),
+            profit_percent: total === 0 ? 0 : r2((curSummary.profit * 100) / total),
+            avg_sale_price: r2(curSummary.avg_sale_price),
+            credit_price: r2(curSummary.credit_price),
+          },
+          chart: curChart,
+        };
+      }
+      return {
+        status: 200,
+        data: {
+          category_guid: categoryGuid,
+          currencies: currenciesData,
+        },
+        message: 'Kategori detallary üstünlikli alyndy',
+      };
+    } catch (e: any) {
+      this.logger.error('getCategoryDetailAnalytics error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Kategoriýa detallaryny alyp bolmady', e);
+    }
+  }
+
+
+
+
+  async getTopOperators(
+    categoryGuid: string,
+    filters: DashboardFilterDto,
+    lang: string = 'tk',
+  ) {
+    try {
+      const officeGuid = filters.office_guid || null;
+      const { startStr, endStr } = parseDates(filters);
+
+      const extraConditions = categoryGuid ? [`tc.category_guid = :catGuid`] : [];
+      const { where, rp } = buildWhere(startStr, endStr, officeGuid, filters.currency, extraConditions, 'op_');
+
+      if (categoryGuid) {
+        rp.catGuid = categoryGuid;
+      }
+      const sql = `
+        SELECT 
+          COALESCE(e."fullName", 'Näbelli') AS operator_name,
+          UPPER(TRIM(tc.currency)) AS currency,
+          COUNT(*)::int AS count_sales,
+          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS total_sale_price,
+          COALESCE(SUM(tc.profit), 0)::numeric(14,2) AS total_profit
+        FROM tbl_total_calculations tc
+        LEFT JOIN tbl_employees e ON tc.receiver_opr_guid = e.guid
+        ${where}
+        GROUP BY COALESCE(e."fullName", 'Näbelli'), UPPER(TRIM(tc.currency))
+        ORDER BY total_sale_price DESC
+        LIMIT 10
+      `;
+
+      const rows = await this.sequelize.query<any>(sql, {
+        replacements: rp,
+        type: QueryTypes.SELECT,
+      });
+
+      const currencies = filters.currency?.trim() ? [filters.currency.trim().toUpperCase()] : ['USD', 'TMT'];
+      const resultData: any = {};
+
+      for (const cur of currencies) {
+        const curRows = rows
+          .filter(r => r.currency === cur)
+          .map((r, index) => ({
+            rank: index + 1,
+            operator_name: r.operator_name,
+            count_sales: r.count_sales,
+            total_sale_price: r2(r.total_sale_price),
+            total_profit: r2(r.total_profit),
+          }));
+
+        resultData[cur] = curRows;
+      }
+
+      return {
+        status: 200,
+        data: resultData,
+        message: 'Iň köp satany operatorlar üstünlikli alyndy',
+      };
+    } catch (e: any) {
+      this.logger.error('getTopOperators error:', e);
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, 'Operatorlary alyp bolmady', e);
     }
   }
 }
