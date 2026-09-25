@@ -6,8 +6,8 @@ import { DashboardFilterDto, GetSummaryFilterDto } from './dto/dashboard-filter.
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Dashboard')
-// @ApiBearerAuth('bearerAuth')
-// @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) { }
@@ -39,7 +39,7 @@ export class DashboardController {
 
   @Get('/offices-rating')
   async getOfficesRating(@Query() filters: GetSummaryFilterDto, @Req() req: any, @I18nLang() lang: string = 'tk',) {
-    return this.dashboardService.getOfficesRating(filters, req.user, lang);
+    return this.dashboardService.getOfficesRating(filters, req?.user, lang);
   }
 }
 

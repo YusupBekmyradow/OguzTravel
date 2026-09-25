@@ -1770,6 +1770,15 @@ export class TotalCalculationsService implements OnModuleInit {
       // -------------------------------------------------------------
       // 13. Cafeteria Trigger (tbl_cafeteria)
       // -------------------------------------------------------------
+      // Each cafeteria row carries its own office (picked in the form). Rows
+      // from before that column get their creator's office once.
+      await sequelize.query(`
+        ALTER TABLE tbl_cafeteria ADD COLUMN IF NOT EXISTS office_guid UUID;
+        UPDATE tbl_cafeteria c
+        SET office_guid = e.office_guid
+        FROM tbl_employees e
+        WHERE c.office_guid IS NULL AND e.guid = c.created_by_guid AND e.office_guid IS NOT NULL;
+      `);
       await sequelize.query(`
         CREATE OR REPLACE FUNCTION sync_cafeteria_to_total_calculations()
         RETURNS TRIGGER AS $$
@@ -1781,9 +1790,13 @@ export class TotalCalculationsService implements OnModuleInit {
             RETURN OLD;
           END IF;
 
-          SELECT office_guid INTO v_office_guid 
-          FROM tbl_employees 
-          WHERE guid = NEW.created_by_guid;
+          -- The row's own office; the creator's office only when it has none.
+          v_office_guid := NEW.office_guid;
+          IF v_office_guid IS NULL THEN
+            SELECT office_guid INTO v_office_guid
+            FROM tbl_employees
+            WHERE guid = NEW.created_by_guid;
+          END IF;
 
           INSERT INTO tbl_total_calculations (
             guid,
@@ -1867,7 +1880,7 @@ export class TotalCalculationsService implements OnModuleInit {
           '${SYSTEM_CATEGORIES.CAFETERIA}'::uuid,
           COALESCE(c.date, COALESCE(c."createdAt", NOW())),
           c.created_by_guid,
-          emp.office_guid,
+          COALESCE(c.office_guid, emp.office_guid),
           NULL,
           CASE WHEN c.type = FALSE THEN COALESCE(c.amount, 0) ELSE 0 END,
           CASE WHEN c.type = TRUE  THEN COALESCE(c.amount, 0) ELSE 0 END,

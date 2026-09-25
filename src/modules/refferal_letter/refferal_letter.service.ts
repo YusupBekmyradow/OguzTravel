@@ -41,7 +41,9 @@ export class RefferalLetterService implements OnModuleInit {
           ) THEN
             ALTER TABLE "tbl_refferal_letter" ADD COLUMN "bgn_departure" VARCHAR;
           END IF;
-        END $$;
+          -- BGN arrival, next to BGN departure
+          ALTER TABLE "tbl_refferal_letter" ADD COLUMN IF NOT EXISTS "bgn_arrival" VARCHAR;
+        END $;
       `);
     } catch (e) {
     }
@@ -93,18 +95,17 @@ export class RefferalLetterService implements OnModuleInit {
     return [
       'guid',
       'index_number',
-      'application_number',
       'received_opr_guid',
       'client_guid',
       'passport_count',
       'destination_country',
       'bgn_departure',
+      'bgn_arrival',
       'travel_document_number',
       'departure_date',
       'return_date',
       'price',
       'currency',
-      'contract_number',
       'contract_date',
       'note',
       'status',
@@ -191,7 +192,8 @@ export class RefferalLetterService implements OnModuleInit {
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
-      const currentLimit = Math.max(1, Number(limit));
+      // Paged list: at most 500 rows per request (the Excel export asks for 500).
+      const currentLimit = Math.max(1, Math.min(500, Number(limit) || 10));
       const offset = (currentPage - 1) * currentLimit;
       const whereConditions: any = { isRefferal: true };
       if (filters) {
@@ -201,8 +203,8 @@ export class RefferalLetterService implements OnModuleInit {
           whereConditions[Op.or] = [
             { destination_country: { [Op.iLike]: searchPattern } },
             { bgn_departure: { [Op.iLike]: searchPattern } },
+            { bgn_arrival: { [Op.iLike]: searchPattern } },
             { travel_document_number: { [Op.iLike]: searchPattern } },
-            { contract_number: { [Op.iLike]: searchPattern } },
             { status: { [Op.iLike]: searchPattern } },
             this.sequelize.where(
               this.sequelize.fn('LOWER', this.sequelize.literal(`"RefferalLetter"."agent"->>'name'`)),
@@ -448,7 +450,8 @@ export class RefferalLetterService implements OnModuleInit {
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
-      const currentLimit = Math.max(1, Number(limit));
+      // Paged list: at most 500 rows per request (the Excel export asks for 500).
+      const currentLimit = Math.max(1, Math.min(500, Number(limit) || 10));
       const offset = (currentPage - 1) * currentLimit;
       const whereConditions: any = { isRefferal: false };
 
@@ -655,16 +658,15 @@ export class RefferalLetterService implements OnModuleInit {
     const json = row.toJSON ? row.toJSON() : row;
 
     const refferalOnlyFields = [
-      'application_number',
       'client_guid',
       'passport_count',
       'destination_country',
       'bgn_departure',
+      'bgn_arrival',
       'departure_date',
       'return_date',
       'price',
       'currency',
-      'contract_number',
       'contract_date',
     ];
 

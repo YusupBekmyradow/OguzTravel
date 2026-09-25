@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID } from 'class-validator';
 
 export class CreateCafeteriaDto {
   @ApiProperty()
@@ -27,4 +27,10 @@ export class CreateCafeteriaDto {
   @IsOptional()
   @IsString()
   declare description?: string;
+
+  /** Office of the transaction. Without it, the creator's office is used. */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  declare office_guid?: string;
 }

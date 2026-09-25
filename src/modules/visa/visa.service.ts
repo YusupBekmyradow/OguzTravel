@@ -11,7 +11,13 @@ import { Office } from '../office/entities/office.entity';
 import { I18nService } from 'nestjs-i18n';
 import { Sequelize } from 'sequelize-typescript';
 import { VisaPayment } from '../visa_payment/entities/visa_payment.entity';
-import { QueryTypes } from 'sequelize';
+import { Op, QueryTypes, WhereOptions } from 'sequelize';
+import { FilterVisaDto } from './dto/get-visas.dto';
+
+const VISA_STATUS_CODES: Record<string, number> = { PROCESS: 1, DONE: 2, FAIL: 3 };
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Visa dates are compared as local (Ashgabat) calendar days. */
+const LOCAL_DAY = `("Visa"."datetime" AT TIME ZONE 'Asia/Ashgabat')::date`;
 
 @Injectable()
 export class VisaService {
@@ -212,13 +218,48 @@ export class VisaService {
     }
   }
 
-  async getAllVisa(page: number = 1, limit: number = 10, lang: string = 'tk') {
+  private buildVisaWhere(filters: FilterVisaDto): WhereOptions {
+    const and: any[] = [];
+    const start = filters.start_date?.slice(0, 10);
+    const end = filters.end_date?.slice(0, 10);
+    if (start && DATE_RE.test(start)) and.push(Sequelize.literal(`${LOCAL_DAY} >= ${this.sequelize.escape(start)}`));
+    if (end && DATE_RE.test(end)) and.push(Sequelize.literal(`${LOCAL_DAY} <= ${this.sequelize.escape(end)}`));
+
+    if (filters.receiver_opr_guid) and.push({ receiver_opr_guid: filters.receiver_opr_guid });
+
+    const status = String(filters.status ?? '').trim().toUpperCase();
+    const statusCode = VISA_STATUS_CODES[status] ?? (/^[123]$/.test(status) ? Number(status) : null);
+    if (statusCode) and.push({ status: statusCode });
+
+    if (filters.is_paid === 'true' || filters.is_paid === 'false') and.push({ is_paid: filters.is_paid === 'true' });
+
+    const search = filters.search?.trim();
+    if (search) {
+      const term = this.sequelize.escape(`%${search}%`);
+      // Client fields via EXISTS, so the paginated query needs no join in its WHERE.
+      and.push(Sequelize.literal(`(
+        CAST("Visa"."index_number" AS TEXT) ILIKE ${term}
+        OR "Visa"."note" ILIKE ${term}
+        OR "Visa"."agent"->>'name' ILIKE ${term}
+        OR EXISTS (
+          SELECT 1 FROM tbl_clients c
+          WHERE c.guid = "Visa"."client_guid"
+            AND (c."fullName" ILIKE ${term} OR c.phone_number ILIKE ${term} OR c.passport_number ILIKE ${term})
+        )
+      )`));
+    }
+    return and.length ? { [Op.and]: and } : {};
+  }
+
+  async getAllVisa(filters: FilterVisaDto, lang: string = 'tk') {
     try {
-      const currentPage = Math.max(1, Number(page));
-      const currentLimit = Math.max(1, Number(limit));
+      const currentPage = Math.max(1, Number(filters.page || 1));
+      const currentLimit = Math.max(1, Number(filters.limit || 10));
       const offset = (currentPage - 1) * currentLimit;
 
       const { rows, count } = await this.visaRepository.findAndCountAll({
+        where: this.buildVisaWhere(filters),
+        distinct: true,
         attributes: {
           exclude: ['package_guid', 'service_guid', 'hotel_booking_guid', 'translation_guid', 'courier_guid'],
           include: this.getVisaAttributes().include as any

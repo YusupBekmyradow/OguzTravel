@@ -1,5 +1,6 @@
 import { BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
+import { Office } from "../../office/entities/office.entity";
 
 @Table({
   tableName: 'tbl_cafeteria',
@@ -69,4 +70,18 @@ export class Cafeteria extends Model<Cafeteria> {
     onUpdate: 'SET NULL',
   })
   declare createdBy: Employee;
+
+  @Column({
+    type: DataType.UUID,
+    allowNull: true,
+  })
+  declare office_guid?: string;
+
+  @BelongsTo(() => Office, {
+    targetKey: 'guid',
+    foreignKey: 'office_guid',
+    as: 'office',
+    constraints: false,
+  })
+  declare office?: Office;
 }

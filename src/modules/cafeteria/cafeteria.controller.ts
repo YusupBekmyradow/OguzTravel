@@ -33,12 +33,13 @@ export class CafeteriaController {
     @Query('start_date') start_date?: string,
     @Query('end_date') end_date?: string,
     @Query('type') type?: boolean | string,
+    @Query('office_guid') office_guid?: string,
     @I18nLang() lang: string = 'tk',
   ) {
     return this.cafeteriaService.getAllCafeteria(
       Number(page),
       Number(limit),
-      { search, start_date, end_date, type },
+      { search, start_date, end_date, type, office_guid },
       lang,
     );
   }
@@ -50,9 +51,10 @@ export class CafeteriaController {
     @Query('start_date') start_date?: string,
     @Query('end_date') end_date?: string,
     @Query('type') type?: boolean | string,
+    @Query('office_guid') office_guid?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    return this.cafeteriaService.getSummary({ search, start_date, end_date, type }, lang);
+    return this.cafeteriaService.getSummary({ search, start_date, end_date, type, office_guid }, lang);
   }
 
 

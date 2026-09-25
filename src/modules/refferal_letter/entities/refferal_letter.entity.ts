@@ -25,12 +25,6 @@ export class RefferalLetter extends Model<RefferalLetter> {
     declare index_number: number;
 
     @Column({
-        type: DataType.STRING,
-        allowNull: true,
-    })
-    declare application_number?: string;
-
-    @Column({
         type: DataType.UUID,
         allowNull: true
     })
@@ -65,6 +59,12 @@ export class RefferalLetter extends Model<RefferalLetter> {
         type: DataType.STRING,
         allowNull: true
     })
+    declare bgn_arrival?: string;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: true
+    })
     declare travel_document_number?: string;
 
     @Column({
@@ -91,12 +91,6 @@ export class RefferalLetter extends Model<RefferalLetter> {
         defaultValue: 'TMT'
     })
     declare currency?: string;
-
-    @Column({
-        type: DataType.STRING,
-        allowNull: true,
-    })
-    declare contract_number?: string;
 
     @Column({
         type: DataType.DATE,

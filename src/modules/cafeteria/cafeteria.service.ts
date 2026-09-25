@@ -29,13 +29,14 @@ export class CafeteriaService {
         attributes: ['guid', 'fullName', 'phone_number'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }],
       },
+      { model: Office, as: 'office', attributes: ['guid', 'fullName', 'shortName'] },
     ];
   }
 
 
 
   private buildWhereConditions(filters?: {
-    search?: string; start_date?: string; end_date?: string; type?: boolean | string;
+    search?: string; start_date?: string; end_date?: string; type?: boolean | string; office_guid?: string;
   }) {
     const where: any = {};
     if (!filters) return where;
@@ -52,6 +53,9 @@ export class CafeteriaService {
     if (filters.type !== undefined && filters.type !== null && filters.type !== '') {
       where.type = String(filters.type) === 'true';
     }
+    if (filters.office_guid) {
+      where.office_guid = filters.office_guid;
+    }
     return where;
   }
 
@@ -60,22 +64,28 @@ export class CafeteriaService {
   async addCafeteria(dto: CreateCafeteriaDto, userPayload: any, lang: string = 'tk') {
     try {
       let validEmployeeGuid: string | null = null;
+      let creatorOfficeGuid: string | null = null;
       const directGuid = userPayload?.employee_guid || userPayload?.guid || userPayload?.id;
 
       if (directGuid) {
         const emp = await this.employeeRepo.findByPk(directGuid);
         if (emp) {
           validEmployeeGuid = emp.guid;
+          creatorOfficeGuid = emp.office_guid ?? null;
         } else {
           const user = await this.userRepo.findByPk(directGuid);
           if (user?.employee_guid) {
             const userEmp = await this.employeeRepo.findByPk(user.employee_guid);
-            if (userEmp) validEmployeeGuid = userEmp.guid;
+            if (userEmp) {
+              validEmployeeGuid = userEmp.guid;
+              creatorOfficeGuid = userEmp.office_guid ?? null;
+            }
           }
         }
       }
       const item = await this.cafeteriaRepo.create({
         ...dto,
+        office_guid: dto.office_guid || creatorOfficeGuid,
         created_by_guid: validEmployeeGuid,
       } as any);
 
@@ -98,7 +108,7 @@ export class CafeteriaService {
   async getAllCafeteria(
     page: number = 1,
     limit: number = 20,
-    filters?: { search?: string; start_date?: string; end_date?: string; type?: boolean | string },
+    filters?: { search?: string; start_date?: string; end_date?: string; type?: boolean | string; office_guid?: string },
     lang: string = 'tk',
   ) {
     try {
@@ -128,7 +138,7 @@ export class CafeteriaService {
     }
   }
   async getSummary(
-    filters?: { search?: string; start_date?: string; end_date?: string; type?: boolean | string },
+    filters?: { search?: string; start_date?: string; end_date?: string; type?: boolean | string; office_guid?: string },
     lang: string = 'tk',
   ) {
     try {

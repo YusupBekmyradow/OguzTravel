@@ -3,12 +3,6 @@ import { Transform } from "class-transformer";
 import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class CreateRefferalLetterDto {
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Transform(({ value }) => (value === "" ? null : value))
-  @IsString()
-  declare application_number?: string;
-
   @ApiProperty()
   @IsUUID()
   @IsNotEmpty()
@@ -28,6 +22,12 @@ export class CreateRefferalLetterDto {
   @IsOptional()
   @IsString()
   declare bgn_departure?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => (value === "" ? null : value))
+  @IsString()
+  declare bgn_arrival?: string;
 
   @ApiProperty()
   @IsString()
@@ -53,11 +53,6 @@ export class CreateRefferalLetterDto {
   @IsOptional()
   @IsString()
   declare currency?: string;
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  declare contract_number?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
