@@ -58,6 +58,9 @@ const NOT_REFUND = `UPPER(COALESCE(tc.status, '')) <> 'REFUND'`;
 const UNPAID = `GREATEST(COALESCE(tc.sale_price, 0) - COALESCE(tc.credit_price, 0), 0)`;
 const RECEIVABLE = `CASE WHEN LOWER(COALESCE(tc.status, '')) = 'notpaid' THEN ${UNPAID} ELSE 0 END`;
 const CURRENCY = `UPPER(TRIM(tc.currency))`;
+/** USD amounts stored in dual-currency rows (e.g. Visa). Always go to USD bucket. */
+const USD_SALE = `COALESCE(tc.sale_price_usd, 0)`;
+const USD_CREDIT = `COALESCE(tc.credit_usd, 0)`;
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const r2 = (v: any) => Math.round((Number(v) || 0) * 100) / 100;
@@ -235,6 +238,7 @@ export class DashboardService {
 
       const [totalRows, bucketRows, operatorRows] = await Promise.all([
         // Totals per period × currency × category × status (a few hundred rows at most).
+        // Extra USD amounts (sale_price_usd, credit_usd) are injected as synthetic 'USD' rows.
         this.select(`
           SELECT ${period} AS period, ${CURRENCY} AS currency, tc.category_guid,
             LOWER(COALESCE(tc.status, '')) AS status,
@@ -245,7 +249,17 @@ export class DashboardService {
             COALESCE(SUM(${UNPAID}), 0) AS unpaid
           FROM tbl_total_calculations tc
           ${where}
-          GROUP BY 1, 2, 3, 4`, rp),
+          GROUP BY 1, 2, 3, 4
+          UNION ALL
+          SELECT ${period}, 'USD', tc.category_guid,
+            LOWER(COALESCE(tc.status, '')),
+            0,
+            COALESCE(SUM(${USD_SALE}), 0),
+            0, 0, 0
+          FROM tbl_total_calculations tc
+          ${where}
+          GROUP BY 1, tc.category_guid, LOWER(COALESCE(tc.status, ''))
+          HAVING COALESCE(SUM(${USD_SALE}), 0) > 0`, rp),
         // Chart buckets per period × currency × category, refunds excluded.
         this.select(`
           SELECT ${period} AS period,
@@ -257,7 +271,16 @@ export class DashboardService {
             COALESCE(SUM(${RECEIVABLE}), 0) AS receivable
           FROM tbl_total_calculations tc
           ${where} AND ${NOT_REFUND}
-          GROUP BY 1, 2, 3, 4`, rp),
+          GROUP BY 1, 2, 3, 4
+          UNION ALL
+          SELECT ${period},
+            TO_CHAR(DATE_TRUNC(:granularity, tc.datetime AT TIME ZONE :tz), 'YYYY-MM-DD'),
+            'USD', tc.category_guid, 0,
+            COALESCE(SUM(${USD_SALE}), 0), 0, 0
+          FROM tbl_total_calculations tc
+          ${where} AND ${NOT_REFUND}
+          GROUP BY 1, 2, tc.category_guid
+          HAVING COALESCE(SUM(${USD_SALE}), 0) > 0`, rp),
         // Operators per currency × category in the current range.
         this.select(`
           SELECT ${CURRENCY} AS currency, tc.category_guid, tc.receiver_opr_guid AS guid,
@@ -268,7 +291,16 @@ export class DashboardService {
           LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
           WHERE ${conds.join(' AND ')} AND ${curCond} AND ${NOT_REFUND}
             AND tc.receiver_opr_guid IS NOT NULL
-          GROUP BY 1, 2, 3, 4`, rp),
+          GROUP BY 1, 2, 3, 4
+          UNION ALL
+          SELECT 'USD', tc.category_guid, tc.receiver_opr_guid, e."fullName", 0,
+            COALESCE(SUM(${USD_SALE}), 0)
+          FROM tbl_total_calculations tc
+          LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
+          WHERE ${conds.join(' AND ')} AND ${curCond} AND ${NOT_REFUND}
+            AND tc.receiver_opr_guid IS NOT NULL
+          GROUP BY tc.category_guid, tc.receiver_opr_guid, e."fullName"
+          HAVING COALESCE(SUM(${USD_SALE}), 0) > 0`, rp),
       ]);
 
       const curBuckets = buildBuckets(cur, granularity);
@@ -423,28 +455,45 @@ export class DashboardService {
       conds.push(NOT_REFUND, 'tc.receiver_opr_guid IS NOT NULL');
 
       const rows = await this.select(`
-        SELECT tc.receiver_opr_guid AS operator_guid,
-          e."fullName" AS operator_name,
-          ${CURRENCY} AS currency,
-          COUNT(*)::int AS count,
-          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS sale,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit,
-          ROUND(
-            COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (PARTITION BY ${CURRENCY}), 0),
-            2
-          ) AS percent
-        FROM tbl_total_calculations tc
-        LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
-        WHERE ${conds.join(' AND ')}
+        WITH raw AS (
+          SELECT tc.receiver_opr_guid AS operator_guid,
+            e."fullName" AS operator_name,
+            ${CURRENCY} AS currency,
+            COUNT(*)::int AS cnt,
+            COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS sale,
+            COALESCE(SUM(tc.profit), 0)::numeric(14,2) AS profit
+          FROM tbl_total_calculations tc
+          LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
+          WHERE ${conds.join(' AND ')}
+          GROUP BY 1, 2, 3
+          UNION ALL
+          SELECT tc.receiver_opr_guid, e."fullName", 'USD'::text, 0,
+            COALESCE(SUM(${USD_SALE}), 0)::numeric(14,2), 0
+          FROM tbl_total_calculations tc
+          LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
+          WHERE ${conds.join(' AND ')}
+          GROUP BY 1, 2
+          HAVING COALESCE(SUM(${USD_SALE}), 0) > 0
+        )
+        SELECT operator_guid, operator_name, currency,
+          SUM(cnt)::int AS count,
+          SUM(sale)::numeric(14,2) AS sale,
+          SUM(profit)::numeric(14,2) AS profit
+        FROM raw
         GROUP BY 1, 2, 3
         ORDER BY sale DESC`, rp);
 
+      // Recompute percent in JS after aggregation (SQL window fn not used anymore)
+      const currencyTotals = new Map<string, number>();
+      for (const r of rows) {
+        currencyTotals.set(r.currency, (currencyTotals.get(r.currency) || 0) + Number(r.count || 0));
+      }
       const data = rows.map((r) => ({
         operator_guid: r.operator_guid,
         operator_name: r.operator_name || 'Näbelli',
         currency: r.currency,
         count: Number(r.count),
-        percent: r2(r.percent),
+        percent: r2((Number(r.count) * 100) / (currencyTotals.get(r.currency) || 1)),
         sale: r2(r.sale),
         profit: r2(r.profit),
       }));
@@ -468,49 +517,62 @@ export class DashboardService {
       conds.push(NOT_REFUND, 'tc.category_guid IS NOT NULL');
 
       const rows = await this.select(`
-        SELECT tc.category_guid AS category_guid,
-          c.name AS category_name,
-          ${CURRENCY} AS currency,
-          COUNT(*)::int AS count,
-          COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS sale,
-          COALESCE(SUM(tc.net_price), 0)::numeric(14,2)  AS cost,
-          COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit,
-          ROUND(
-            CASE WHEN COALESCE(SUM(tc.sale_price), 0) = 0 THEN 0
-            ELSE COALESCE(SUM(tc.profit), 0) * 100.0 / SUM(tc.sale_price) END,
-            2
-          ) AS marja,
-          ROUND(
-            COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (PARTITION BY ${CURRENCY}), 0),
-            2
-          ) AS percent
-        FROM tbl_total_calculations tc
-        LEFT JOIN tbl_categories c ON c.guid = tc.category_guid
-        WHERE ${conds.join(' AND ')}
+        WITH raw AS (
+          SELECT tc.category_guid, c.name AS category_name, ${CURRENCY} AS currency,
+            COUNT(*)::int AS cnt,
+            COALESCE(SUM(tc.sale_price), 0)::numeric(14,2) AS sale,
+            COALESCE(SUM(tc.net_price), 0)::numeric(14,2)  AS cost,
+            COALESCE(SUM(tc.profit), 0)::numeric(14,2)     AS profit
+          FROM tbl_total_calculations tc
+          LEFT JOIN tbl_categories c ON c.guid = tc.category_guid
+          WHERE ${conds.join(' AND ')}
+          GROUP BY 1, 2, 3
+          UNION ALL
+          SELECT tc.category_guid, c.name, 'USD'::text, 0,
+            COALESCE(SUM(${USD_SALE}), 0)::numeric(14,2), 0, 0
+          FROM tbl_total_calculations tc
+          LEFT JOIN tbl_categories c ON c.guid = tc.category_guid
+          WHERE ${conds.join(' AND ')}
+          GROUP BY 1, 2
+          HAVING COALESCE(SUM(${USD_SALE}), 0) > 0
+        )
+        SELECT category_guid, category_name, currency,
+          SUM(cnt)::int AS count,
+          SUM(sale)::numeric(14,2) AS sale,
+          SUM(cost)::numeric(14,2) AS cost,
+          SUM(profit)::numeric(14,2) AS profit
+        FROM raw
         GROUP BY 1, 2, 3
         ORDER BY sale DESC`, rp);
 
-      const data = rows.map((r) => ({
-        category_guid: r.category_guid,
-        category_name: localized(r.category_name, lang),
-        currency: r.currency,
-        count: Number(r.count),
-        percent: r2(r.percent),
-        sale: r2(r.sale),
-        cost: r2(r.cost),
-        profit: r2(r.profit),
-        marja: r2(r.marja),
-      }));
-
-      const sumMap = new Map<string, { count: number; sale: number; cost: number; profit: number }>();
-      for (const r of data) {
-        const t = sumMap.get(r.currency) || { count: 0, sale: 0, cost: 0, profit: 0 };
-        t.count += r.count;
-        t.sale += r.sale;
-        t.cost += r.cost;
-        t.profit += r.profit;
-        sumMap.set(r.currency, t);
+      // Recompute per-currency totals in JS (window fns removed due to UNION ALL)
+      const catTotals = new Map<string, { count: number; sale: number; cost: number; profit: number }>();
+      for (const r of rows) {
+        const t = catTotals.get(r.currency) || { count: 0, sale: 0, cost: 0, profit: 0 };
+        t.count += Number(r.count);
+        t.sale = r2(t.sale + Number(r.sale));
+        t.cost = r2(t.cost + Number(r.cost));
+        t.profit = r2(t.profit + Number(r.profit));
+        catTotals.set(r.currency, t);
       }
+
+      const data = rows.map((r) => {
+        const tot = catTotals.get(r.currency) || { count: 1, sale: 0, cost: 0, profit: 0 };
+        const sale = Number(r.sale);
+        return {
+          category_guid: r.category_guid,
+          category_name: localized(r.category_name, lang),
+          currency: r.currency,
+          count: Number(r.count),
+          percent: r2((Number(r.count) * 100) / (tot.count || 1)),
+          sale: r2(sale),
+          cost: r2(r.cost),
+          profit: r2(r.profit),
+          marja: sale === 0 ? 0 : r2((Number(r.profit) * 100) / sale),
+        };
+      });
+
+      const sumMap = catTotals;
       const sum = [...sumMap.entries()].map(([currency, t]) => ({
         currency,
         count: t.count,
@@ -538,25 +600,29 @@ export class DashboardService {
       const conds = baseConds(officeGuid, undefined, rp);
       conds.push(rangeCond(range, 'cur', rp), NOT_REFUND, 'tc.office_guid IS NOT NULL');
       const sumIf = (cur: string, col: string) => `SUM(CASE WHEN ${CURRENCY} = '${cur}' THEN tc.${col} ELSE 0 END)`;
-
+      // sale_price_usd / credit_usd are always USD, so add them directly to the USD bucket.
       const rows = await this.select(`
-        SELECT
-          o.guid AS office_guid,
-          o."fullName" AS office_name,
-          o."shortName" AS office_short_name,
-          COUNT(*)::int AS count,
-          ${sumIf('USD', 'sale_price')}::numeric(14,2) AS income_usd,
-          ${sumIf('TMT', 'sale_price')}::numeric(14,2) AS income_tmt,
-          ${sumIf('USD', 'net_price')}::numeric(14,2)  AS expense_usd,
-          ${sumIf('TMT', 'net_price')}::numeric(14,2)  AS expense_tmt,
-          ${sumIf('USD', 'profit')}::numeric(14,2)     AS profit_usd,
-          ${sumIf('TMT', 'profit')}::numeric(14,2)     AS profit_tmt,
-          ROUND(${sumIf('USD', 'sale_price')} * 100.0 / NULLIF(SUM(${sumIf('USD', 'sale_price')}) OVER (), 0), 2) AS percent_usd,
-          ROUND(${sumIf('TMT', 'sale_price')} * 100.0 / NULLIF(SUM(${sumIf('TMT', 'sale_price')}) OVER (), 0), 2) AS percent_tmt
-        FROM tbl_total_calculations tc
-        JOIN tbl_offices o ON o.guid = tc.office_guid
-        WHERE ${conds.join(' AND ')}
-        GROUP BY o.guid, o."fullName", o."shortName"
+        WITH agg AS (
+          SELECT
+            o.guid AS office_guid,
+            o."fullName" AS office_name,
+            o."shortName" AS office_short_name,
+            COUNT(*)::int AS count,
+            (${sumIf('USD', 'sale_price')} + COALESCE(SUM(${USD_SALE}), 0))::numeric(14,2) AS income_usd,
+            ${sumIf('TMT', 'sale_price')}::numeric(14,2) AS income_tmt,
+            ${sumIf('USD', 'net_price')}::numeric(14,2)  AS expense_usd,
+            ${sumIf('TMT', 'net_price')}::numeric(14,2)  AS expense_tmt,
+            ${sumIf('USD', 'profit')}::numeric(14,2)     AS profit_usd,
+            ${sumIf('TMT', 'profit')}::numeric(14,2)     AS profit_tmt
+          FROM tbl_total_calculations tc
+          JOIN tbl_offices o ON o.guid = tc.office_guid
+          WHERE ${conds.join(' AND ')}
+          GROUP BY o.guid, o."fullName", o."shortName"
+        )
+        SELECT *,
+          ROUND(income_usd * 100.0 / NULLIF(SUM(income_usd) OVER (), 0), 2) AS percent_usd,
+          ROUND(income_tmt * 100.0 / NULLIF(SUM(income_tmt) OVER (), 0), 2) AS percent_tmt
+        FROM agg
         ORDER BY income_usd DESC`, rp);
 
       const data = rows.map((r) => ({
@@ -658,17 +724,19 @@ export class DashboardService {
         whereClauses.push(`datetime <= :end_date`);
         replacements.end_date = `${filters.end_date} 23:59:59`;
       }
-      if (filters.currency) {
-        whereClauses.push(`UPPER(TRIM(currency)) = :currency`);
-        replacements.currency = filters.currency.trim().toUpperCase();
-      }
       if (filters.office_guid) {
         whereClauses.push(`office_guid = :office_guid`);
         replacements.office_guid = filters.office_guid;
       }
+      // whereSqlNC: all filters except currency (used for USD dual-currency rows)
+      const whereSqlNC = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+      if (filters.currency) {
+        whereClauses.push(`UPPER(TRIM(currency)) = :currency`);
+        replacements.currency = filters.currency.trim().toUpperCase();
+      }
       const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
       const query = `
-        WITH stats AS (
+        WITH stats_raw AS (
           SELECT 
             UPPER(TRIM(COALESCE(currency, 'OTHER'))) AS currency_key,
             COALESCE(status, 'NULL') AS status_key,
@@ -678,12 +746,32 @@ export class DashboardService {
           FROM tbl_total_calculations
           ${whereSql}
           GROUP BY UPPER(TRIM(COALESCE(currency, 'OTHER'))), COALESCE(status, 'NULL')
+          UNION ALL
+          -- Visa dual-currency USD amounts, bucketed by their status
+          SELECT 'USD'::text,
+            COALESCE(status, 'NULL'),
+            0,
+            COALESCE(SUM(COALESCE(sale_price_usd, 0)), 0)::numeric(14,2),
+            COALESCE(SUM(COALESCE(credit_usd, 0)), 0)::numeric(14,2)
+          FROM tbl_total_calculations
+          ${whereSqlNC}
+          GROUP BY COALESCE(status, 'NULL')
+          HAVING COALESCE(SUM(COALESCE(sale_price_usd, 0)), 0) > 0
+              OR COALESCE(SUM(COALESCE(credit_usd, 0)), 0) > 0
+        ),
+        stats AS (
+          SELECT currency_key, status_key,
+            SUM(count_sales)::int AS count_sales,
+            SUM(total_sale_price)::numeric(14,2) AS total_sale_price,
+            SUM(total_credit_price)::numeric(14,2) AS total_credit_price
+          FROM stats_raw
+          GROUP BY 1, 2
         ),
         currency_aggregates AS (
           SELECT 
             currency_key, 
             SUM(count_sales) AS overall_count,
-            MAX(total_credit_price) AS grand_total_credit_price
+            SUM(total_credit_price) AS grand_total_credit_price
           FROM stats 
           GROUP BY currency_key
         )
@@ -783,7 +871,15 @@ export class DashboardService {
             COALESCE(SUM(tc.credit_price), 0) AS credit
           FROM tbl_total_calculations tc
           WHERE ${conds.join(' AND ')} AND (${curCond} OR ${prevCond})
-          GROUP BY 1, 2`, rp),
+          GROUP BY 1, 2
+          UNION ALL
+          SELECT CASE WHEN ${curCond} THEN 'cur' ELSE 'prev' END, 'USD'::text, 0,
+            COALESCE(SUM(${USD_SALE}), 0), 0,
+            COALESCE(SUM(${USD_CREDIT}), 0)
+          FROM tbl_total_calculations tc
+          WHERE ${conds.join(' AND ')} AND (${curCond} OR ${prevCond})
+          GROUP BY 1
+          HAVING COALESCE(SUM(${USD_SALE}), 0) > 0 OR COALESCE(SUM(${USD_CREDIT}), 0) > 0`, rp),
         this.select(`
           SELECT TO_CHAR(DATE_TRUNC(:granularity, tc.datetime AT TIME ZONE :tz), 'YYYY-MM-DD') AS bucket,
             ${CURRENCY} AS currency,
@@ -791,17 +887,45 @@ export class DashboardService {
             COALESCE(SUM(tc.profit), 0) AS profit
           FROM tbl_total_calculations tc
           WHERE ${conds.join(' AND ')} AND ${curCond}
-          GROUP BY 1, 2`, rp),
+          GROUP BY 1, 2
+          UNION ALL
+          SELECT TO_CHAR(DATE_TRUNC(:granularity, tc.datetime AT TIME ZONE :tz), 'YYYY-MM-DD'),
+            'USD'::text, COALESCE(SUM(${USD_SALE}), 0), 0
+          FROM tbl_total_calculations tc
+          WHERE ${conds.join(' AND ')} AND ${curCond}
+          GROUP BY 1
+          HAVING COALESCE(SUM(${USD_SALE}), 0) > 0`, rp),
       ]);
 
       const buckets = buildBuckets(cur, granularity);
-      const chartMap = new Map(chartRows.map((r) => [`${r.bucket}_${r.currency}`, r]));
+
+      // Aggregate totalRows and chartRows by (period/bucket + currency) — UNION ALL may produce duplicate keys
+      const totalAgg = new Map<string, any>();
+      for (const r of totalRows) {
+        const key = `${r.period}_${r.currency}`;
+        const e = totalAgg.get(key);
+        if (e) {
+          e.sale = r2(Number(e.sale) + Number(r.sale || 0));
+          e.profit = r2(Number(e.profit) + Number(r.profit || 0));
+          e.credit = r2(Number(e.credit) + Number(r.credit || 0));
+          e.count += Number(r.count || 0);
+        } else { totalAgg.set(key, { ...r, sale: Number(r.sale || 0), profit: Number(r.profit || 0), credit: Number(r.credit || 0), count: Number(r.count || 0) }); }
+      }
+      const chartAgg = new Map<string, any>();
+      for (const r of chartRows) {
+        const key = `${r.bucket}_${r.currency}`;
+        const e = chartAgg.get(key);
+        if (e) { e.sale = r2(Number(e.sale) + Number(r.sale || 0)); e.profit = r2(Number(e.profit) + Number(r.profit || 0)); }
+        else { chartAgg.set(key, { ...r, sale: Number(r.sale || 0), profit: Number(r.profit || 0) }); }
+      }
+
       const currenciesData = Object.fromEntries(currencies.map((c) => {
-        const now = totalRows.find((r) => r.period === 'cur' && r.currency === c);
-        const before = totalRows.find((r) => r.period === 'prev' && r.currency === c);
+        const now = totalAgg.get(`cur_${c}`);
+        const before = totalAgg.get(`prev_${c}`);
         const count = now?.count || 0;
         const total = Number(now?.sale) || 0;
         const profit = Number(now?.profit) || 0;
+        const credit = Number(now?.credit) || 0;
         const previous = Number(before?.sale) || 0;
         return [c, {
           summary: {
@@ -812,10 +936,10 @@ export class DashboardService {
             profit: r2(profit),
             profit_percent: total === 0 ? 0 : r2((profit * 100) / total),
             avg_sale_price: count === 0 ? 0 : r2(total / count),
-            credit_price: r2(now?.credit),
+            credit_price: r2(credit),
           },
           chart: buckets.map((b) => {
-            const v = chartMap.get(`${b.key}_${c}`);
+            const v = chartAgg.get(`${b.key}_${c}`);
             return { label: b.label, date: b.key, sale: r2(v?.sale), profit: r2(v?.profit) };
           }),
         }];
@@ -851,20 +975,36 @@ export class DashboardService {
       conds.push('tc.category_guid = :catGuid', rangeCond(range, 'cur', rp), NOT_REFUND);
 
       const rows = await this.select(`
-        SELECT * FROM (
+        WITH raw AS (
           SELECT ${CURRENCY} AS currency,
             COALESCE(e."fullName", 'Näbelli') AS operator_name,
-            COUNT(*)::int AS count_sales,
-            COALESCE(SUM(tc.sale_price), 0) AS total_sale_price,
-            COALESCE(SUM(tc.profit), 0) AS total_profit,
-            ROW_NUMBER() OVER (PARTITION BY ${CURRENCY} ORDER BY SUM(tc.sale_price) DESC NULLS LAST)::int AS rank
+            COUNT(*)::int AS cnt,
+            COALESCE(SUM(tc.sale_price), 0) AS sale_sum,
+            COALESCE(SUM(tc.profit), 0) AS profit_sum
           FROM tbl_total_calculations tc
           LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
           WHERE ${conds.join(' AND ')}
           GROUP BY ${CURRENCY}, tc.receiver_opr_guid, e."fullName"
-        ) t
-        WHERE rank <= 10
-        ORDER BY rank`, rp);
+          UNION ALL
+          SELECT 'USD'::text,
+            COALESCE(e."fullName", 'Näbelli'), 0,
+            COALESCE(SUM(${USD_SALE}), 0), 0
+          FROM tbl_total_calculations tc
+          LEFT JOIN tbl_employees e ON e.guid = tc.receiver_opr_guid
+          WHERE ${conds.join(' AND ')}
+          GROUP BY tc.receiver_opr_guid, e."fullName"
+          HAVING COALESCE(SUM(${USD_SALE}), 0) > 0
+        ),
+        agg AS (
+          SELECT currency, operator_name,
+            SUM(cnt)::int AS count_sales,
+            SUM(sale_sum) AS total_sale_price,
+            SUM(profit_sum) AS total_profit,
+            ROW_NUMBER() OVER (PARTITION BY currency ORDER BY SUM(sale_sum) DESC NULLS LAST)::int AS rank
+          FROM raw
+          GROUP BY currency, operator_name
+        )
+        SELECT * FROM agg WHERE rank <= 10 ORDER BY rank`, rp);
 
       const data = Object.fromEntries(currencies.map((c) => [c, rows
         .filter((r) => r.currency === c)
