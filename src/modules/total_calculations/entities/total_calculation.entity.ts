@@ -82,6 +82,22 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare credit_price: number;
 
+  // USD sale price — used for dual-currency modules (e.g. Visa)
+  @Column({
+    type: DataType.DECIMAL(12, 2),
+    allowNull: true,
+    defaultValue: 0
+  })
+  declare sale_price_usd: number;
+
+  // USD credit (paid amount) — used for dual-currency modules (e.g. Visa)
+  @Column({
+    type: DataType.DECIMAL(12, 2),
+    allowNull: true,
+    defaultValue: 0
+  })
+  declare credit_usd: number;
+
   @Column({
     type: DataType.BOOLEAN,
     allowNull: false,

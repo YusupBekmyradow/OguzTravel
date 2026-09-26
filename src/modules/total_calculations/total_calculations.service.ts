@@ -594,7 +594,9 @@ export class TotalCalculationsService implements OnModuleInit {
           ADD COLUMN IF NOT EXISTS giver VARCHAR(255),
           ADD COLUMN IF NOT EXISTS receiver VARCHAR(255),
           ADD COLUMN IF NOT EXISTS company VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS import_key VARCHAR(64);
+          ADD COLUMN IF NOT EXISTS import_key VARCHAR(64),
+          ADD COLUMN IF NOT EXISTS sale_price_usd DECIMAL(12,2) DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS credit_usd DECIMAL(12,2) DEFAULT 0;
       `);
       // Rows created from the UI before these columns existed were expenses.
       await sequelize.query(`
@@ -1894,7 +1896,171 @@ export class TotalCalculationsService implements OnModuleInit {
           "updatedAt" = NOW();
       `);
 
-      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation, Referral Letter, Aylyk, Cafeteria we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');
+
+      // -------------------------------------------------------------
+      // Visa Trigger (tbl_visa)
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        CREATE OR REPLACE FUNCTION sync_visa_to_total_calculations()
+        RETURNS TRIGGER AS $$
+        DECLARE
+          v_office_guid UUID;
+          v_credit_tmt DECIMAL(12, 2);
+          v_credit_usd DECIMAL(12, 2);
+          v_status VARCHAR(50);
+        BEGIN
+          IF TG_OP = 'DELETE' THEN
+            DELETE FROM tbl_total_calculations WHERE guid = OLD.guid;
+            RETURN OLD;
+          END IF;
+
+          SELECT office_guid INTO v_office_guid
+          FROM tbl_employees
+          WHERE guid = NEW.receiver_opr_guid;
+
+          SELECT
+            COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'TMT' THEN amount ELSE 0 END), 0),
+            COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'USD' THEN amount ELSE 0 END), 0)
+          INTO v_credit_tmt, v_credit_usd
+          FROM tbl_visa_payments
+          WHERE visa_guid = NEW.guid;
+
+          IF NEW.status = 3 THEN
+            v_status := 'REFUND';
+          ELSIF NEW.is_paid IS TRUE THEN
+            v_status := 'paid';
+          ELSE
+            v_status := 'notpaid';
+          END IF;
+
+          INSERT INTO tbl_total_calculations (
+            guid,
+            category_guid,
+            datetime,
+            receiver_opr_guid,
+            office_guid,
+            status,
+            net_price,
+            sale_price,
+            sale_price_usd,
+            currency,
+            profit,
+            credit_price,
+            credit_usd,
+            is_manual,
+            "createdAt",
+            "updatedAt"
+          ) VALUES (
+            NEW.guid,
+            '${SYSTEM_CATEGORIES.VISA}'::uuid,
+            COALESCE(NEW.datetime, NOW()),
+            NEW.receiver_opr_guid,
+            v_office_guid,
+            v_status,
+            0,
+            COALESCE(NEW.price_tmt, 0),
+            COALESCE(NEW.price_usd, 0),
+            'TMT',
+            0,
+            COALESCE(v_credit_tmt, 0),
+            COALESCE(v_credit_usd, 0),
+            FALSE,
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (guid) DO UPDATE SET
+            category_guid    = EXCLUDED.category_guid,
+            datetime         = EXCLUDED.datetime,
+            receiver_opr_guid = EXCLUDED.receiver_opr_guid,
+            office_guid      = EXCLUDED.office_guid,
+            status           = EXCLUDED.status,
+            net_price        = EXCLUDED.net_price,
+            sale_price       = EXCLUDED.sale_price,
+            sale_price_usd   = EXCLUDED.sale_price_usd,
+            currency         = EXCLUDED.currency,
+            profit           = EXCLUDED.profit,
+            credit_price     = EXCLUDED.credit_price,
+            credit_usd       = EXCLUDED.credit_usd,
+            is_manual        = FALSE,
+            "updatedAt"      = NOW();
+
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+
+      await sequelize.query(`
+        DROP TRIGGER IF EXISTS trg_sync_visa_to_total_calculations ON tbl_visa;
+        CREATE TRIGGER trg_sync_visa_to_total_calculations
+        AFTER INSERT OR UPDATE OR DELETE ON tbl_visa
+        FOR EACH ROW EXECUTE FUNCTION sync_visa_to_total_calculations();
+      `);
+
+      // -------------------------------------------------------------
+      // Visa Payment Trigger (tbl_visa_payments)
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        CREATE OR REPLACE FUNCTION sync_visa_payment_to_total_calculations()
+        RETURNS TRIGGER AS $$
+        DECLARE
+          v_target_visa_guid UUID;
+          v_credit_tmt DECIMAL(12, 2);
+          v_credit_usd DECIMAL(12, 2);
+        BEGIN
+          IF TG_OP = 'DELETE' THEN
+            v_target_visa_guid := OLD.visa_guid;
+          ELSE
+            v_target_visa_guid := NEW.visa_guid;
+          END IF;
+
+          IF v_target_visa_guid IS NOT NULL THEN
+            SELECT
+              COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'TMT' THEN amount ELSE 0 END), 0),
+              COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'USD' THEN amount ELSE 0 END), 0)
+            INTO v_credit_tmt, v_credit_usd
+            FROM tbl_visa_payments
+            WHERE visa_guid = v_target_visa_guid;
+
+            UPDATE tbl_total_calculations
+            SET credit_price = v_credit_tmt,
+                credit_usd   = v_credit_usd,
+                "updatedAt"  = NOW()
+            WHERE guid = v_target_visa_guid;
+          END IF;
+
+          -- Handle UPDATE where visa_guid changed
+          IF TG_OP = 'UPDATE' AND OLD.visa_guid IS NOT NULL AND OLD.visa_guid IS DISTINCT FROM NEW.visa_guid THEN
+            SELECT
+              COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'TMT' THEN amount ELSE 0 END), 0),
+              COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'USD' THEN amount ELSE 0 END), 0)
+            INTO v_credit_tmt, v_credit_usd
+            FROM tbl_visa_payments
+            WHERE visa_guid = OLD.visa_guid;
+
+            UPDATE tbl_total_calculations
+            SET credit_price = v_credit_tmt,
+                credit_usd   = v_credit_usd,
+                "updatedAt"  = NOW()
+            WHERE guid = OLD.visa_guid;
+          END IF;
+
+          IF TG_OP = 'DELETE' THEN
+            RETURN OLD;
+          ELSE
+            RETURN NEW;
+          END IF;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+
+      await sequelize.query(`
+        DROP TRIGGER IF EXISTS trg_sync_visa_payment_to_total_calculations ON tbl_visa_payments;
+        CREATE TRIGGER trg_sync_visa_payment_to_total_calculations
+        AFTER INSERT OR UPDATE OR DELETE ON tbl_visa_payments
+        FOR EACH ROW EXECUTE FUNCTION sync_visa_payment_to_total_calculations();
+      `);
+
+      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation, Referral Letter, Aylyk, Cafeteria, Visa we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');
     } catch (error) {
       console.error('❌ Total Calculations trigger döredilende ýalňyşlyk:', error);
     }
