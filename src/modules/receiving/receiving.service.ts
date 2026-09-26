@@ -179,13 +179,16 @@ export class ReceivingService {
       office_guid?: string;
       operator_guid?: string;
       application_date?: string;
+      start_date?: string;
+      end_date?: string;
       status?: string;
     },
     lang: string = 'tk',
   ) {
     try {
       const page = Math.max(1, Number(query.page) || 1);
-      const limit = Math.max(1, Math.min(100, Number(query.limit) || 10));
+      // Up to 500 per page, so an Excel export needs only a few requests.
+      const limit = Math.max(1, Math.min(500, Number(query.limit) || 10));
       const offset = (page - 1) * limit;
 
       const conditions: string[] = [];
@@ -203,9 +206,23 @@ export class ReceivingService {
         conditions.push(`r.operator_guid = :operator_guid`);
         replacements.operator_guid = query.operator_guid;
       }
-      if (query.application_date) {
-        conditions.push(`r.application_date::date = :application_date::date`);
-        replacements.application_date = query.application_date;
+      // Application dates are compared as local (Ashgabat) calendar days.
+      const localDay = `(r.application_date AT TIME ZONE 'Asia/Ashgabat')::date`;
+      const day = (v?: string) => {
+        const d = v?.trim().slice(0, 10);
+        return d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+      };
+      if (day(query.application_date)) {
+        conditions.push(`${localDay} = CAST(:application_date AS date)`);
+        replacements.application_date = day(query.application_date);
+      }
+      if (day(query.start_date)) {
+        conditions.push(`${localDay} >= CAST(:start_date AS date)`);
+        replacements.start_date = day(query.start_date);
+      }
+      if (day(query.end_date)) {
+        conditions.push(`${localDay} <= CAST(:end_date AS date)`);
+        replacements.end_date = day(query.end_date);
       }
       if (query.status?.trim()) {
         conditions.push(`r.status ILIKE :status`);

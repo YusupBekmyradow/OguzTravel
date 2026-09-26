@@ -6,8 +6,8 @@ import { DashboardFilterDto, GetSummaryFilterDto } from './dto/dashboard-filter.
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Dashboard')
-// @ApiBearerAuth('bearerAuth')
-// @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) { }
@@ -38,8 +38,8 @@ export class DashboardController {
   }
 
   @Get('/offices-rating')
-  async getOfficesRating(@Query() filters: DashboardFilterDto, @Req() req: any, @I18nLang() lang: string = 'tk',) {
-    return this.dashboardService.getOfficesRating(filters, req.user, lang);
+  async getOfficesRating(@Query() filters: GetSummaryFilterDto, @Req() req: any, @I18nLang() lang: string = 'tk',) {
+    return this.dashboardService.getOfficesRating(filters, req?.user, lang);
   }
 
 
@@ -67,19 +67,19 @@ export class DashboardController {
   @Get('category-detail/:guid')
   async getCategoryDetailAnalytics(
     @Param('guid') guid: string,
-    @Query() filters: DashboardFilterDto
+    @Query() filters: GetSummaryFilterDto,
+    @Req() req: any,
   ) {
-    return await this.dashboardService.getCategoryDetailAnalytics(
-      guid,
-      filters,
-    );
+    return this.dashboardService.getCategoryDetailAnalytics(guid, filters, req?.user);
   }
 
   @Get('category-detail/:guid/top-operators')
   async getCategoryTopOperators(
     @Param('guid') guid: string,
-    @Query() filters: DashboardFilterDto) {
-    return await this.dashboardService.getTopOperators(guid, filters);
+    @Query() filters: DashboardFilterDto,
+    @Req() req: any,
+  ) {
+    return this.dashboardService.getTopOperators(guid, filters, req?.user);
   }
 }
 

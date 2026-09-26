@@ -25,6 +25,17 @@ export class DashboardFilterDto {
 
 
 export class GetSummaryFilterDto extends DashboardFilterDto {
+  /** Comparison range. Without it the equally long span right before start_date is used. */
+  @ApiPropertyOptional({ example: '2026-08-01' })
+  @IsString()
+  @IsOptional()
+  declare prev_start_date?: string;
+
+  @ApiPropertyOptional({ example: '2026-08-31' })
+  @IsString()
+  @IsOptional()
+  declare prev_end_date?: string;
+
   @ApiPropertyOptional({ example: 'week', enum: ['day', 'week', 'month'] })
   @IsIn(['day', 'week', 'month'])
   @IsOptional()
