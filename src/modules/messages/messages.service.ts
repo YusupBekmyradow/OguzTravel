@@ -139,7 +139,7 @@ export class MessagesService {
         },
         message: this.i18n.t('messages.listFetched', { lang }),
       };
-    } catch (error: any) {
+    } catch (error: any) { console.log(error)
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.fetchFailed', { lang }), error);
     }
   }

@@ -453,7 +453,7 @@ export class TotalCalculationsService implements OnModuleInit {
             tc.guid, tc.category_guid, tc.datetime,
             tc.receiver_opr_guid, tc.office_guid,
             tc.status, tc.net_price, tc.sale_price,
-            tc.currency, tc.profit, tc.credit_price,
+            tc.currency, tc.profit, tc.credit_price, tc.sale_price_usd, tc.credit_usd,
             tc.is_manual, tc.index_number,
             tc.type, COALESCE(tc.source, 'PROJECT') AS source,
             tc.description, tc.giver, tc.receiver, tc.company,
@@ -514,6 +514,8 @@ export class TotalCalculationsService implements OnModuleInit {
         currency: r.currency,
         profit: r.profit,
         credit_price: r.credit_price,
+        sale_price_usd: r.sale_price_usd,
+        credit_usd: r.credit_usd,
         is_manual: r.is_manual,
         index_number: r.index_number,
         type: r.type,
@@ -631,7 +633,7 @@ export class TotalCalculationsService implements OnModuleInit {
           FROM tbl_employees 
           WHERE guid = NEW.receiver_opr_guid;
 
-          SELECT COALESCE(SUM(amount), 0) INTO v_credit_price 
+          SELECT GREATEST(COALESCE(NEW.sale_price, 0) - COALESCE(SUM(amount), 0), 0) INTO v_credit_price 
           FROM tbl_ticket_payments 
           WHERE b2b_guid = NEW.guid;
 
@@ -705,7 +707,7 @@ export class TotalCalculationsService implements OnModuleInit {
         RETURNS TRIGGER AS $$
         DECLARE
           v_target_b2b_guid UUID;
-          v_total_paid DECIMAL(12, 2);
+          v_total_unpaid DECIMAL(12, 2);
         BEGIN
           IF TG_OP = 'DELETE' THEN
             v_target_b2b_guid := OLD.b2b_guid;
@@ -714,23 +716,27 @@ export class TotalCalculationsService implements OnModuleInit {
           END IF;
 
           IF v_target_b2b_guid IS NOT NULL THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid
-            FROM tbl_ticket_payments
-            WHERE b2b_guid = v_target_b2b_guid;
+            SELECT GREATEST(COALESCE(b.sale_price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_b2b b
+            LEFT JOIN tbl_ticket_payments p ON p.b2b_guid = b.guid
+            WHERE b.guid = v_target_b2b_guid
+            GROUP BY b.guid, b.sale_price;
 
             UPDATE tbl_total_calculations
-            SET credit_price = v_total_paid,
+            SET credit_price = COALESCE(v_total_unpaid, 0),
                 "updatedAt" = NOW()
             WHERE guid = v_target_b2b_guid;
           END IF;
 
           IF TG_OP = 'UPDATE' AND OLD.b2b_guid IS NOT NULL AND OLD.b2b_guid IS DISTINCT FROM NEW.b2b_guid THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid
-            FROM tbl_ticket_payments
-            WHERE b2b_guid = OLD.b2b_guid;
+            SELECT GREATEST(COALESCE(b.sale_price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_b2b b
+            LEFT JOIN tbl_ticket_payments p ON p.b2b_guid = b.guid
+            WHERE b.guid = OLD.b2b_guid
+            GROUP BY b.guid, b.sale_price;
 
             UPDATE tbl_total_calculations
-            SET credit_price = v_total_paid,
+            SET credit_price = COALESCE(v_total_unpaid, 0),
                 "updatedAt" = NOW()
             WHERE guid = OLD.b2b_guid;
           END IF;
@@ -771,7 +777,7 @@ export class TotalCalculationsService implements OnModuleInit {
           FROM tbl_employees 
           WHERE guid = NEW.opr_guid;
 
-          SELECT COALESCE(SUM(amount), 0) INTO v_credit_price 
+          SELECT GREATEST(COALESCE(NEW.price, 0) - COALESCE(SUM(amount), 0), 0) INTO v_credit_price 
           FROM "tbl_HAR_payments" 
           WHERE airway_guid = NEW.guid;
 
@@ -862,7 +868,7 @@ export class TotalCalculationsService implements OnModuleInit {
           FROM tbl_employees 
           WHERE guid = NEW.opr_guid;
 
-          SELECT COALESCE(SUM(amount), 0) INTO v_credit_price 
+          SELECT GREATEST(COALESCE(NEW.price, 0) - COALESCE(SUM(amount), 0), 0) INTO v_credit_price 
           FROM "tbl_HAR_payments" 
           WHERE railway_guid = NEW.guid;
 
@@ -953,7 +959,7 @@ export class TotalCalculationsService implements OnModuleInit {
           FROM tbl_employees 
           WHERE guid = NEW.opr_guid;
 
-          SELECT COALESCE(SUM(amount), 0) INTO v_credit_price 
+          SELECT GREATEST(COALESCE(NEW.price, 0) - COALESCE(SUM(amount), 0), 0) INTO v_credit_price 
           FROM "tbl_HAR_payments" 
           WHERE hotel_guid = NEW.guid;
 
@@ -1044,7 +1050,7 @@ export class TotalCalculationsService implements OnModuleInit {
           FROM tbl_employees 
           WHERE guid = NEW.opr_guid;
 
-          SELECT COALESCE(SUM(amount), 0) INTO v_credit_price 
+          SELECT GREATEST(COALESCE(NEW.price, 0) - COALESCE(SUM(amount), 0), 0) INTO v_credit_price 
           FROM "tbl_TTP_payments" 
           WHERE tour_guid = NEW.guid;
 
@@ -1135,7 +1141,7 @@ export class TotalCalculationsService implements OnModuleInit {
           FROM tbl_employees 
           WHERE guid = NEW.opr_guid;
 
-          SELECT COALESCE(SUM(amount), 0) INTO v_credit_price 
+          SELECT GREATEST(COALESCE(NEW.price, 0) - COALESCE(SUM(amount), 0), 0) INTO v_credit_price 
           FROM "tbl_TTP_payments" 
           WHERE transfer_guid = NEW.guid;
 
@@ -1226,7 +1232,7 @@ export class TotalCalculationsService implements OnModuleInit {
           FROM tbl_employees 
           WHERE guid = NEW.opr_guid;
 
-          SELECT COALESCE(SUM(amount), 0) INTO v_credit_price 
+          SELECT GREATEST(COALESCE(NEW.price, 0) - COALESCE(SUM(amount), 0), 0) INTO v_credit_price 
           FROM "tbl_TTP_payments" 
           WHERE package_guid = NEW.guid;
 
@@ -1304,7 +1310,7 @@ export class TotalCalculationsService implements OnModuleInit {
         CREATE OR REPLACE FUNCTION sync_har_payment_to_total_calculations()
         RETURNS TRIGGER AS $$
         DECLARE
-          v_total_paid DECIMAL(12, 2);
+          v_total_unpaid DECIMAL(12, 2);
           v_guid UUID;
         BEGIN
           -- Airway
@@ -1314,12 +1320,16 @@ export class TotalCalculationsService implements OnModuleInit {
             v_guid := NEW.airway_guid;
           END IF;
           IF v_guid IS NOT NULL THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_HAR_payments" WHERE airway_guid = v_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = v_guid;
+            SELECT GREATEST(COALESCE(a.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_airway a LEFT JOIN "tbl_HAR_payments" p ON p.airway_guid = a.guid
+            WHERE a.guid = v_guid GROUP BY a.guid, a.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = v_guid;
           END IF;
           IF TG_OP = 'UPDATE' AND OLD.airway_guid IS NOT NULL AND OLD.airway_guid IS DISTINCT FROM NEW.airway_guid THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_HAR_payments" WHERE airway_guid = OLD.airway_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = OLD.airway_guid;
+            SELECT GREATEST(COALESCE(a.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_airway a LEFT JOIN "tbl_HAR_payments" p ON p.airway_guid = a.guid
+            WHERE a.guid = OLD.airway_guid GROUP BY a.guid, a.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = OLD.airway_guid;
           END IF;
 
           -- Railway
@@ -1329,12 +1339,16 @@ export class TotalCalculationsService implements OnModuleInit {
             v_guid := NEW.railway_guid;
           END IF;
           IF v_guid IS NOT NULL THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_HAR_payments" WHERE railway_guid = v_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = v_guid;
+            SELECT GREATEST(COALESCE(r.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_railway r LEFT JOIN "tbl_HAR_payments" p ON p.railway_guid = r.guid
+            WHERE r.guid = v_guid GROUP BY r.guid, r.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = v_guid;
           END IF;
           IF TG_OP = 'UPDATE' AND OLD.railway_guid IS NOT NULL AND OLD.railway_guid IS DISTINCT FROM NEW.railway_guid THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_HAR_payments" WHERE railway_guid = OLD.railway_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = OLD.railway_guid;
+            SELECT GREATEST(COALESCE(r.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_railway r LEFT JOIN "tbl_HAR_payments" p ON p.railway_guid = r.guid
+            WHERE r.guid = OLD.railway_guid GROUP BY r.guid, r.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = OLD.railway_guid;
           END IF;
 
           -- Hotel
@@ -1344,12 +1358,16 @@ export class TotalCalculationsService implements OnModuleInit {
             v_guid := NEW.hotel_guid;
           END IF;
           IF v_guid IS NOT NULL THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_HAR_payments" WHERE hotel_guid = v_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = v_guid;
+            SELECT GREATEST(COALESCE(h.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_hotel h LEFT JOIN "tbl_HAR_payments" p ON p.hotel_guid = h.guid
+            WHERE h.guid = v_guid GROUP BY h.guid, h.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = v_guid;
           END IF;
           IF TG_OP = 'UPDATE' AND OLD.hotel_guid IS NOT NULL AND OLD.hotel_guid IS DISTINCT FROM NEW.hotel_guid THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_HAR_payments" WHERE hotel_guid = OLD.hotel_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = OLD.hotel_guid;
+            SELECT GREATEST(COALESCE(h.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_hotel h LEFT JOIN "tbl_HAR_payments" p ON p.hotel_guid = h.guid
+            WHERE h.guid = OLD.hotel_guid GROUP BY h.guid, h.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = OLD.hotel_guid;
           END IF;
 
           IF TG_OP = 'DELETE' THEN
@@ -1375,7 +1393,7 @@ export class TotalCalculationsService implements OnModuleInit {
         CREATE OR REPLACE FUNCTION sync_ttp_payment_to_total_calculations()
         RETURNS TRIGGER AS $$
         DECLARE
-          v_total_paid DECIMAL(12, 2);
+          v_total_unpaid DECIMAL(12, 2);
           v_guid UUID;
         BEGIN
           -- Tour
@@ -1385,12 +1403,16 @@ export class TotalCalculationsService implements OnModuleInit {
             v_guid := NEW.tour_guid;
           END IF;
           IF v_guid IS NOT NULL THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_TTP_payments" WHERE tour_guid = v_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = v_guid;
+            SELECT GREATEST(COALESCE(t.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_tour t LEFT JOIN "tbl_TTP_payments" p ON p.tour_guid = t.guid
+            WHERE t.guid = v_guid GROUP BY t.guid, t.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = v_guid;
           END IF;
           IF TG_OP = 'UPDATE' AND OLD.tour_guid IS NOT NULL AND OLD.tour_guid IS DISTINCT FROM NEW.tour_guid THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_TTP_payments" WHERE tour_guid = OLD.tour_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = OLD.tour_guid;
+            SELECT GREATEST(COALESCE(t.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_tour t LEFT JOIN "tbl_TTP_payments" p ON p.tour_guid = t.guid
+            WHERE t.guid = OLD.tour_guid GROUP BY t.guid, t.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = OLD.tour_guid;
           END IF;
 
           -- Transfer
@@ -1400,12 +1422,16 @@ export class TotalCalculationsService implements OnModuleInit {
             v_guid := NEW.transfer_guid;
           END IF;
           IF v_guid IS NOT NULL THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_TTP_payments" WHERE transfer_guid = v_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = v_guid;
+            SELECT GREATEST(COALESCE(tr.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_transfer tr LEFT JOIN "tbl_TTP_payments" p ON p.transfer_guid = tr.guid
+            WHERE tr.guid = v_guid GROUP BY tr.guid, tr.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = v_guid;
           END IF;
           IF TG_OP = 'UPDATE' AND OLD.transfer_guid IS NOT NULL AND OLD.transfer_guid IS DISTINCT FROM NEW.transfer_guid THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_TTP_payments" WHERE transfer_guid = OLD.transfer_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = OLD.transfer_guid;
+            SELECT GREATEST(COALESCE(tr.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_transfer tr LEFT JOIN "tbl_TTP_payments" p ON p.transfer_guid = tr.guid
+            WHERE tr.guid = OLD.transfer_guid GROUP BY tr.guid, tr.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = OLD.transfer_guid;
           END IF;
 
           -- Package
@@ -1415,12 +1441,16 @@ export class TotalCalculationsService implements OnModuleInit {
             v_guid := NEW.package_guid;
           END IF;
           IF v_guid IS NOT NULL THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_TTP_payments" WHERE package_guid = v_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = v_guid;
+            SELECT GREATEST(COALESCE(pk.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_package pk LEFT JOIN "tbl_TTP_payments" p ON p.package_guid = pk.guid
+            WHERE pk.guid = v_guid GROUP BY pk.guid, pk.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = v_guid;
           END IF;
           IF TG_OP = 'UPDATE' AND OLD.package_guid IS NOT NULL AND OLD.package_guid IS DISTINCT FROM NEW.package_guid THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid FROM "tbl_TTP_payments" WHERE package_guid = OLD.package_guid;
-            UPDATE tbl_total_calculations SET credit_price = v_total_paid, "updatedAt" = NOW() WHERE guid = OLD.package_guid;
+            SELECT GREATEST(COALESCE(pk.price, 0) - COALESCE(SUM(p.amount), 0), 0) INTO v_total_unpaid
+            FROM tbl_package pk LEFT JOIN "tbl_TTP_payments" p ON p.package_guid = pk.guid
+            WHERE pk.guid = OLD.package_guid GROUP BY pk.guid, pk.price;
+            UPDATE tbl_total_calculations SET credit_price = COALESCE(v_total_unpaid, 0), "updatedAt" = NOW() WHERE guid = OLD.package_guid;
           END IF;
 
           IF TG_OP = 'DELETE' THEN
@@ -1459,7 +1489,7 @@ export class TotalCalculationsService implements OnModuleInit {
           FROM tbl_employees 
           WHERE guid = NEW.opr_guid;
 
-          SELECT COALESCE(SUM(amount), 0) INTO v_credit_price 
+          SELECT GREATEST(COALESCE(NEW.price, 0) - COALESCE(SUM(amount), 0), 0) INTO v_credit_price 
           FROM tbl_trans_payments 
           WHERE translation_guid = NEW.guid;
 
@@ -1548,22 +1578,26 @@ export class TotalCalculationsService implements OnModuleInit {
           END IF;
 
           IF v_guid IS NOT NULL THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid 
-            FROM tbl_trans_payments 
-            WHERE translation_guid = v_guid;
+            SELECT GREATEST(COALESCE(gt.price, 0) - COALESCE(SUM(tp.amount), 0), 0) INTO v_total_paid 
+            FROM tbl_general_translations gt
+            LEFT JOIN tbl_trans_payments tp ON tp.translation_guid = gt.guid
+            WHERE gt.guid = v_guid
+            GROUP BY gt.guid, gt.price;
 
             UPDATE tbl_total_calculations 
-            SET credit_price = v_total_paid, "updatedAt" = NOW() 
+            SET credit_price = COALESCE(v_total_paid, 0), "updatedAt" = NOW() 
             WHERE guid = v_guid;
           END IF;
 
           IF TG_OP = 'UPDATE' AND OLD.translation_guid IS NOT NULL AND OLD.translation_guid IS DISTINCT FROM NEW.translation_guid THEN
-            SELECT COALESCE(SUM(amount), 0) INTO v_total_paid 
-            FROM tbl_trans_payments 
-            WHERE translation_guid = OLD.translation_guid;
+            SELECT GREATEST(COALESCE(gt.price, 0) - COALESCE(SUM(tp.amount), 0), 0) INTO v_total_paid 
+            FROM tbl_general_translations gt
+            LEFT JOIN tbl_trans_payments tp ON tp.translation_guid = gt.guid
+            WHERE gt.guid = OLD.translation_guid
+            GROUP BY gt.guid, gt.price;
 
             UPDATE tbl_total_calculations 
-            SET credit_price = v_total_paid, "updatedAt" = NOW() 
+            SET credit_price = COALESCE(v_total_paid, 0), "updatedAt" = NOW() 
             WHERE guid = OLD.translation_guid;
           END IF;
 
@@ -1621,7 +1655,7 @@ export class TotalCalculationsService implements OnModuleInit {
           COALESCE(gt.price, 0),
           'TMT',
           COALESCE(gt.price, 0) - COALESCE(gt.expense_price, 0),
-          COALESCE((SELECT SUM(tp.amount) FROM tbl_trans_payments tp WHERE tp.translation_guid = gt.guid), 0),
+          COALESCE(gt.price, 0) - COALESCE((SELECT SUM(tp.amount) FROM tbl_trans_payments tp WHERE tp.translation_guid = gt.guid), 0),
           FALSE,
           COALESCE(gt."createdAt", NOW()),
           NOW()
@@ -1686,7 +1720,7 @@ export class TotalCalculationsService implements OnModuleInit {
             COALESCE(NEW.price, 0),
             COALESCE(NEW.currency, 'TMT'),
             0,
-            0,
+            COALESCE(NEW.price, 0),
             FALSE,
             NOW(),
             NOW()
@@ -1932,8 +1966,8 @@ export class TotalCalculationsService implements OnModuleInit {
           WHERE guid = NEW.receiver_opr_guid;
 
           SELECT
-            COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'TMT' THEN amount ELSE 0 END), 0),
-            COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'USD' THEN amount ELSE 0 END), 0)
+            GREATEST(COALESCE(NEW.price_tmt, 0) - COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'TMT' THEN amount ELSE 0 END), 0), 0),
+            GREATEST(COALESCE(NEW.price_usd, 0) - COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'USD' THEN amount ELSE 0 END), 0), 0)
           INTO v_credit_tmt, v_credit_usd
           FROM tbl_visa_payments
           WHERE visa_guid = NEW.guid;
@@ -2028,15 +2062,17 @@ export class TotalCalculationsService implements OnModuleInit {
 
           IF v_target_visa_guid IS NOT NULL THEN
             SELECT
-              COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'TMT' THEN amount ELSE 0 END), 0),
-              COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'USD' THEN amount ELSE 0 END), 0)
+              GREATEST(COALESCE(v.price_tmt, 0) - COALESCE(SUM(CASE WHEN UPPER(TRIM(vp.currency)) = 'TMT' THEN vp.amount ELSE 0 END), 0), 0),
+              GREATEST(COALESCE(v.price_usd, 0) - COALESCE(SUM(CASE WHEN UPPER(TRIM(vp.currency)) = 'USD' THEN vp.amount ELSE 0 END), 0), 0)
             INTO v_credit_tmt, v_credit_usd
-            FROM tbl_visa_payments
-            WHERE visa_guid = v_target_visa_guid;
+            FROM tbl_visa v
+            LEFT JOIN tbl_visa_payments vp ON vp.visa_guid = v.guid
+            WHERE v.guid = v_target_visa_guid
+            GROUP BY v.guid, v.price_tmt, v.price_usd;
 
             UPDATE tbl_total_calculations
-            SET credit_price = v_credit_tmt,
-                credit_usd   = v_credit_usd,
+            SET credit_price = COALESCE(v_credit_tmt, 0),
+                credit_usd   = COALESCE(v_credit_usd, 0),
                 "updatedAt"  = NOW()
             WHERE guid = v_target_visa_guid;
           END IF;
@@ -2044,15 +2080,17 @@ export class TotalCalculationsService implements OnModuleInit {
           -- Handle UPDATE where visa_guid changed
           IF TG_OP = 'UPDATE' AND OLD.visa_guid IS NOT NULL AND OLD.visa_guid IS DISTINCT FROM NEW.visa_guid THEN
             SELECT
-              COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'TMT' THEN amount ELSE 0 END), 0),
-              COALESCE(SUM(CASE WHEN UPPER(TRIM(currency)) = 'USD' THEN amount ELSE 0 END), 0)
+              GREATEST(COALESCE(v.price_tmt, 0) - COALESCE(SUM(CASE WHEN UPPER(TRIM(vp.currency)) = 'TMT' THEN vp.amount ELSE 0 END), 0), 0),
+              GREATEST(COALESCE(v.price_usd, 0) - COALESCE(SUM(CASE WHEN UPPER(TRIM(vp.currency)) = 'USD' THEN vp.amount ELSE 0 END), 0), 0)
             INTO v_credit_tmt, v_credit_usd
-            FROM tbl_visa_payments
-            WHERE visa_guid = OLD.visa_guid;
+            FROM tbl_visa v
+            LEFT JOIN tbl_visa_payments vp ON vp.visa_guid = v.guid
+            WHERE v.guid = OLD.visa_guid
+            GROUP BY v.guid, v.price_tmt, v.price_usd;
 
             UPDATE tbl_total_calculations
-            SET credit_price = v_credit_tmt,
-                credit_usd   = v_credit_usd,
+            SET credit_price = COALESCE(v_credit_tmt, 0),
+                credit_usd   = COALESCE(v_credit_usd, 0),
                 "updatedAt"  = NOW()
             WHERE guid = OLD.visa_guid;
           END IF;
@@ -2071,6 +2109,78 @@ export class TotalCalculationsService implements OnModuleInit {
         CREATE TRIGGER trg_sync_visa_payment_to_total_calculations
         AFTER INSERT OR UPDATE OR DELETE ON tbl_visa_payments
         FOR EACH ROW EXECUTE FUNCTION sync_visa_payment_to_total_calculations();
+      `);
+
+      // -------------------------------------------------------------
+      // Recalculate credit_price / credit_usd for all existing rows
+      // -------------------------------------------------------------
+      await sequelize.query(`
+        UPDATE tbl_total_calculations tc
+        SET credit_price = GREATEST(COALESCE(b.sale_price, 0) - COALESCE(p.paid, 0), 0)
+        FROM tbl_b2b b
+        LEFT JOIN (SELECT b2b_guid, SUM(amount) AS paid FROM tbl_ticket_payments GROUP BY b2b_guid) p ON p.b2b_guid = b.guid
+        WHERE tc.guid = b.guid;
+
+        UPDATE tbl_total_calculations tc
+        SET credit_price = GREATEST(COALESCE(a.price, 0) - COALESCE(p.paid, 0), 0)
+        FROM tbl_airway a
+        LEFT JOIN (SELECT airway_guid, SUM(amount) AS paid FROM "tbl_HAR_payments" WHERE airway_guid IS NOT NULL GROUP BY airway_guid) p ON p.airway_guid = a.guid
+        WHERE tc.guid = a.guid;
+
+        UPDATE tbl_total_calculations tc
+        SET credit_price = GREATEST(COALESCE(r.price, 0) - COALESCE(p.paid, 0), 0)
+        FROM tbl_railway r
+        LEFT JOIN (SELECT railway_guid, SUM(amount) AS paid FROM "tbl_HAR_payments" WHERE railway_guid IS NOT NULL GROUP BY railway_guid) p ON p.railway_guid = r.guid
+        WHERE tc.guid = r.guid;
+
+        UPDATE tbl_total_calculations tc
+        SET credit_price = GREATEST(COALESCE(h.price, 0) - COALESCE(p.paid, 0), 0)
+        FROM tbl_hotel h
+        LEFT JOIN (SELECT hotel_guid, SUM(amount) AS paid FROM "tbl_HAR_payments" WHERE hotel_guid IS NOT NULL GROUP BY hotel_guid) p ON p.hotel_guid = h.guid
+        WHERE tc.guid = h.guid;
+
+        UPDATE tbl_total_calculations tc
+        SET credit_price = GREATEST(COALESCE(t.price, 0) - COALESCE(p.paid, 0), 0)
+        FROM tbl_tour t
+        LEFT JOIN (SELECT tour_guid, SUM(amount) AS paid FROM "tbl_TTP_payments" WHERE tour_guid IS NOT NULL GROUP BY tour_guid) p ON p.tour_guid = t.guid
+        WHERE tc.guid = t.guid;
+
+        UPDATE tbl_total_calculations tc
+        SET credit_price = GREATEST(COALESCE(tr.price, 0) - COALESCE(p.paid, 0), 0)
+        FROM tbl_transfer tr
+        LEFT JOIN (SELECT transfer_guid, SUM(amount) AS paid FROM "tbl_TTP_payments" WHERE transfer_guid IS NOT NULL GROUP BY transfer_guid) p ON p.transfer_guid = tr.guid
+        WHERE tc.guid = tr.guid;
+
+        UPDATE tbl_total_calculations tc
+        SET credit_price = GREATEST(COALESCE(pk.price, 0) - COALESCE(p.paid, 0), 0)
+        FROM tbl_package pk
+        LEFT JOIN (SELECT package_guid, SUM(amount) AS paid FROM "tbl_TTP_payments" WHERE package_guid IS NOT NULL GROUP BY package_guid) p ON p.package_guid = pk.guid
+        WHERE tc.guid = pk.guid;
+
+        UPDATE tbl_total_calculations tc
+        SET credit_price = GREATEST(COALESCE(gt.price, 0) - COALESCE(p.paid, 0), 0)
+        FROM tbl_general_translations gt
+        LEFT JOIN (SELECT translation_guid, SUM(amount) AS paid FROM tbl_trans_payments WHERE translation_guid IS NOT NULL GROUP BY translation_guid) p ON p.translation_guid = gt.guid
+        WHERE tc.guid = gt.guid;
+
+        UPDATE tbl_total_calculations tc
+        SET credit_price = COALESCE(rl.price, 0)
+        FROM tbl_refferal_letter rl
+        WHERE tc.guid = rl.guid;
+
+        UPDATE tbl_total_calculations tc
+        SET credit_price = GREATEST(COALESCE(v.price_tmt, 0) - COALESCE(p.paid_tmt, 0), 0),
+            credit_usd   = GREATEST(COALESCE(v.price_usd, 0) - COALESCE(p.paid_usd, 0), 0)
+        FROM tbl_visa v
+        LEFT JOIN (
+          SELECT visa_guid,
+            SUM(CASE WHEN UPPER(TRIM(currency)) = 'TMT' THEN amount ELSE 0 END) AS paid_tmt,
+            SUM(CASE WHEN UPPER(TRIM(currency)) = 'USD' THEN amount ELSE 0 END) AS paid_usd
+          FROM tbl_visa_payments
+          WHERE visa_guid IS NOT NULL
+          GROUP BY visa_guid
+        ) p ON p.visa_guid = v.guid
+        WHERE tc.guid = v.guid;
       `);
 
       console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation, Referral Letter, Aylyk, Cafeteria, Visa we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');

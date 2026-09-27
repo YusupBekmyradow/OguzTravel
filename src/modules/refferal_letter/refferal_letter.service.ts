@@ -167,7 +167,7 @@ export class RefferalLetterService implements OnModuleInit {
         data: formattedData,
         message: this.i18n.t('refferal_letter.created', { lang }),
       };
-    } catch (error: any) {
+    } catch (error: any) { console.log(error)
       await transaction.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.createFailed', { lang }), error);
     }
@@ -276,7 +276,7 @@ export class RefferalLetterService implements OnModuleInit {
         },
         message: this.i18n.t('refferal_letter.listFetched', { lang }),
       };
-    } catch (error: any) {
+    } catch (error: any) { console.log(error)
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.fetchFailed', { lang }), error);
     }
   }

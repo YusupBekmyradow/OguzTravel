@@ -212,7 +212,7 @@ export class VisaService {
         data: { ...this.formatVisaPassport(newVisa), paymentStats },
         message: this.i18n.t('visa.created', { lang })
       };
-    } catch (error: any) {
+    } catch (error: any) { console.log(error)
       await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('visa.createFailed', { lang }), error);
     }
@@ -276,7 +276,8 @@ export class VisaService {
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
         message: this.i18n.t('visa.listFetched', { lang })
       };
-    } catch (error: any) {
+    } catch (error: any) { console.log(error);
+  
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('visa.fetchFailed', { lang }), error);
     }
   }

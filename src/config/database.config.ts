@@ -55,6 +55,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
     database: isDev ? process.env.LOCAL_DB_NAME : process.env.REMOTE_DB_NAME,
     autoLoadModels: true,
     synchronize: true,
+   // sync: { alter: true }, /// automat clomn create
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
       Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria, TotalCalculation, Category, Salary, SalaryMonth]

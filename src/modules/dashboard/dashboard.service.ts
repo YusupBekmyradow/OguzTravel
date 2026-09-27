@@ -54,8 +54,8 @@ const SALES_COND = `(tc.is_manual = FALSE
   AND tc.category_guid IN (${SALE_CATEGORIES})
   AND NOT (tc.category_guid = '${SYSTEM_CATEGORIES.CAFETERIA}' AND COALESCE(tc.sale_price, 0) = 0))`;
 const NOT_REFUND = `UPPER(COALESCE(tc.status, '')) <> 'REFUND'`;
-/** Unpaid remainder of a sale; credit_price holds the amount already paid. */
-const UNPAID = `GREATEST(COALESCE(tc.sale_price, 0) - COALESCE(tc.credit_price, 0), 0)`;
+/** Unpaid remainder of a sale; credit_price holds the unpaid remaining balance. */
+const UNPAID = `COALESCE(tc.credit_price, 0)`;
 const RECEIVABLE = `CASE WHEN LOWER(COALESCE(tc.status, '')) = 'notpaid' THEN ${UNPAID} ELSE 0 END`;
 const CURRENCY = `UPPER(TRIM(tc.currency))`;
 /** USD amounts stored in dual-currency rows (e.g. Visa). Always go to USD bucket. */
