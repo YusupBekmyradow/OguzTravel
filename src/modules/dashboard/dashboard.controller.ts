@@ -5,81 +5,66 @@ import { DashboardService } from './dashboard.service';
 import { DashboardFilterDto, GetSummaryFilterDto } from './dto/dashboard-filter.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@ApiTags('Dashboard')
-@ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+// @ApiTags('Dashboard')
+// @ApiBearerAuth('bearerAuth')
+// @UseGuards(JwtAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) { }
 
 
-  @Get('/get-summary')
-  async getSummary(
+  @Get('admin-cards-summary')
+  async getSummary(@Query() filters: GetSummaryFilterDto) {
+    return await this.dashboardService.getDashboardSummary(filters);
+  }
+
+
+  @Get('admin-chart-data')
+  async getChartData(
     @Query() filters: GetSummaryFilterDto,
-    @Req() req: any,
-    @I18nLang() lang: string = 'tk',
+    @Query('currency') currency?: 'USD' | 'TMT',
   ) {
-    return this.dashboardService.getSummary(filters, req?.user, lang);
-  }
-
-  @Get('/get-operators-rating')
-  async getOperatorsRating(@Query() filters: DashboardFilterDto, @Req() req: any) {
-    return this.dashboardService.getOperatorsRating(filters, req?.user);
-  }
-
-
-  @Get('/get-categories-rating')
-  async getCategoryRating(
-    @Query() filters: DashboardFilterDto,
-    @Req() req: any,
-    @I18nLang() lang: string = 'tk',
-  ) {
-    return this.dashboardService.getCategoryRating(filters, req?.user, lang);
-  }
-
-  @Get('/offices-rating')
-  async getOfficesRating(@Query() filters: GetSummaryFilterDto, @Req() req: any, @I18nLang() lang: string = 'tk',) {
-    return this.dashboardService.getOfficesRating(filters, req?.user, lang);
+    return await this.dashboardService.getDashboardChartData({
+      ...filters,
+      currency: currency || 'TMT',
+    });
   }
 
 
-
-  @ApiQuery({ name: 'start_date', required: false, type: String })
-  @ApiQuery({ name: 'end_date', required: false, type: String })
-  @ApiQuery({ name: 'currency', required: false, type: String })
-  @Get('/one-offices')
-  async getOneOffices(
-    @Query() filters: { start_date?: string; end_date?: string; currency?: string },
-    @I18nLang() lang: string = 'tk',
-  ) {
-    return this.dashboardService.getOneOffices(filters, lang);
-  }
-
-
-  @Get('/admin-status-analytics')
-  async getStatusAnalytics(
-    @Query() filters: DashboardFilterDto,
-  ) {
-    return this.dashboardService.getStatusAnalytics(filters);
-  }
-
-
-  @Get('category-detail/:guid')
-  async getCategoryDetailAnalytics(
-    @Param('guid') guid: string,
+  @Get('admin-by-status')
+  async getStatusSummary(
     @Query() filters: GetSummaryFilterDto,
-    @Req() req: any,
+    @Query('currency') currency?: 'USD' | 'TMT',
   ) {
-    return this.dashboardService.getCategoryDetailAnalytics(guid, filters, req?.user);
+    return await this.dashboardService.getDashboardStatusSummary({
+      ...filters,
+      currency: currency || 'TMT',
+    });
   }
 
-  @Get('category-detail/:guid/top-operators')
-  async getCategoryTopOperators(
-    @Param('guid') guid: string,
-    @Query() filters: DashboardFilterDto,
-    @Req() req: any,
+
+  @Get('adm-mal-by-operators')
+  async getOperatorsRanking(
+    @Query() filters: GetSummaryFilterDto,
+    @Query('currency') currency?: 'USD' | 'TMT',
   ) {
-    return this.dashboardService.getTopOperators(guid, filters, req?.user);
+    return await this.dashboardService.getOperatorsRanking({
+      ...filters,
+      currency: currency || 'TMT',
+    });
   }
+
+
+  @Get('mal-by-categories')
+  async getCategoriesRanking(
+    @Query() filters: GetSummaryFilterDto,
+    @Query('currency') currency?: 'USD' | 'TMT',
+  ) {
+    return await this.dashboardService.getCategoriesRanking({
+      ...filters,
+      currency: currency || 'TMT',
+    });
+  }
+
 }
 
