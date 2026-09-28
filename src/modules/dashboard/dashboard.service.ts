@@ -96,8 +96,7 @@ export class DashboardService {
 
 
 
-
-  async getDashboardChartData(filters: GetSummaryFilterDto & { currency?: 'USD' | 'TMT' }) {
+async getDashboardChartData(filters: GetSummaryFilterDto & { currency?: 'USD' | 'TMT' }) {
     let { start_date, end_date, period_preset, office_guid, currency = 'TMT' } = filters;
 
     let currentStart: Date = new Date();
@@ -136,13 +135,31 @@ export class DashboardService {
       groupType = 'month';
     }
 
+    // 🌟 1. ADIM: Seçilen başlangıç tarihinden ÖNCEKİ tüm geçmiş kâr/bakiye toplamını buluyoruz (Devreden bakiye)
+    const priorWhere: any = {
+      datetime: { [Op.lt]: currentStart },
+      currency: currency,
+    };
+    if (office_guid) {
+      priorWhere.office_guid = office_guid;
+    }
+
+    const priorSumResult = await this.totalCalculationModel.findOne({
+      where: priorWhere,
+      attributes: [[fn('SUM', col('profit')), 'total_prior_profit']],
+      raw: true,
+    });
+
+    let runningAccumulatedProfit = Number((priorSumResult as any)?.total_prior_profit || 0);
+
+    // 2. ADIM: Asıl tarih aralığındaki verileri çekme
     const baseWhere: any = {
       datetime: { [Op.between]: [currentStart, currentEnd] },
-      currency: currency, // Para birimi filtresi (TMT veya USD)
+      currency: currency,
     };
 
     if (office_guid) {
-      baseWhere.office_guid = office_guid; // Ofis filtresi
+      baseWhere.office_guid = office_guid;
     }
 
     let groupFormat = 'YYYY-MM-DD';
@@ -153,7 +170,7 @@ export class DashboardService {
     }
 
     const formattedDateLiteral = literal(`TO_CHAR(datetime, '${groupFormat}')`);
-
+    
     const saleColExpression = currency === 'USD'
       ? literal('COALESCE(sale_price, 0) + COALESCE(sale_price_usd, 0)')
       : col('sale_price');
@@ -162,9 +179,8 @@ export class DashboardService {
       ? literal('COALESCE(credit_price, 0) + COALESCE(credit_usd, 0)')
       : col('credit_price');
 
-    // 🌟 BURASI EKLENDİ: Net price da diğerleri gibi filtreden geçip SUM ile toplanıyor
     const netPriceColExpression = currency === 'USD'
-      ? literal('COALESCE(net_price, 0)') // Eğer USD için ayrı net_price_usd kolonun varsa burayı güncelleyebilirsin, yoksa direkt net_price
+      ? literal('COALESCE(net_price, 0)')
       : col('net_price');
 
     const results = await this.totalCalculationModel.findAll({
@@ -174,7 +190,7 @@ export class DashboardService {
         [fn('COUNT', col('guid')), 'sales_count'],
         [fn('SUM', saleColExpression), 'sale_price'],
         [fn('SUM', creditColExpression), 'credit_price'],
-        [fn('SUM', netPriceColExpression), 'net_price'], // 🌟 Net price toplamı buraya eklendi
+        [fn('SUM', netPriceColExpression), 'net_price'],
         [fn('SUM', col('profit')), 'profit'],
       ],
       group: [formattedDateLiteral as any],
@@ -182,14 +198,13 @@ export class DashboardService {
       raw: true,
     });
 
-    // Veritabanından gelenleri Map'e yazarken net_price'ı da ekliyoruz
     const dataMap = new Map<string, any>();
     results.forEach((row: any) => {
       dataMap.set(row.period, {
         sales_count: Number(row.sales_count || 0),
         sale_price: Number(row.sale_price || 0),
         credit_price: Number(row.credit_price || 0),
-        net_price: Number(row.net_price || 0), // 🌟 O döneme ait net price toplamı
+        net_price: Number(row.net_price || 0),
         profit: Number(row.profit || 0),
         currency: currency,
       });
@@ -198,6 +213,7 @@ export class DashboardService {
     const filledResults: any[] = [];
     let iterDate = new Date(currentStart);
 
+    // 3. ADIM: Döngüyle gün/ay bazında ilerleyip `last_profit` (kümülatif bakiye) değerini üstüne ekleyerek oluşturuyoruz
     if (groupType === 'day') {
       while (iterDate <= currentEnd) {
         const year = iterDate.getFullYear();
@@ -205,19 +221,24 @@ export class DashboardService {
         const day = String(iterDate.getDate()).padStart(2, '0');
         const periodStr = `${year}-${month}-${day}`;
 
-        if (dataMap.has(periodStr)) {
-          filledResults.push({ period: periodStr, ...dataMap.get(periodStr) });
-        } else {
-          filledResults.push({
-            period: periodStr,
-            sales_count: 0,
-            sale_price: 0,
-            credit_price: 0,
-            net_price: 0, // 🌟 Boş günlerde 0 olarak atanıyor
-            profit: 0,
-            currency: currency,
-          });
-        }
+        let currentDayData = dataMap.get(periodStr) || {
+          sales_count: 0,
+          sale_price: 0,
+          credit_price: 0,
+          net_price: 0,
+          profit: 0,
+          currency: currency,
+        };
+
+        // O günkü kârı kümülatif toplama ekliyoruz
+        runningAccumulatedProfit += currentDayData.profit;
+
+        filledResults.push({
+          period: periodStr,
+          ...currentDayData,
+          last_profit: runningAccumulatedProfit, // 🌟 Resimdeki "Ahyrky galyndy" mantığı gibi kümülatif bakiye
+        });
+
         iterDate.setDate(iterDate.getDate() + 1);
       }
     } else if (groupType === 'month') {
@@ -228,30 +249,39 @@ export class DashboardService {
         const month = String(iterDate.getMonth() + 1).padStart(2, '0');
         const periodStr = `${year}-${month}`;
 
-        if (dataMap.has(periodStr)) {
-          filledResults.push({ period: periodStr, ...dataMap.get(periodStr) });
-        } else {
-          filledResults.push({
-            period: periodStr,
-            sales_count: 0,
-            sale_price: 0,
-            credit_price: 0,
-            net_price: 0, // 🌟 Boş aylarda 0 olarak atanıyor
-            profit: 0,
-            currency: currency,
-          });
-        }
+        let currentMonthData = dataMap.get(periodStr) || {
+          sales_count: 0,
+          sale_price: 0,
+          credit_price: 0,
+          net_price: 0,
+          profit: 0,
+          currency: currency,
+        };
+
+        // O ayki kârı kümülatif toplama ekliyoruz
+        runningAccumulatedProfit += currentMonthData.profit;
+
+        filledResults.push({
+          period: periodStr,
+          ...currentMonthData,
+          last_profit: runningAccumulatedProfit, // 🌟 Aylık kümülatif bakiye
+        });
+
         iterDate.setMonth(iterDate.getMonth() + 1);
       }
     } else {
       results.forEach((row: any) => {
+        let rowProfit = Number(row.profit || 0);
+        runningAccumulatedProfit += rowProfit;
+
         filledResults.push({
           period: row.period,
           sales_count: Number(row.sales_count || 0),
           sale_price: Number(row.sale_price || 0),
           credit_price: Number(row.credit_price || 0),
           net_price: Number(row.net_price || 0),
-          profit: Number(row.profit || 0),
+          profit: rowProfit,
+          last_profit: runningAccumulatedProfit,
           currency: currency,
         });
       });
@@ -259,7 +289,6 @@ export class DashboardService {
 
     return filledResults;
   }
-
 
 
   async getDashboardStatusSummary(filters: GetSummaryFilterDto & { currency?: 'USD' | 'TMT' }) {
