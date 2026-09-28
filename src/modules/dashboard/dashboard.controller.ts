@@ -13,10 +13,10 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) { }
 
 
-  @Get('admin-vs-maliya-cards')
+  @Get('/admin-vs-maliya-vs-office-cards')
   async getSummary(@Query() filters: GetSummaryFilterDto) {
     return await this.dashboardService.getDashboardSummary(filters);
-  }
+  } ///test edilen
 
 
   @Get('admin-chart-data')
@@ -40,7 +40,7 @@ export class DashboardController {
       ...filters,
       currency: currency || 'TMT',
     });
-  }
+  } //test-edilen
 
 
   @Get('/admin-vs-maliya-operators')
@@ -52,7 +52,7 @@ export class DashboardController {
       ...filters,
       currency: currency || 'TMT',
     });
-  }
+  } //test edilen
 
 
   @Get('/maliya-by-categories')
@@ -76,6 +76,6 @@ export class DashboardController {
       ...filters,
       currency: currency || 'TMT',
     });
-  }
+  } ///test-edilen
 }
 

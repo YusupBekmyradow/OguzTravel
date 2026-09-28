@@ -17,10 +17,9 @@ export class DashboardService {
   ) { }
 
   async getDashboardSummary(filters: GetSummaryFilterDto) {
-    let { start_date, end_date, period_preset, office_guid } = filters;
+    let { start_date, end_date, period_preset, office_guid, currency = 'TMT' } = filters;
     let currentStart: Date = new Date();
     let currentEnd: Date = new Date();
-
     if (period_preset) {
       const now = new Date();
       if (period_preset === 'this_month') {
@@ -62,12 +61,16 @@ export class DashboardService {
       prevWhere.office_guid = office_guid;
     }
 
-    const currentUsdData = await this.calculateMetrics(baseWhere, 'USD');
-    const prevUsdData = await this.calculateMetrics(prevWhere, 'USD');
-    const currentTmtData = await this.calculateMetrics(baseWhere, 'TMT');
-    const prevTmtData = await this.calculateMetrics(prevWhere, 'TMT');
+    const currencyParam = (currency as 'USD' | 'TMT') || 'TMT';
 
-    const salesCountStats = this.calcPercentage(currentUsdData.count, prevUsdData.count);
+    const currentUsdData = await this.calculateMetrics(baseWhere, 'USD', currencyParam);
+    const prevUsdData = await this.calculateMetrics(prevWhere, 'USD', currencyParam);
+    const currentTmtData = await this.calculateMetrics(baseWhere, 'TMT', currencyParam);
+    const prevTmtData = await this.calculateMetrics(prevWhere, 'TMT', currencyParam);
+    const activeCurrentCount = currency === 'USD' ? currentUsdData.count : currentTmtData.count;
+    const activePrevCount = currency === 'USD' ? prevUsdData.count : prevTmtData.count;
+    const salesCountStats = this.calcPercentage(activeCurrentCount, activePrevCount);
+
     const salePriceUsdStats = this.calcPercentage(currentUsdData.totalSale, prevUsdData.totalSale);
     const salePriceTmtStats = this.calcPercentage(currentTmtData.totalSale, prevTmtData.totalSale);
 
@@ -82,7 +85,7 @@ export class DashboardService {
 
     return {
       sales_count: {
-        value: currentUsdData.count,
+        value: activeCurrentCount,
         ...salesCountStats,
       },
       sale_price: {
@@ -101,6 +104,58 @@ export class DashboardService {
         usd: { value: currentUsdData.totalProfit, ...profitUsdStats },
         tmt: { value: currentTmtData.totalProfit, ...profitTmtStats },
       },
+    };
+  }
+
+
+
+
+
+  private async calculateMetrics(
+    whereCondition: any,
+    currencyType: 'USD' | 'TMT',
+    filterCurrency?: 'USD' | 'TMT'
+  ) {
+    const activeCountCurrency = filterCurrency || currencyType;
+
+    const countExpression = activeCountCurrency === 'USD'
+      ? literal(`COUNT(CASE WHEN currency = 'USD' OR COALESCE(sale_price_usd, 0) > 0 OR COALESCE(credit_usd, 0) > 0 THEN 1 END)`)
+      : literal(`COUNT(CASE WHEN currency = 'TMT' THEN 1 END)`);
+
+    const saleColExpression = currencyType === 'USD'
+      ? literal(`SUM(CASE WHEN currency = 'USD' THEN COALESCE(sale_price, 0) ELSE 0 END + COALESCE(sale_price_usd, 0))`)
+      : literal(`SUM(CASE WHEN currency = 'TMT' THEN COALESCE(sale_price, 0) ELSE 0 END)`);
+
+    const creditColExpression = currencyType === 'USD'
+      ? literal(`SUM(CASE WHEN currency = 'USD' THEN COALESCE(credit_price, 0) ELSE 0 END + COALESCE(credit_usd, 0))`)
+      : literal(`SUM(CASE WHEN currency = 'TMT' THEN COALESCE(credit_price, 0) ELSE 0 END)`);
+
+    const netPriceColExpression = currencyType === 'USD'
+      ? literal(`SUM(CASE WHEN currency = 'USD' THEN COALESCE(net_price, 0) ELSE 0 END)`)
+      : literal(`SUM(CASE WHEN currency = 'TMT' THEN COALESCE(net_price, 0) ELSE 0 END)`);
+
+    const profitColExpression = currencyType === 'USD'
+      ? literal(`SUM(CASE WHEN currency = 'USD' THEN COALESCE(profit, 0) ELSE 0 END)`)
+      : literal(`SUM(CASE WHEN currency = 'TMT' THEN COALESCE(profit, 0) ELSE 0 END)`);
+
+    const result = await this.totalCalculationModel.findOne({
+      where: whereCondition,
+      attributes: [
+        [countExpression, 'count'],
+        [saleColExpression, 'totalSale'],
+        [creditColExpression, 'totalCredit'],
+        [netPriceColExpression, 'totalNetPrice'],
+        [profitColExpression, 'totalProfit'],
+      ],
+      raw: true,
+    });
+
+    return {
+      count: Number(result?.['count'] || 0),
+      totalSale: Number(result?.['totalSale'] || 0),
+      totalCredit: Number(result?.['totalCredit'] || 0),
+      totalNetPrice: Number(result?.['totalNetPrice'] || 0),
+      totalProfit: Number(result?.['totalProfit'] || 0),
     };
   }
 
@@ -295,6 +350,7 @@ export class DashboardService {
 
   async getDashboardStatusSummary(filters: GetSummaryFilterDto & { currency?: 'USD' | 'TMT' }) {
     let { start_date, end_date, period_preset, office_guid, currency = 'TMT' } = filters;
+    const currencyParam: 'USD' | 'TMT' = (currency as 'USD' | 'TMT') || 'TMT';
 
     let currentStart: Date = new Date();
     let currentEnd: Date = new Date();
@@ -326,41 +382,44 @@ export class DashboardService {
 
     const baseWhere: any = {
       datetime: { [Op.between]: [currentStart, currentEnd] },
-      currency: currency,
     };
+
+    if (currencyParam === 'USD') {
+      baseWhere[Op.or] = [
+        { currency: 'USD' },
+        { sale_price_usd: { [Op.gt]: 0 } },
+        { credit_usd: { [Op.gt]: 0 } },
+      ];
+    } else {
+      baseWhere.currency = 'TMT';
+    }
 
     if (office_guid) {
       baseWhere.office_guid = office_guid;
     }
 
-    const saleColExpression = currency === 'USD'
-      ? literal('COALESCE(sale_price, 0) + COALESCE(sale_price_usd, 0)')
-      : col('sale_price');
-
-    const creditColExpression = currency === 'USD'
-      ? literal('COALESCE(credit_price, 0) + COALESCE(credit_usd, 0)')
-      : col('credit_price');
+    const saleColExpression = currencyParam === 'USD'
+      ? literal('SUM(CASE WHEN currency = \'USD\' THEN COALESCE(sale_price, 0) ELSE 0 END + COALESCE(sale_price_usd, 0))')
+      : literal('SUM(CASE WHEN currency = \'TMT\' THEN COALESCE(sale_price, 0) ELSE 0 END)');
 
     const results = await this.totalCalculationModel.findAll({
       where: baseWhere,
       attributes: [
         'status',
         [fn('COUNT', col('guid')), 'count'],
-        [fn('SUM', saleColExpression), 'total_sale'],
-        [fn('SUM', creditColExpression), 'total_credit'],
+        [saleColExpression, 'total_sale'],
       ],
       group: ['status'],
       raw: true,
     });
 
-    const statusMap: Record<string, { count: number; total_sale: number; total_credit: number }> = {
-      paid: { count: 0, total_sale: 0, total_credit: 0 },
-      notpaid: { count: 0, total_sale: 0, total_credit: 0 },
-      REFUND: { count: 0, total_sale: 0, total_credit: 0 },
-      null: { count: 0, total_sale: 0, total_credit: 0 },
+    const statusMap = {
+      paid: { count: 0, total_sale: 0 },
+      notpaid: { count: 0, total_sale: 0 },
+      REFUND: { count: 0, total_sale: 0 },
+      null: { count: 0, total_sale: 0 },
     };
 
-    let overallTotalCredit = 0;
     let overallTotalCount = 0;
 
     results.forEach((row: any) => {
@@ -369,23 +428,19 @@ export class DashboardService {
 
       const count = Number(row.count || 0);
       const totalSale = Number(row.total_sale || 0);
-      const totalCredit = Number(row.total_credit || 0);
 
       if (statusMap[key]) {
         statusMap[key].count = count;
         statusMap[key].total_sale = totalSale;
-        statusMap[key].total_credit = totalCredit;
       } else {
         statusMap['null'].count += count;
         statusMap['null'].total_sale += totalSale;
-        statusMap['null'].total_credit += totalCredit;
       }
 
-      overallTotalCredit += totalCredit;
       overallTotalCount += count;
     });
 
-    const formatStatusItem = (item: { count: number; total_sale: number; total_credit: number }) => {
+    const formatStatusItem = (item: { count: number; total_sale: number }) => {
       const percentage = overallTotalCount > 0 ? Math.round((item.count / overallTotalCount) * 100) : 0;
       return {
         count: item.count,
@@ -395,8 +450,7 @@ export class DashboardService {
     };
 
     return {
-      currency: currency,
-      overall_total_credit: overallTotalCredit,
+      currency: currencyParam,
       statuses: {
         paid: formatStatusItem(statusMap['paid']),
         notpaid: formatStatusItem(statusMap['notpaid']),
@@ -409,9 +463,9 @@ export class DashboardService {
 
 
 
-
   async getOperatorsRanking(filters: GetSummaryFilterDto & { currency?: 'USD' | 'TMT' }) {
     let { start_date, end_date, period_preset, office_guid, currency = 'TMT' } = filters;
+    const currencyParam: 'USD' | 'TMT' = (currency as 'USD' | 'TMT') || 'TMT';
 
     let currentStart: Date = new Date();
     let currentEnd: Date = new Date();
@@ -444,47 +498,57 @@ export class DashboardService {
     const baseWhere: any = {
       datetime: { [Op.between]: [currentStart, currentEnd] },
       receiver_opr_guid: { [Op.not]: null },
-      currency: currency,
     };
+    if (currencyParam === 'USD') {
+      baseWhere[Op.and] = literal(
+        `(currency = 'USD' OR COALESCE(sale_price_usd, 0) > 0)`
+      );
+    } else {
+      baseWhere.currency = 'TMT';
+    }
 
     if (office_guid) {
       baseWhere.office_guid = office_guid;
     }
+    const saleColExpression = currencyParam === 'USD'
+      ? literal('SUM(CASE WHEN currency = \'USD\' THEN COALESCE(sale_price, 0) ELSE 0 END + COALESCE(sale_price_usd, 0))')
+      : literal('SUM(COALESCE(sale_price, 0))');
 
-    const saleColExpression = currency === 'USD'
-      ? literal('COALESCE(sale_price, 0) + COALESCE(sale_price_usd, 0)')
-      : col('sale_price');
-
-    const profitCol = 'profit';
+    const profitColExpression = literal('SUM(COALESCE(profit, 0))');
 
     const results = await this.totalCalculationModel.findAll({
       where: baseWhere,
       attributes: [
         'receiver_opr_guid',
         [fn('COUNT', col('TotalCalculation.guid')), 'sales_count'],
-        [fn('SUM', saleColExpression), 'total_sale'],
-        [fn('SUM', col(profitCol)), 'total_profit'],
+        [saleColExpression, 'total_sale'],
+        [profitColExpression, 'total_profit'],
       ],
       include: [
         {
           model: Employee,
           as: 'receiver_operator',
           attributes: ['fullName'],
+          required: false,
         },
       ],
-      group: ['receiver_opr_guid', 'receiver_operator.guid', 'receiver_operator.fullName'],
-      order: [[fn('COUNT', col('TotalCalculation.guid')), 'DESC']],
+      group: [
+        'TotalCalculation.receiver_opr_guid',
+        'receiver_operator.guid',
+        'receiver_operator.fullName',
+      ],
       raw: true,
     });
-
-    let overallTotalCount = 0;
+    let overallTotalProfit = 0;
     results.forEach((row: any) => {
-      overallTotalCount += Number(row.sales_count || 0);
+      overallTotalProfit += Number(row.total_profit || 0);
     });
-
-    return results.map((row: any) => {
+    const mappedResults = results.map((row: any) => {
       const salesCount = Number(row.sales_count || 0);
-      const percentage = overallTotalCount > 0 ? Math.round((salesCount / overallTotalCount) * 100) : 0;
+      const profit = Number(row.total_profit || 0);
+      const percentage = overallTotalProfit > 0
+        ? Math.round((profit / overallTotalProfit) * 100)
+        : 0;
 
       return {
         operator_guid: row.receiver_opr_guid,
@@ -492,12 +556,11 @@ export class DashboardService {
         sales_count: salesCount,
         percentage: percentage,
         sale_price: Number(row.total_sale || 0),
-        profit: Number(row.total_profit || 0),
+        profit: profit,
       };
     });
+    return mappedResults.sort((a, b) => b.percentage - a.percentage);
   }
-
-
 
 
 
@@ -620,46 +683,6 @@ export class DashboardService {
 
 
 
-  private async calculateMetrics(whereCondition: any, currencyType: 'USD' | 'TMT') {
-    const queryWhere = {
-      ...whereCondition,
-      currency: currencyType,
-    };
-
-    const saleColExpression = currencyType === 'USD'
-      ? literal('COALESCE(sale_price, 0) + COALESCE(sale_price_usd, 0)')
-      : col('sale_price');
-
-    const creditColExpression = currencyType === 'USD'
-      ? literal('COALESCE(credit_price, 0) + COALESCE(credit_usd, 0)')
-      : col('credit_price');
-
-    const netPriceColExpression = currencyType === 'USD'
-      ? literal('COALESCE(net_price, 0)')
-      : col('net_price');
-
-    const result = await this.totalCalculationModel.findOne({
-      where: queryWhere,
-      attributes: [
-        [fn('COUNT', col('guid')), 'count'],
-        [fn('SUM', saleColExpression), 'totalSale'],
-        [fn('SUM', creditColExpression), 'totalCredit'],
-        [fn('SUM', netPriceColExpression), 'totalNetPrice'],
-        [fn('SUM', col('profit')), 'totalProfit'],
-      ],  
-      raw: true,
-    });
-
-    return {
-      count: Number(result?.['count'] || 0),
-      totalSale: Number(result?.['totalSale'] || 0),
-      totalCredit: Number(result?.['totalCredit'] || 0),
-      totalNetPrice: Number(result?.['totalNetPrice'] || 0),
-      totalProfit: Number(result?.['totalProfit'] || 0),
-    };
-  }
-
-
   private calcPercentage(current: number, previous: number) {
     const diff = current - previous;
     let percentage = 0;
@@ -677,10 +700,8 @@ export class DashboardService {
 
   async getOfficesSummaryData(filters: GetSummaryFilterDto) {
     let { start_date, end_date, period_preset } = filters;
-
     let currentStart: Date = new Date();
     let currentEnd: Date = new Date();
-
     if (period_preset) {
       const now = new Date();
       if (period_preset === 'this_month') {
@@ -706,53 +727,112 @@ export class DashboardService {
       currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
       currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
     }
-
-    // 1. Tüm ofisleri çekiyoruz (Hiç hareketi olmasa bile listede 0 ile görünmesi için)
     const offices = await Office.findAll({ raw: true });
-
-    // 2. Tarih aralığındaki toplamları ofis bazlı gruplayarak çekiyoruz
     const results = await this.totalCalculationModel.findAll({
       where: {
         datetime: { [Op.between]: [currentStart, currentEnd] },
       },
       attributes: [
         'office_guid',
-        [fn('SUM', literal(`CASE WHEN currency = 'USD' THEN COALESCE(sale_price, 0) ELSE 0 END`)), 'sale_price_usd'],
-        [fn('SUM', literal(`CASE WHEN currency = 'TMT' THEN COALESCE(sale_price, 0) ELSE 0 END`)), 'sale_price_tmt'],
-        
-        [fn('SUM', literal(`CASE WHEN currency = 'USD' THEN COALESCE(credit_price, 0) ELSE 0 END`)), 'credit_price_usd'],
-        [fn('SUM', literal(`CASE WHEN currency = 'TMT' THEN COALESCE(credit_price, 0) ELSE 0 END`)), 'credit_price_tmt'],
-
-        [fn('SUM', literal(`CASE WHEN currency = 'USD' THEN COALESCE(profit, 0) ELSE 0 END`)), 'profit_usd'],
-        [fn('SUM', literal(`CASE WHEN currency = 'TMT' THEN COALESCE(profit, 0) ELSE 0 END`)), 'profit_tmt'],
+        [
+          fn(
+            'SUM',
+            literal(
+              `CASE WHEN currency = 'USD' THEN COALESCE(sale_price, 0) ELSE 0 END + COALESCE(sale_price_usd, 0)`
+            )
+          ),
+          'sale_price_usd',
+        ],
+        [
+          fn(
+            'SUM',
+            literal(
+              `CASE WHEN currency = 'TMT' THEN COALESCE(sale_price, 0) ELSE 0 END`
+            )
+          ),
+          'sale_price_tmt',
+        ],
+        [
+          fn(
+            'SUM',
+            literal(
+              `CASE WHEN currency = 'USD' THEN COALESCE(net_price, 0) ELSE 0 END`
+            )
+          ),
+          'net_price_usd',
+        ],
+        [
+          fn(
+            'SUM',
+            literal(
+              `CASE WHEN currency = 'TMT' THEN COALESCE(net_price, 0) ELSE 0 END`
+            )
+          ),
+          'net_price_tmt',
+        ],
+        [
+          fn(
+            'SUM',
+            literal(
+              `CASE WHEN currency = 'USD' THEN COALESCE(credit_price, 0) ELSE 0 END + COALESCE(credit_usd, 0)`
+            )
+          ),
+          'credit_price_usd',
+        ],
+        [
+          fn(
+            'SUM',
+            literal(
+              `CASE WHEN currency = 'TMT' THEN COALESCE(credit_price, 0) ELSE 0 END`
+            )
+          ),
+          'credit_price_tmt',
+        ],
+        [
+          fn(
+            'SUM',
+            literal(
+              `CASE WHEN currency = 'USD' THEN COALESCE(profit, 0) ELSE 0 END`
+            )
+          ),
+          'profit_usd',
+        ],
+        [
+          fn(
+            'SUM',
+            literal(
+              `CASE WHEN currency = 'TMT' THEN COALESCE(profit, 0) ELSE 0 END`
+            )
+          ),
+          'profit_tmt',
+        ],
       ],
       group: ['office_guid'],
       raw: true,
     });
-
-    // Sonuçları hızlı aramak için Map'e çeviriyoruz
-    const dataMap = new Map<string, any>();
+    const dataMap = new Map();
     results.forEach((row: any) => {
       dataMap.set(row.office_guid, row);
     });
 
     let grandTotalSaleUsd = 0;
     let grandTotalSaleTmt = 0;
+    let grandTotalNetUsd = 0;
+    let grandTotalNetTmt = 0;
     let grandTotalCreditUsd = 0;
     let grandTotalCreditTmt = 0;
     let grandTotalProfitUsd = 0;
     let grandTotalProfitTmt = 0;
-
     const totalSalePool = results.reduce((acc: number, row: any) => {
       return acc + Number(row.sale_price_usd || 0) + Number(row.sale_price_tmt || 0);
     }, 0);
-
-    // 3. Ofisleri dönüp hareketi olmayanlara bile 0 vererek mapliyoruz
     const formattedOffices = offices.map((office: any) => {
       const stats = dataMap.get(office.guid) || {};
 
       const saleUsd = Number(stats.sale_price_usd || 0);
       const saleTmt = Number(stats.sale_price_tmt || 0);
+      const netUsd = Number(stats.net_price_usd || 0);
+      const netTmt = Number(stats.net_price_tmt || 0);
       const creditUsd = Number(stats.credit_price_usd || 0);
       const creditTmt = Number(stats.credit_price_tmt || 0);
       const profitUsd = Number(stats.profit_usd || 0);
@@ -760,21 +840,28 @@ export class DashboardService {
 
       grandTotalSaleUsd += saleUsd;
       grandTotalSaleTmt += saleTmt;
+      grandTotalNetUsd += netUsd;
+      grandTotalNetTmt += netTmt;
       grandTotalCreditUsd += creditUsd;
       grandTotalCreditTmt += creditTmt;
       grandTotalProfitUsd += profitUsd;
       grandTotalProfitTmt += profitTmt;
 
       const officeTotal = saleUsd + saleTmt;
-      const percentage = totalSalePool > 0 ? Math.round((officeTotal / totalSalePool) * 100) : 0;
+      const percentageNum = totalSalePool > 0 ? Math.round((officeTotal / totalSalePool) * 100) : 0;
 
       return {
         office_guid: office.guid,
-        name: office.fullName, // Modelindeki fullName JSONB objesi doğrudan geliyor
-        percentage: `${percentage}%`,
+        name: office.fullName,
+        rawPercentage: percentageNum,
+        percentage: `${percentageNum}%`,
         sale_price: {
           usd: saleUsd,
           tmt: saleTmt,
+        },
+        net_price: {
+          usd: netUsd,
+          tmt: netTmt,
         },
         credit_price: {
           usd: creditUsd,
@@ -786,13 +873,19 @@ export class DashboardService {
         },
       };
     });
+    formattedOffices.sort((a, b) => b.rawPercentage - a.rawPercentage);
+    const sortedOffices = formattedOffices.map(({ rawPercentage, ...rest }) => rest);
 
     return {
-      offices: formattedOffices,
+      offices: sortedOffices,
       jemi: {
         sale_price: {
           usd: grandTotalSaleUsd,
           tmt: grandTotalSaleTmt,
+        },
+        net_price: {
+          usd: grandTotalNetUsd,
+          tmt: grandTotalNetTmt,
         },
         credit_price: {
           usd: grandTotalCreditUsd,
