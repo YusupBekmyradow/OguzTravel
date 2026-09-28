@@ -102,30 +102,38 @@ export class DashboardService {
 
     let currentStart: Date = new Date();
     let currentEnd: Date = new Date();
+    let groupType: 'day' | 'week' | 'month' = 'day';
 
     if (period_preset) {
       const now = new Date();
       if (period_preset === 'this_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
         currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        groupType = 'day';
       } else if (period_preset === 'last_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
         currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        groupType = 'day';
       } else if (period_preset === 'last_3_months') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0);
         currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        groupType = 'week';
       } else if (period_preset === 'this_year') {
-        currentStart = new Date(now.getFullYear(), 0, 1);
+        currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
         currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        groupType = 'month';
       }
     } else if (start_date && end_date) {
       currentStart = new Date(start_date);
+      currentStart.setHours(0, 0, 0, 0);
       currentEnd = new Date(end_date);
-      currentEnd.setHours(23, 59, 59);
+      currentEnd.setHours(23, 59, 59, 999);
+      groupType = 'day';
     } else {
       const now = new Date();
-      currentStart = new Date(now.getFullYear(), 0, 1);
+      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
       currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      groupType = 'month';
     }
 
     const baseWhere: any = {
@@ -138,9 +146,9 @@ export class DashboardService {
     }
 
     let groupFormat = 'YYYY-MM-DD';
-    if (period_preset === 'last_3_months') {
+    if (groupType === 'week') {
       groupFormat = 'IYYY-IW';
-    } else if (period_preset === 'this_year') {
+    } else if (groupType === 'month') {
       groupFormat = 'YYYY-MM';
     }
 
@@ -153,8 +161,6 @@ export class DashboardService {
       ? literal('COALESCE(credit_price, 0) + COALESCE(credit_usd, 0)')
       : col('credit_price');
 
-    const profitCol = 'profit';
-
     const results = await this.totalCalculationModel.findAll({
       where: baseWhere,
       attributes: [
@@ -162,23 +168,86 @@ export class DashboardService {
         [fn('COUNT', col('guid')), 'sales_count'],
         [fn('SUM', saleColExpression), 'sale_price'],
         [fn('SUM', creditColExpression), 'credit_price'],
-        [fn('SUM', col(profitCol)), 'profit'],
+        [fn('SUM', col('profit')), 'profit'],
       ],
       group: [formattedDateLiteral as any],
       order: [[formattedDateLiteral as any, 'ASC']],
       raw: true,
     });
 
-    return results.map((row: any) => ({
-      period: row.period,
-      sales_count: Number(row.sales_count || 0),
-      sale_price: Number(row.sale_price || 0),
-      credit_price: Number(row.credit_price || 0),
-      profit: Number(row.profit || 0),
-      currency: currency,
-    }));
-  }
+    // Veritabanından gelenleri hızlı eşleşme için Map'e taşıyalım
+    const dataMap = new Map<string, any>();
+    results.forEach((row: any) => {
+      dataMap.set(row.period, {
+        sales_count: Number(row.sales_count || 0),
+        sale_price: Number(row.sale_price || 0),
+        credit_price: Number(row.credit_price || 0),
+        profit: Number(row.profit || 0),
+        currency: currency,
+      });
+    });
 
+    const filledResults: any[] = [];
+    let iterDate = new Date(currentStart);
+
+    if (groupType === 'day') {
+      while (iterDate <= currentEnd) {
+        const year = iterDate.getFullYear();
+        const month = String(iterDate.getMonth() + 1).padStart(2, '0');
+        const day = String(iterDate.getDate()).padStart(2, '0');
+        const periodStr = `${year}-${month}-${day}`;
+
+        if (dataMap.has(periodStr)) {
+          filledResults.push({ period: periodStr, ...dataMap.get(periodStr) });
+        } else {
+          filledResults.push({
+            period: periodStr,
+            sales_count: 0,
+            sale_price: 0,
+            credit_price: 0,
+            profit: 0,
+            currency: currency,
+          });
+        }
+        iterDate.setDate(iterDate.getDate() + 1);
+      }
+    } else if (groupType === 'month') {
+      iterDate = new Date(currentStart.getFullYear(), 0, 1);
+      const endYear = currentEnd.getFullYear();
+      while (iterDate.getFullYear() <= endYear && iterDate <= currentEnd) {
+        const year = iterDate.getFullYear();
+        const month = String(iterDate.getMonth() + 1).padStart(2, '0');
+        const periodStr = `${year}-${month}`;
+
+        if (dataMap.has(periodStr)) {
+          filledResults.push({ period: periodStr, ...dataMap.get(periodStr) });
+        } else {
+          filledResults.push({
+            period: periodStr,
+            sales_count: 0,
+            sale_price: 0,
+            credit_price: 0,
+            profit: 0,
+            currency: currency,
+          });
+        }
+        iterDate.setMonth(iterDate.getMonth() + 1);
+      }
+    } else {
+      results.forEach((row: any) => {
+        filledResults.push({
+          period: row.period,
+          sales_count: Number(row.sales_count || 0),
+          sale_price: Number(row.sale_price || 0),
+          credit_price: Number(row.credit_price || 0),
+          profit: Number(row.profit || 0),
+          currency: currency,
+        });
+      });
+    }
+
+    return filledResults;
+  }
 
 
 
