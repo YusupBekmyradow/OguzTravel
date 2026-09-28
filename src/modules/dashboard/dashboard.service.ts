@@ -6,6 +6,7 @@ import { GetSummaryFilterDto } from './dto/dashboard-filter.dto';
 import { Sequelize } from 'sequelize-typescript';
 import { Employee } from '../employee/entities/employee.entity';
 import { Category } from '../category/entities/category.entity';
+import { Office } from '../office/entities/office.entity';
 
 @Injectable()
 export class DashboardService {
@@ -111,32 +112,54 @@ export class DashboardService {
 
     let currentStart: Date = new Date();
     let currentEnd: Date = new Date();
+    let groupType: 'day' | 'week' | 'month' = 'day';
 
     if (period_preset) {
       const now = new Date();
       if (period_preset === 'this_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
         currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        groupType = 'day';
       } else if (period_preset === 'last_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
         currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        groupType = 'day';
       } else if (period_preset === 'last_3_months') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0);
         currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        groupType = 'week';
       } else if (period_preset === 'this_year') {
-        currentStart = new Date(now.getFullYear(), 0, 1);
+        currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
         currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        groupType = 'month';
       }
     } else if (start_date && end_date) {
       currentStart = new Date(start_date);
+      currentStart.setHours(0, 0, 0, 0);
       currentEnd = new Date(end_date);
-      currentEnd.setHours(23, 59, 59);
+      currentEnd.setHours(23, 59, 59, 999);
+      groupType = 'day';
     } else {
       const now = new Date();
-      currentStart = new Date(now.getFullYear(), 0, 1);
+      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
       currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      groupType = 'month';
+    }
+    const priorWhere: any = {
+      datetime: { [Op.lt]: currentStart },
+      currency: currency,
+    };
+    if (office_guid) {
+      priorWhere.office_guid = office_guid;
     }
 
+    const priorSumResult = await this.totalCalculationModel.findOne({
+      where: priorWhere,
+      attributes: [[fn('SUM', col('profit')), 'total_prior_profit']],
+      raw: true,
+    });
+
+    let runningAccumulatedProfit = Number((priorSumResult as any)?.total_prior_profit || 0);
     const baseWhere: any = {
       datetime: { [Op.between]: [currentStart, currentEnd] },
       currency: currency,
@@ -147,13 +170,13 @@ export class DashboardService {
     }
 
     let groupFormat = 'YYYY-MM-DD';
-    if (period_preset === 'last_3_months') {
+    if (groupType === 'week') {
       groupFormat = 'IYYY-IW';
-    } else if (period_preset === 'this_year') {
+    } else if (groupType === 'month') {
       groupFormat = 'YYYY-MM';
     }
-
     const formattedDateLiteral = literal(`TO_CHAR(datetime, '${groupFormat}')`);
+
     const saleColExpression = currency === 'USD'
       ? literal('COALESCE(sale_price, 0) + COALESCE(sale_price_usd, 0)')
       : col('sale_price');
@@ -162,7 +185,9 @@ export class DashboardService {
       ? literal('COALESCE(credit_price, 0) + COALESCE(credit_usd, 0)')
       : col('credit_price');
 
-    const profitCol = 'profit';
+    const netPriceColExpression = currency === 'USD'
+      ? literal('COALESCE(net_price, 0)')
+      : col('net_price');
 
     const results = await this.totalCalculationModel.findAll({
       where: baseWhere,
@@ -171,21 +196,98 @@ export class DashboardService {
         [fn('COUNT', col('guid')), 'sales_count'],
         [fn('SUM', saleColExpression), 'sale_price'],
         [fn('SUM', creditColExpression), 'credit_price'],
-        [fn('SUM', col(profitCol)), 'profit'],
+        [fn('SUM', netPriceColExpression), 'net_price'],
+        [fn('SUM', col('profit')), 'profit'],
       ],
       group: [formattedDateLiteral as any],
       order: [[formattedDateLiteral as any, 'ASC']],
       raw: true,
     });
 
-    return results.map((row: any) => ({
-      period: row.period,
-      sales_count: Number(row.sales_count || 0),
-      sale_price: Number(row.sale_price || 0),
-      credit_price: Number(row.credit_price || 0),
-      profit: Number(row.profit || 0),
-      currency: currency,
-    }));
+    const dataMap = new Map<string, any>();
+    results.forEach((row: any) => {
+      dataMap.set(row.period, {
+        sales_count: Number(row.sales_count || 0),
+        sale_price: Number(row.sale_price || 0),
+        credit_price: Number(row.credit_price || 0),
+        net_price: Number(row.net_price || 0),
+        profit: Number(row.profit || 0),
+        currency: currency,
+      });
+    });
+
+    const filledResults: any[] = [];
+    let iterDate = new Date(currentStart);
+    if (groupType === 'day') {
+      while (iterDate <= currentEnd) {
+        const year = iterDate.getFullYear();
+        const month = String(iterDate.getMonth() + 1).padStart(2, '0');
+        const day = String(iterDate.getDate()).padStart(2, '0');
+        const periodStr = `${year}-${month}-${day}`;
+
+        let currentDayData = dataMap.get(periodStr) || {
+          sales_count: 0,
+          sale_price: 0,
+          credit_price: 0,
+          net_price: 0,
+          profit: 0,
+          currency: currency,
+        };
+        runningAccumulatedProfit += currentDayData.profit;
+
+        filledResults.push({
+          period: periodStr,
+          ...currentDayData,
+          last_profit: runningAccumulatedProfit,
+        });
+
+        iterDate.setDate(iterDate.getDate() + 1);
+      }
+    } else if (groupType === 'month') {
+      iterDate = new Date(currentStart.getFullYear(), 0, 1);
+      const endYear = currentEnd.getFullYear();
+      while (iterDate.getFullYear() <= endYear && iterDate <= currentEnd) {
+        const year = iterDate.getFullYear();
+        const month = String(iterDate.getMonth() + 1).padStart(2, '0');
+        const periodStr = `${year}-${month}`;
+
+        let currentMonthData = dataMap.get(periodStr) || {
+          sales_count: 0,
+          sale_price: 0,
+          credit_price: 0,
+          net_price: 0,
+          profit: 0,
+          currency: currency,
+        };
+        runningAccumulatedProfit += currentMonthData.profit;
+
+        filledResults.push({
+          period: periodStr,
+          ...currentMonthData,
+          last_profit: runningAccumulatedProfit,
+        });
+
+        iterDate.setMonth(iterDate.getMonth() + 1);
+      }
+    } else {
+      results.forEach((row: any) => {
+        let rowProfit = Number(row.profit || 0);
+        runningAccumulatedProfit += rowProfit;
+
+        filledResults.push({
+          period: row.period,
+          sales_count: Number(row.sales_count || 0),
+          sale_price: Number(row.sale_price || 0),
+          credit_price: Number(row.credit_price || 0),
+          net_price: Number(row.net_price || 0),
+          profit: rowProfit,
+          last_profit: runningAccumulatedProfit,
+          currency: currency,
+        });
+      });
+    }
+
+    return filledResults;
   }
 
 
@@ -568,5 +670,139 @@ export class DashboardService {
       percentage = Number(((diff / previous) * 100).toFixed(1));
     }
     return { difference: diff, percentage };
+  }
+
+
+
+
+  async getOfficesSummaryData(filters: GetSummaryFilterDto) {
+    let { start_date, end_date, period_preset } = filters;
+
+    let currentStart: Date = new Date();
+    let currentEnd: Date = new Date();
+
+    if (period_preset) {
+      const now = new Date();
+      if (period_preset === 'this_month') {
+        currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      } else if (period_preset === 'last_month') {
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      } else if (period_preset === 'last_3_months') {
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      } else if (period_preset === 'this_year') {
+        currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      }
+    } else if (start_date && end_date) {
+      currentStart = new Date(start_date);
+      currentStart.setHours(0, 0, 0, 0);
+      currentEnd = new Date(end_date);
+      currentEnd.setHours(23, 59, 59, 999);
+    } else {
+      const now = new Date();
+      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+    }
+
+    // 1. Tüm ofisleri çekiyoruz (Hiç hareketi olmasa bile listede 0 ile görünmesi için)
+    const offices = await Office.findAll({ raw: true });
+
+    // 2. Tarih aralığındaki toplamları ofis bazlı gruplayarak çekiyoruz
+    const results = await this.totalCalculationModel.findAll({
+      where: {
+        datetime: { [Op.between]: [currentStart, currentEnd] },
+      },
+      attributes: [
+        'office_guid',
+        [fn('SUM', literal(`CASE WHEN currency = 'USD' THEN COALESCE(sale_price, 0) ELSE 0 END`)), 'sale_price_usd'],
+        [fn('SUM', literal(`CASE WHEN currency = 'TMT' THEN COALESCE(sale_price, 0) ELSE 0 END`)), 'sale_price_tmt'],
+        
+        [fn('SUM', literal(`CASE WHEN currency = 'USD' THEN COALESCE(credit_price, 0) ELSE 0 END`)), 'credit_price_usd'],
+        [fn('SUM', literal(`CASE WHEN currency = 'TMT' THEN COALESCE(credit_price, 0) ELSE 0 END`)), 'credit_price_tmt'],
+
+        [fn('SUM', literal(`CASE WHEN currency = 'USD' THEN COALESCE(profit, 0) ELSE 0 END`)), 'profit_usd'],
+        [fn('SUM', literal(`CASE WHEN currency = 'TMT' THEN COALESCE(profit, 0) ELSE 0 END`)), 'profit_tmt'],
+      ],
+      group: ['office_guid'],
+      raw: true,
+    });
+
+    // Sonuçları hızlı aramak için Map'e çeviriyoruz
+    const dataMap = new Map<string, any>();
+    results.forEach((row: any) => {
+      dataMap.set(row.office_guid, row);
+    });
+
+    let grandTotalSaleUsd = 0;
+    let grandTotalSaleTmt = 0;
+    let grandTotalCreditUsd = 0;
+    let grandTotalCreditTmt = 0;
+    let grandTotalProfitUsd = 0;
+    let grandTotalProfitTmt = 0;
+
+    const totalSalePool = results.reduce((acc: number, row: any) => {
+      return acc + Number(row.sale_price_usd || 0) + Number(row.sale_price_tmt || 0);
+    }, 0);
+
+    // 3. Ofisleri dönüp hareketi olmayanlara bile 0 vererek mapliyoruz
+    const formattedOffices = offices.map((office: any) => {
+      const stats = dataMap.get(office.guid) || {};
+
+      const saleUsd = Number(stats.sale_price_usd || 0);
+      const saleTmt = Number(stats.sale_price_tmt || 0);
+      const creditUsd = Number(stats.credit_price_usd || 0);
+      const creditTmt = Number(stats.credit_price_tmt || 0);
+      const profitUsd = Number(stats.profit_usd || 0);
+      const profitTmt = Number(stats.profit_tmt || 0);
+
+      grandTotalSaleUsd += saleUsd;
+      grandTotalSaleTmt += saleTmt;
+      grandTotalCreditUsd += creditUsd;
+      grandTotalCreditTmt += creditTmt;
+      grandTotalProfitUsd += profitUsd;
+      grandTotalProfitTmt += profitTmt;
+
+      const officeTotal = saleUsd + saleTmt;
+      const percentage = totalSalePool > 0 ? Math.round((officeTotal / totalSalePool) * 100) : 0;
+
+      return {
+        office_guid: office.guid,
+        name: office.fullName, // Modelindeki fullName JSONB objesi doğrudan geliyor
+        percentage: `${percentage}%`,
+        sale_price: {
+          usd: saleUsd,
+          tmt: saleTmt,
+        },
+        credit_price: {
+          usd: creditUsd,
+          tmt: creditTmt,
+        },
+        profit: {
+          usd: profitUsd,
+          tmt: profitTmt,
+        },
+      };
+    });
+
+    return {
+      offices: formattedOffices,
+      jemi: {
+        sale_price: {
+          usd: grandTotalSaleUsd,
+          tmt: grandTotalSaleTmt,
+        },
+        credit_price: {
+          usd: grandTotalCreditUsd,
+          tmt: grandTotalCreditTmt,
+        },
+        profit: {
+          usd: grandTotalProfitUsd,
+          tmt: grandTotalProfitTmt,
+        },
+      },
+    };
   }
 }

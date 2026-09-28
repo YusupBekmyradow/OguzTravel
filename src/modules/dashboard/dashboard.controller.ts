@@ -66,5 +66,16 @@ export class DashboardController {
     });
   }
 
+
+  @Get('office-by-office')
+  async getOfficesSummaryData(
+    @Query() filters: GetSummaryFilterDto,
+    @Query('currency') currency?: 'USD' | 'TMT',
+  ) {
+    return await this.dashboardService.getOfficesSummaryData({
+      ...filters,
+      currency: currency || 'TMT',
+    });
+  }
 }
 
