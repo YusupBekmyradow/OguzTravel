@@ -9,8 +9,6 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('TicketStatus')
-@ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('tstatus')
 export class TstatusController {
   constructor(private readonly tstatusService: TstatusService) { }

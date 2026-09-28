@@ -13,7 +13,7 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) { }
 
 
-  @Get('admin-cards-summary')
+  @Get('admin-vs-maliya-cards')
   async getSummary(@Query() filters: GetSummaryFilterDto) {
     return await this.dashboardService.getDashboardSummary(filters);
   }
@@ -43,7 +43,7 @@ export class DashboardController {
   }
 
 
-  @Get('adm-mal-by-operators')
+  @Get('/admin-vs-maliya-operators')
   async getOperatorsRanking(
     @Query() filters: GetSummaryFilterDto,
     @Query('currency') currency?: 'USD' | 'TMT',
@@ -55,7 +55,7 @@ export class DashboardController {
   }
 
 
-  @Get('mal-by-categories')
+  @Get('/maliya-by-categories')
   async getCategoriesRanking(
     @Query() filters: GetSummaryFilterDto,
     @Query('currency') currency?: 'USD' | 'TMT',

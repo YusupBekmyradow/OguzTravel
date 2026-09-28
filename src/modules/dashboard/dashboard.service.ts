@@ -60,6 +60,7 @@ export class DashboardService {
       baseWhere.office_guid = office_guid;
       prevWhere.office_guid = office_guid;
     }
+
     const currentUsdData = await this.calculateMetrics(baseWhere, 'USD');
     const prevUsdData = await this.calculateMetrics(prevWhere, 'USD');
     const currentTmtData = await this.calculateMetrics(baseWhere, 'TMT');
@@ -68,8 +69,13 @@ export class DashboardService {
     const salesCountStats = this.calcPercentage(currentUsdData.count, prevUsdData.count);
     const salePriceUsdStats = this.calcPercentage(currentUsdData.totalSale, prevUsdData.totalSale);
     const salePriceTmtStats = this.calcPercentage(currentTmtData.totalSale, prevTmtData.totalSale);
+
+    const netPriceUsdStats = this.calcPercentage(currentUsdData.totalNetPrice, prevUsdData.totalNetPrice);
+    const netPriceTmtStats = this.calcPercentage(currentTmtData.totalNetPrice, prevTmtData.totalNetPrice);
+
     const creditUsdStats = this.calcPercentage(currentUsdData.totalCredit, prevUsdData.totalCredit);
     const creditTmtStats = this.calcPercentage(currentTmtData.totalCredit, prevTmtData.totalCredit);
+
     const profitUsdStats = this.calcPercentage(currentUsdData.totalProfit, prevUsdData.totalProfit);
     const profitTmtStats = this.calcPercentage(currentTmtData.totalProfit, prevTmtData.totalProfit);
 
@@ -82,6 +88,10 @@ export class DashboardService {
         usd: { value: currentUsdData.totalSale, ...salePriceUsdStats },
         tmt: { value: currentTmtData.totalSale, ...salePriceTmtStats },
       },
+      net_price: {
+        usd: { value: currentUsdData.totalNetPrice, ...netPriceUsdStats },
+        tmt: { value: currentTmtData.totalNetPrice, ...netPriceTmtStats },
+      },
       credit_price: {
         usd: { value: currentUsdData.totalCredit, ...creditUsdStats },
         tmt: { value: currentTmtData.totalCredit, ...creditTmtStats },
@@ -92,7 +102,6 @@ export class DashboardService {
       },
     };
   }
-
 
 
 
@@ -515,13 +524,17 @@ export class DashboardService {
       currency: currencyType,
     };
 
-    let saleColExpression = currencyType === 'USD'
+    const saleColExpression = currencyType === 'USD'
       ? literal('COALESCE(sale_price, 0) + COALESCE(sale_price_usd, 0)')
       : col('sale_price');
 
-    let creditColExpression = currencyType === 'USD'
+    const creditColExpression = currencyType === 'USD'
       ? literal('COALESCE(credit_price, 0) + COALESCE(credit_usd, 0)')
       : col('credit_price');
+
+    const netPriceColExpression = currencyType === 'USD'
+      ? literal('COALESCE(net_price, 0)')
+      : col('net_price');
 
     const result = await this.totalCalculationModel.findOne({
       where: queryWhere,
@@ -529,8 +542,9 @@ export class DashboardService {
         [fn('COUNT', col('guid')), 'count'],
         [fn('SUM', saleColExpression), 'totalSale'],
         [fn('SUM', creditColExpression), 'totalCredit'],
+        [fn('SUM', netPriceColExpression), 'totalNetPrice'],
         [fn('SUM', col('profit')), 'totalProfit'],
-      ],
+      ],  
       raw: true,
     });
 
@@ -538,10 +552,10 @@ export class DashboardService {
       count: Number(result?.['count'] || 0),
       totalSale: Number(result?.['totalSale'] || 0),
       totalCredit: Number(result?.['totalCredit'] || 0),
+      totalNetPrice: Number(result?.['totalNetPrice'] || 0),
       totalProfit: Number(result?.['totalProfit'] || 0),
     };
   }
-
 
 
   private calcPercentage(current: number, previous: number) {
