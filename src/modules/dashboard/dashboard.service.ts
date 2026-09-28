@@ -138,11 +138,11 @@ export class DashboardService {
 
     const baseWhere: any = {
       datetime: { [Op.between]: [currentStart, currentEnd] },
-      currency: currency,
+      currency: currency, // Para birimi filtresi (TMT veya USD)
     };
 
     if (office_guid) {
-      baseWhere.office_guid = office_guid;
+      baseWhere.office_guid = office_guid; // Ofis filtresi
     }
 
     let groupFormat = 'YYYY-MM-DD';
@@ -153,6 +153,7 @@ export class DashboardService {
     }
 
     const formattedDateLiteral = literal(`TO_CHAR(datetime, '${groupFormat}')`);
+
     const saleColExpression = currency === 'USD'
       ? literal('COALESCE(sale_price, 0) + COALESCE(sale_price_usd, 0)')
       : col('sale_price');
@@ -161,6 +162,11 @@ export class DashboardService {
       ? literal('COALESCE(credit_price, 0) + COALESCE(credit_usd, 0)')
       : col('credit_price');
 
+    // 🌟 BURASI EKLENDİ: Net price da diğerleri gibi filtreden geçip SUM ile toplanıyor
+    const netPriceColExpression = currency === 'USD'
+      ? literal('COALESCE(net_price, 0)') // Eğer USD için ayrı net_price_usd kolonun varsa burayı güncelleyebilirsin, yoksa direkt net_price
+      : col('net_price');
+
     const results = await this.totalCalculationModel.findAll({
       where: baseWhere,
       attributes: [
@@ -168,6 +174,7 @@ export class DashboardService {
         [fn('COUNT', col('guid')), 'sales_count'],
         [fn('SUM', saleColExpression), 'sale_price'],
         [fn('SUM', creditColExpression), 'credit_price'],
+        [fn('SUM', netPriceColExpression), 'net_price'], // 🌟 Net price toplamı buraya eklendi
         [fn('SUM', col('profit')), 'profit'],
       ],
       group: [formattedDateLiteral as any],
@@ -175,13 +182,14 @@ export class DashboardService {
       raw: true,
     });
 
-    // Veritabanından gelenleri hızlı eşleşme için Map'e taşıyalım
+    // Veritabanından gelenleri Map'e yazarken net_price'ı da ekliyoruz
     const dataMap = new Map<string, any>();
     results.forEach((row: any) => {
       dataMap.set(row.period, {
         sales_count: Number(row.sales_count || 0),
         sale_price: Number(row.sale_price || 0),
         credit_price: Number(row.credit_price || 0),
+        net_price: Number(row.net_price || 0), // 🌟 O döneme ait net price toplamı
         profit: Number(row.profit || 0),
         currency: currency,
       });
@@ -205,6 +213,7 @@ export class DashboardService {
             sales_count: 0,
             sale_price: 0,
             credit_price: 0,
+            net_price: 0, // 🌟 Boş günlerde 0 olarak atanıyor
             profit: 0,
             currency: currency,
           });
@@ -227,6 +236,7 @@ export class DashboardService {
             sales_count: 0,
             sale_price: 0,
             credit_price: 0,
+            net_price: 0, // 🌟 Boş aylarda 0 olarak atanıyor
             profit: 0,
             currency: currency,
           });
@@ -240,6 +250,7 @@ export class DashboardService {
           sales_count: Number(row.sales_count || 0),
           sale_price: Number(row.sale_price || 0),
           credit_price: Number(row.credit_price || 0),
+          net_price: Number(row.net_price || 0),
           profit: Number(row.profit || 0),
           currency: currency,
         });
