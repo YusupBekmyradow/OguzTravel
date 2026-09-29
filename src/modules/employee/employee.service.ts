@@ -125,6 +125,20 @@ export class EmployeeService implements OnModuleInit {
           SELECT json_agg(json_build_object('guid', p.guid, 'name', p.name))
           FROM tbl_positions p WHERE p.guid = ANY(e.position_guids)
         ), '[]'::json) AS positions,
+        COALESCE(e.empl_loan, 0) AS empl_loan,
+        COALESCE((
+          SELECT SUM(s.loan)
+          FROM tbl_salary s
+          WHERE s.employee_guid = e.guid
+        ), 0) AS salary_loans_total,
+        ROUND(
+          COALESCE(e.empl_loan, 0) - COALESCE((
+            SELECT SUM(s.loan)
+            FROM tbl_salary s
+            WHERE s.employee_guid = e.guid
+          ), 0),
+          2
+        ) AS remaining_loan,
         COUNT(*) OVER() AS total_count
       FROM tbl_employees e
       LEFT JOIN tbl_offices o ON o.guid = e.office_guid
@@ -156,6 +170,63 @@ export class EmployeeService implements OnModuleInit {
     }
   }
 
+
+  async getEmployeeLoanDetails(employee_guid: string, lang: string = 'tk') {
+    try {
+      const employee = await this.employeeRepository.findOne({
+        where: { guid: employee_guid },
+        attributes: ['guid', 'fullName', 'empl_loan'],
+        raw: true,
+      });
+      if (!employee) {
+        return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFound', { lang }));
+      }
+
+      const salaryLoans: any[] = await this.sequelize.query(
+        `
+        SELECT
+          s.guid,
+          s.month,
+          s.loan,
+          s.paid_date
+        FROM tbl_salary s
+        WHERE s.employee_guid = :employee_guid
+          AND s.loan > 0
+        ORDER BY s.month ASC
+        `,
+        {
+          replacements: { employee_guid },
+          type: QueryTypes.SELECT,
+        },
+      );
+      const salary_loans_total = salaryLoans.reduce(
+        (sum, row) => sum + Number(row.loan || 0),
+        0,
+      );
+      const empl_loan = Number((employee as any).empl_loan || 0);
+      const remaining_loan = Math.round((empl_loan - salary_loans_total) * 100) / 100;
+
+      return {
+        status: 200,
+        data: {
+          employee_guid: (employee as any).guid,
+          fullName: (employee as any).fullName,
+          empl_loan,
+          salary_loans_total: Math.round(salary_loans_total * 100) / 100,
+          remaining_loan,
+          loans: salaryLoans.map((row) => ({
+            guid: row.guid,
+            month: row.month,
+            loan: Number(row.loan),
+            paid_date: row.paid_date ?? null,
+          })),
+        },
+        message: this.i18n.t('employee.listFetched', { lang }),
+      };
+    } catch (error) {
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.fetchFailed', { lang }), error);
+    }
+  }
 
 
   async getEmployeeForPosition(

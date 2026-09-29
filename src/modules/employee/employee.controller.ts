@@ -52,6 +52,16 @@ export class EmployeeController {
   }
 
 
+  @Get('/get-employee-loan-details')
+  @ApiQuery({ name: 'employee_guid', required: true, type: String })
+  async getEmployeeLoanDetails(
+    @Query('employee_guid') employee_guid: string,
+    @I18nLang() lang: string = 'tk',
+  ) {
+    return this.employeeService.getEmployeeLoanDetails(employee_guid, lang);
+  }
+
+
   @Patch('/update-employee')
   async update(
     @Body() updateEmployeeDto: UpdateEmployeeDto,

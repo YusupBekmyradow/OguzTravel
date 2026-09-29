@@ -1,7 +1,6 @@
-import { IsString, IsEmail, IsNotEmpty, IsArray, ArrayNotEmpty, IsObject, IsUUID, IsOptional, MinLength, MaxLength, IsBoolean } from 'class-validator';
+import { Min, IsString, IsEmail, IsNotEmpty, IsArray, ArrayNotEmpty, IsObject, IsUUID, IsOptional, MinLength, MaxLength, IsBoolean, IsNumber } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
 
 export class CreateEmployeeDto {
   @ApiProperty()
@@ -30,6 +29,12 @@ export class CreateEmployeeDto {
   @IsUUID()
   @IsOptional()
   declare department_guid?: string;
+
+  @ApiPropertyOptional({ description: 'KARZ' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  declare empl_loan?: number;
 
   @ApiPropertyOptional({ type: [String], example: ['ed18f34d-beb2-404e-ab9b-8464a9b4fa3a'] })
   @Transform(({ value }) => {

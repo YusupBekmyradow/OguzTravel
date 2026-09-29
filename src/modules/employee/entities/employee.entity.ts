@@ -95,6 +95,13 @@ export class Employee extends Model<Employee> {
   })
   declare is_active: boolean;
 
+  @Column({
+    type: DataType.DECIMAL(12, 2),
+    allowNull: true,
+    defaultValue: 0
+  })
+  declare empl_loan: number;
+
   @BelongsTo(() => Office, {
     targetKey: 'guid',
     foreignKey: 'office_guid',
