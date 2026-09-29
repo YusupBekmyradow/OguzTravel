@@ -4,6 +4,7 @@ import { I18nLang } from 'nestjs-i18n';
 import { DashboardService } from './dashboard.service';
 import { DashboardFilterDto, GetSummaryFilterDto } from './dto/dashboard-filter.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { GetCategoryAnalyticsFilterDto } from './dto/GetCategoryAnalyticsFilterDto-filter.dto';
 
 // @ApiTags('Dashboard')
 // @ApiBearerAuth('bearerAuth')
@@ -19,7 +20,7 @@ export class DashboardController {
   } ///test edilen
 
 
-  @Get('admin-chart-data')
+  @Get('/admin-vs-maliya-chart-data')
   async getChartData(
     @Query() filters: GetSummaryFilterDto,
     @Query('currency') currency?: 'USD' | 'TMT',
@@ -28,10 +29,10 @@ export class DashboardController {
       ...filters,
       currency: currency || 'TMT',
     });
-  }
+  } //test-edilen
 
 
-  @Get('admin-by-status')
+  @Get('/admin-by-status')
   async getStatusSummary(
     @Query() filters: GetSummaryFilterDto,
     @Query('currency') currency?: 'USD' | 'TMT',
@@ -45,14 +46,10 @@ export class DashboardController {
 
   @Get('/admin-vs-maliya-operators')
   async getOperatorsRanking(
-    @Query() filters: GetSummaryFilterDto,
-    @Query('currency') currency?: 'USD' | 'TMT',
+    @Query() filters: GetCategoryAnalyticsFilterDto,
   ) {
-    return await this.dashboardService.getOperatorsRanking({
-      ...filters,
-      currency: currency || 'TMT',
-    });
-  } //test edilen
+    return await this.dashboardService.getOperatorsRanking(filters);
+  } //test-edilen
 
 
   @Get('/maliya-by-categories')
@@ -64,18 +61,25 @@ export class DashboardController {
       ...filters,
       currency: currency || 'TMT',
     });
-  }
+  } ///test-edilen
 
 
-  @Get('office-by-office')
+  @Get('/offices-by-office')
   async getOfficesSummaryData(
     @Query() filters: GetSummaryFilterDto,
     @Query('currency') currency?: 'USD' | 'TMT',
   ) {
-    return await this.dashboardService.getOfficesSummaryData({
+    return await this.dashboardService.getOfficesPerformanceData({
       ...filters,
       currency: currency || 'TMT',
     });
   } ///test-edilen
+
+
+  @Get('/admin-category-grifik')
+  async getCategoryAnalytics(
+    @Query() filters: GetCategoryAnalyticsFilterDto) {
+    return await this.dashboardService.getCategoryAnalytics(filters);
+  }//test-edilen
 }
 

@@ -7,6 +7,7 @@ import { Sequelize } from 'sequelize-typescript';
 import { Employee } from '../employee/entities/employee.entity';
 import { Category } from '../category/entities/category.entity';
 import { Office } from '../office/entities/office.entity';
+import { GetCategoryAnalyticsFilterDto } from './dto/GetCategoryAnalyticsFilterDto-filter.dto';
 
 @Injectable()
 export class DashboardService {
@@ -15,6 +16,8 @@ export class DashboardService {
     private readonly totalCalculationModel: typeof TotalCalculation,
     private readonly sequelize: Sequelize,
   ) { }
+
+
 
   async getDashboardSummary(filters: GetSummaryFilterDto) {
     let { start_date, end_date, period_preset, office_guid, currency = 'TMT' } = filters;
@@ -162,30 +165,30 @@ export class DashboardService {
 
 
 
-  async getDashboardChartData(filters: GetSummaryFilterDto & { currency?: 'USD' | 'TMT' }) {
-    let { start_date, end_date, period_preset, office_guid, currency = 'TMT' } = filters;
+  async getDashboardChartData(filters: GetSummaryFilterDto) {
+    const { start_date, end_date, period_preset, office_guid, currency = 'TMT' } = filters;
+    const currencyParam = currency || 'TMT';
 
     let currentStart: Date = new Date();
     let currentEnd: Date = new Date();
     let groupType: 'day' | 'week' | 'month' = 'day';
-
     if (period_preset) {
       const now = new Date();
       if (period_preset === 'this_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         groupType = 'day';
       } else if (period_preset === 'last_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
-        currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
         groupType = 'day';
       } else if (period_preset === 'last_3_months') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0);
-        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         groupType = 'week';
       } else if (period_preset === 'this_year') {
-        currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
-        currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
         groupType = 'month';
       }
     } else if (start_date && end_date) {
@@ -196,18 +199,31 @@ export class DashboardService {
       groupType = 'day';
     } else {
       const now = new Date();
-      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
-      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
       groupType = 'month';
     }
+    const buildCurrencyFilter = () => {
+      if (currencyParam === 'USD') {
+        return {
+          [Op.or]: [
+            { currency: 'USD' },
+            { [Op.and]: [{ currency: 'TMT' }, { sale_price_usd: { [Op.gt]: 0 } }] },
+          ],
+        };
+      }
+      return { currency: 'TMT' };
+    };
     const priorWhere: any = {
       datetime: { [Op.lt]: currentStart },
-      currency: currency,
+      ...buildCurrencyFilter(),
     };
-    if (office_guid) {
-      priorWhere.office_guid = office_guid;
-    }
-
+    if (office_guid) priorWhere.office_guid = office_guid;
+    const baseWhere: any = {
+      datetime: { [Op.between]: [currentStart, currentEnd] },
+      ...buildCurrencyFilter(),
+    };
+    if (office_guid) baseWhere.office_guid = office_guid;
     const priorSumResult = await this.totalCalculationModel.findOne({
       where: priorWhere,
       attributes: [[fn('SUM', col('profit')), 'total_prior_profit']],
@@ -215,15 +231,6 @@ export class DashboardService {
     });
 
     let runningAccumulatedProfit = Number((priorSumResult as any)?.total_prior_profit || 0);
-    const baseWhere: any = {
-      datetime: { [Op.between]: [currentStart, currentEnd] },
-      currency: currency,
-    };
-
-    if (office_guid) {
-      baseWhere.office_guid = office_guid;
-    }
-
     let groupFormat = 'YYYY-MM-DD';
     if (groupType === 'week') {
       groupFormat = 'IYYY-IW';
@@ -231,48 +238,37 @@ export class DashboardService {
       groupFormat = 'YYYY-MM';
     }
     const formattedDateLiteral = literal(`TO_CHAR(datetime, '${groupFormat}')`);
+    const saleColExpression = currencyParam === 'USD'
+      ? literal(`SUM(CASE WHEN currency = 'USD' THEN COALESCE(sale_price, 0) ELSE COALESCE(sale_price_usd, 0) END)`)
+      : literal('SUM(COALESCE(sale_price, 0))');
 
-    const saleColExpression = currency === 'USD'
-      ? literal('COALESCE(sale_price, 0) + COALESCE(sale_price_usd, 0)')
-      : col('sale_price');
-
-    const creditColExpression = currency === 'USD'
-      ? literal('COALESCE(credit_price, 0) + COALESCE(credit_usd, 0)')
-      : col('credit_price');
-
-    const netPriceColExpression = currency === 'USD'
-      ? literal('COALESCE(net_price, 0)')
-      : col('net_price');
-
+    const netPriceColExpression = literal('SUM(COALESCE(net_price, 0))');
+    const profitColExpression = literal('SUM(COALESCE(profit, 0))');
     const results = await this.totalCalculationModel.findAll({
       where: baseWhere,
       attributes: [
         [formattedDateLiteral, 'period'],
         [fn('COUNT', col('guid')), 'sales_count'],
-        [fn('SUM', saleColExpression), 'sale_price'],
-        [fn('SUM', creditColExpression), 'credit_price'],
-        [fn('SUM', netPriceColExpression), 'net_price'],
-        [fn('SUM', col('profit')), 'profit'],
+        [saleColExpression, 'sale_price'],
+        [netPriceColExpression, 'net_price'],
+        [profitColExpression, 'profit'],
       ],
       group: [formattedDateLiteral as any],
       order: [[formattedDateLiteral as any, 'ASC']],
       raw: true,
     });
-
     const dataMap = new Map<string, any>();
     results.forEach((row: any) => {
       dataMap.set(row.period, {
         sales_count: Number(row.sales_count || 0),
         sale_price: Number(row.sale_price || 0),
-        credit_price: Number(row.credit_price || 0),
         net_price: Number(row.net_price || 0),
         profit: Number(row.profit || 0),
-        currency: currency,
       });
     });
-
     const filledResults: any[] = [];
     let iterDate = new Date(currentStart);
+
     if (groupType === 'day') {
       while (iterDate <= currentEnd) {
         const year = iterDate.getFullYear();
@@ -280,13 +276,11 @@ export class DashboardService {
         const day = String(iterDate.getDate()).padStart(2, '0');
         const periodStr = `${year}-${month}-${day}`;
 
-        let currentDayData = dataMap.get(periodStr) || {
+        const currentDayData = dataMap.get(periodStr) || {
           sales_count: 0,
           sale_price: 0,
-          credit_price: 0,
           net_price: 0,
           profit: 0,
-          currency: currency,
         };
         runningAccumulatedProfit += currentDayData.profit;
 
@@ -306,13 +300,11 @@ export class DashboardService {
         const month = String(iterDate.getMonth() + 1).padStart(2, '0');
         const periodStr = `${year}-${month}`;
 
-        let currentMonthData = dataMap.get(periodStr) || {
+        const currentMonthData = dataMap.get(periodStr) || {
           sales_count: 0,
           sale_price: 0,
-          credit_price: 0,
           net_price: 0,
           profit: 0,
-          currency: currency,
         };
         runningAccumulatedProfit += currentMonthData.profit;
 
@@ -326,24 +318,23 @@ export class DashboardService {
       }
     } else {
       results.forEach((row: any) => {
-        let rowProfit = Number(row.profit || 0);
+        const rowProfit = Number(row.profit || 0);
         runningAccumulatedProfit += rowProfit;
 
         filledResults.push({
           period: row.period,
           sales_count: Number(row.sales_count || 0),
           sale_price: Number(row.sale_price || 0),
-          credit_price: Number(row.credit_price || 0),
           net_price: Number(row.net_price || 0),
           profit: rowProfit,
           last_profit: runningAccumulatedProfit,
-          currency: currency,
         });
       });
     }
 
     return filledResults;
   }
+
 
 
 
@@ -463,55 +454,59 @@ export class DashboardService {
 
 
 
-  async getOperatorsRanking(filters: GetSummaryFilterDto & { currency?: 'USD' | 'TMT' }) {
-    let { start_date, end_date, period_preset, office_guid, currency = 'TMT' } = filters;
-    const currencyParam: 'USD' | 'TMT' = (currency as 'USD' | 'TMT') || 'TMT';
+  async getOperatorsRanking(filters: GetCategoryAnalyticsFilterDto) {
+    const { start_date, end_date, period_preset, office_guid, category_guid, currency = 'TMT' } = filters;
+    const currencyParam: 'USD' | 'TMT' = currency || 'TMT';
 
     let currentStart: Date = new Date();
     let currentEnd: Date = new Date();
-
     if (period_preset) {
       const now = new Date();
       if (period_preset === 'this_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       } else if (period_preset === 'last_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
       } else if (period_preset === 'last_3_months') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       } else if (period_preset === 'this_year') {
-        currentStart = new Date(now.getFullYear(), 0, 1);
-        currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+        currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
       }
     } else if (start_date && end_date) {
       currentStart = new Date(start_date);
       currentEnd = new Date(end_date);
-      currentEnd.setHours(23, 59, 59);
+      currentEnd.setHours(23, 59, 59, 999);
     } else {
       const now = new Date();
-      currentStart = new Date(now.getFullYear(), 0, 1);
-      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
-
     const baseWhere: any = {
       datetime: { [Op.between]: [currentStart, currentEnd] },
       receiver_opr_guid: { [Op.not]: null },
     };
-    if (currencyParam === 'USD') {
-      baseWhere[Op.and] = literal(
-        `(currency = 'USD' OR COALESCE(sale_price_usd, 0) > 0)`
-      );
-    } else {
-      baseWhere.currency = 'TMT';
-    }
 
     if (office_guid) {
       baseWhere.office_guid = office_guid;
     }
+
+    if (category_guid) {
+      baseWhere.category_guid = category_guid;
+    }
+
+    if (currencyParam === 'USD') {
+      baseWhere[Op.or] = [
+        { currency: 'USD' },
+        { [Op.and]: [{ currency: 'TMT' }, { sale_price_usd: { [Op.gt]: 0 } }] }
+      ];
+    } else {
+      baseWhere.currency = 'TMT';
+    }
     const saleColExpression = currencyParam === 'USD'
-      ? literal('SUM(CASE WHEN currency = \'USD\' THEN COALESCE(sale_price, 0) ELSE 0 END + COALESCE(sale_price_usd, 0))')
+      ? literal(`SUM(CASE WHEN currency = 'USD' THEN COALESCE(sale_price, 0) ELSE COALESCE(sale_price_usd, 0) END)`)
       : literal('SUM(COALESCE(sale_price, 0))');
 
     const profitColExpression = literal('SUM(COALESCE(profit, 0))');
@@ -539,28 +534,33 @@ export class DashboardService {
       ],
       raw: true,
     });
-    let overallTotalProfit = 0;
+    let overallTotalSalesCount = 0;
     results.forEach((row: any) => {
-      overallTotalProfit += Number(row.total_profit || 0);
+      overallTotalSalesCount += Number(row.sales_count || 0);
     });
     const mappedResults = results.map((row: any) => {
       const salesCount = Number(row.sales_count || 0);
       const profit = Number(row.total_profit || 0);
-      const percentage = overallTotalProfit > 0
-        ? Math.round((profit / overallTotalProfit) * 100)
-        : 0;
+      const salePrice = Number(row.total_sale || 0);
+
+      let percentage = 0;
+      if (overallTotalSalesCount > 0) {
+        percentage = Number(((salesCount / overallTotalSalesCount) * 100).toFixed(1));
+      }
 
       return {
         operator_guid: row.receiver_opr_guid,
         operator_name: row['receiver_operator.fullName'] || 'Bilinmeyen Operatör',
         sales_count: salesCount,
         percentage: percentage,
-        sale_price: Number(row.total_sale || 0),
+        sale_price: salePrice,
         profit: profit,
       };
     });
-    return mappedResults.sort((a, b) => b.percentage - a.percentage);
+    return mappedResults.sort((a, b) => b.sales_count - a.sales_count);
   }
+
+
 
 
 
@@ -574,54 +574,62 @@ export class DashboardService {
       const now = new Date();
       if (period_preset === 'this_month') {
         currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       } else if (period_preset === 'last_month') {
         currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
       } else if (period_preset === 'last_3_months') {
         currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       } else if (period_preset === 'this_year') {
         currentStart = new Date(now.getFullYear(), 0, 1);
-        currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
       }
     } else if (start_date && end_date) {
       currentStart = new Date(start_date);
       currentEnd = new Date(end_date);
-      currentEnd.setHours(23, 59, 59);
+      currentEnd.setHours(23, 59, 59, 999);
     } else {
       const now = new Date();
       currentStart = new Date(now.getFullYear(), 0, 1);
-      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     }
-
     const baseWhere: any = {
       datetime: { [Op.between]: [currentStart, currentEnd] },
       category_guid: { [Op.not]: null },
-      currency: currency,
     };
 
     if (office_guid) {
       baseWhere.office_guid = office_guid;
     }
+    if (currency === 'USD') {
+      baseWhere[Op.or] = [
+        { currency: 'USD' },
+        { sale_price_usd: { [Op.gt]: 0 } },
+      ];
+    } else {
+      baseWhere.currency = 'TMT';
+    }
     const saleColExpression = currency === 'USD'
-      ? literal('COALESCE(sale_price, 0) + COALESCE(sale_price_usd, 0)')
-      : col('sale_price');
+      ? literal('SUM(CASE WHEN currency = \'USD\' THEN COALESCE(sale_price, 0) ELSE COALESCE(sale_price_usd, 0) END)')
+      : literal('SUM(COALESCE(sale_price, 0))');
 
     const netPriceColExpression = currency === 'USD'
-      ? literal('COALESCE(net_price, 0)')
-      : col('net_price');
+      ? literal('SUM(CASE WHEN currency = \'USD\' THEN COALESCE(net_price, 0) ELSE 0 END)')
+      : literal('SUM(COALESCE(net_price, 0))');
 
-    const profitColExpression = col('profit');
+    const profitColExpression = currency === 'USD'
+      ? literal('SUM(CASE WHEN currency = \'USD\' THEN COALESCE(profit, 0) ELSE (COALESCE(sale_price_usd, 0) - COALESCE(net_price, 0)) END)')
+      : literal('SUM(COALESCE(profit, 0))');
 
     const results = await this.totalCalculationModel.findAll({
       where: baseWhere,
       attributes: [
         'category_guid',
         [fn('COUNT', col('TotalCalculation.guid')), 'sales_count'],
-        [fn('SUM', saleColExpression), 'total_sale'],
-        [fn('SUM', netPriceColExpression), 'total_net_price'],
-        [fn('SUM', profitColExpression), 'total_profit'],
+        [saleColExpression, 'total_sale'],
+        [netPriceColExpression, 'total_net_price'],
+        [profitColExpression, 'total_profit'],
       ],
       include: [
         {
@@ -634,6 +642,7 @@ export class DashboardService {
       order: [[fn('COUNT', col('TotalCalculation.guid')), 'DESC']],
       raw: true,
     });
+
     let overallTotalCount = 0;
     let overallTotalSale = 0;
     let overallTotalNetPrice = 0;
@@ -651,14 +660,12 @@ export class DashboardService {
       const totalSale = Number(row.total_sale || 0);
       const totalNetPrice = Number(row.total_net_price || 0);
       const totalProfit = Number(row.total_profit || 0);
-
       const percentage = overallTotalCount > 0 ? Math.round((salesCount / overallTotalCount) * 100) : 0;
-
       const margin = totalSale > 0 ? Number(((totalProfit / totalSale) * 100).toFixed(1)) : 0;
 
       return {
         category_guid: row.category_guid,
-        category_name: row['category.name'] || 'Bilinmeyen Hýzmat',
+        category_name: row['category.name'] || 'Bilinmeyen Hizmat',
         sales_count: salesCount,
         percentage: percentage,
         sale_price: totalSale,
@@ -683,6 +690,8 @@ export class DashboardService {
 
 
 
+
+
   private calcPercentage(current: number, previous: number) {
     const diff = current - previous;
     let percentage = 0;
@@ -696,206 +705,388 @@ export class DashboardService {
   }
 
 
+  
 
+  async getOfficesPerformanceData(filters: GetSummaryFilterDto) {
+    const { start_date, end_date, period_preset, currency = 'TMT' } = filters;
+    const currencyParam = currency || 'TMT';
 
-  async getOfficesSummaryData(filters: GetSummaryFilterDto) {
-    let { start_date, end_date, period_preset } = filters;
-    let currentStart: Date = new Date();
-    let currentEnd: Date = new Date();
-    if (period_preset) {
-      const now = new Date();
-      if (period_preset === 'this_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      } else if (period_preset === 'last_month') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
-        currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-      } else if (period_preset === 'last_3_months') {
-        currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0);
-        currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      } else if (period_preset === 'this_year') {
-        currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
-        currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-      }
+    const now = new Date();
+    let currentStart: Date;
+    let currentEnd: Date;
+    let previousStart: Date;
+    let previousEnd: Date;
+    if (period_preset === 'this_month') {
+      currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      previousEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    } else if (period_preset === 'last_month') {
+      currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+      previousStart = new Date(now.getFullYear(), now.getMonth() - 2, 1, 0, 0, 0, 0);
+      previousEnd = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59, 999);
+    } else if (period_preset === 'last_3_months') {
+      currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      previousStart = new Date(now.getFullYear(), now.getMonth() - 7, 1, 0, 0, 0, 0);
+      previousEnd = new Date(now.getFullYear(), now.getMonth() - 3, 0, 23, 59, 59, 999);
+    } else if (period_preset === 'this_year') {
+      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+
+      previousStart = new Date(now.getFullYear() - 1, 0, 1, 0, 0, 0, 0);
+      previousEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
     } else if (start_date && end_date) {
       currentStart = new Date(start_date);
       currentStart.setHours(0, 0, 0, 0);
       currentEnd = new Date(end_date);
       currentEnd.setHours(23, 59, 59, 999);
+
+      const diffTime = Math.abs(currentEnd.getTime() - currentStart.getTime());
+      previousEnd = new Date(currentStart.getTime() - 1);
+      previousStart = new Date(previousEnd.getTime() - diffTime);
     } else {
-      const now = new Date();
-      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
-      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+
+      previousStart = new Date(now.getFullYear() - 1, 0, 1, 0, 0, 0, 0);
+      previousEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
     }
+    const buildCurrencyWhere = () => {
+      if (currencyParam === 'USD') {
+        return {
+          [Op.or]: [
+            { currency: 'USD' },
+            { [Op.and]: [{ currency: 'TMT' }, { sale_price_usd: { [Op.gt]: 0 } }] },
+          ],
+        };
+      }
+      return { currency: 'TMT' };
+    };
+
+    const saleColExpression =
+      currencyParam === 'USD'
+        ? literal(
+          `SUM(CASE WHEN currency = 'USD' THEN COALESCE(sale_price, 0) ELSE COALESCE(sale_price_usd, 0) END)`,
+        )
+        : literal('SUM(COALESCE(sale_price, 0))');
+
+    const netPriceColExpression = literal('SUM(COALESCE(net_price, 0))');
+    const profitColExpression = literal('SUM(COALESCE(profit, 0))');
     const offices = await Office.findAll({ raw: true });
-    const results = await this.totalCalculationModel.findAll({
+    const currentResults = await this.totalCalculationModel.findAll({
       where: {
         datetime: { [Op.between]: [currentStart, currentEnd] },
+        ...buildCurrencyWhere(),
       },
       attributes: [
         'office_guid',
-        [
-          fn(
-            'SUM',
-            literal(
-              `CASE WHEN currency = 'USD' THEN COALESCE(sale_price, 0) ELSE 0 END + COALESCE(sale_price_usd, 0)`
-            )
-          ),
-          'sale_price_usd',
-        ],
-        [
-          fn(
-            'SUM',
-            literal(
-              `CASE WHEN currency = 'TMT' THEN COALESCE(sale_price, 0) ELSE 0 END`
-            )
-          ),
-          'sale_price_tmt',
-        ],
-        [
-          fn(
-            'SUM',
-            literal(
-              `CASE WHEN currency = 'USD' THEN COALESCE(net_price, 0) ELSE 0 END`
-            )
-          ),
-          'net_price_usd',
-        ],
-        [
-          fn(
-            'SUM',
-            literal(
-              `CASE WHEN currency = 'TMT' THEN COALESCE(net_price, 0) ELSE 0 END`
-            )
-          ),
-          'net_price_tmt',
-        ],
-        [
-          fn(
-            'SUM',
-            literal(
-              `CASE WHEN currency = 'USD' THEN COALESCE(credit_price, 0) ELSE 0 END + COALESCE(credit_usd, 0)`
-            )
-          ),
-          'credit_price_usd',
-        ],
-        [
-          fn(
-            'SUM',
-            literal(
-              `CASE WHEN currency = 'TMT' THEN COALESCE(credit_price, 0) ELSE 0 END`
-            )
-          ),
-          'credit_price_tmt',
-        ],
-        [
-          fn(
-            'SUM',
-            literal(
-              `CASE WHEN currency = 'USD' THEN COALESCE(profit, 0) ELSE 0 END`
-            )
-          ),
-          'profit_usd',
-        ],
-        [
-          fn(
-            'SUM',
-            literal(
-              `CASE WHEN currency = 'TMT' THEN COALESCE(profit, 0) ELSE 0 END`
-            )
-          ),
-          'profit_tmt',
-        ],
+        [saleColExpression, 'sale_price'],
+        [netPriceColExpression, 'net_price'],
+        [profitColExpression, 'profit'],
       ],
       group: ['office_guid'],
       raw: true,
     });
-    const dataMap = new Map();
-    results.forEach((row: any) => {
-      dataMap.set(row.office_guid, row);
+    const previousResults = await this.totalCalculationModel.findAll({
+      where: {
+        datetime: { [Op.between]: [previousStart, previousEnd] },
+        ...buildCurrencyWhere(),
+      },
+      attributes: ['office_guid', [profitColExpression, 'profit']],
+      group: ['office_guid'],
+      raw: true,
     });
+    const currentMap = new Map<string, any>();
+    currentResults.forEach((row: any) => currentMap.set(row.office_guid, row));
 
-    let grandTotalSaleUsd = 0;
-    let grandTotalSaleTmt = 0;
-    let grandTotalNetUsd = 0;
-    let grandTotalNetTmt = 0;
-    let grandTotalCreditUsd = 0;
-    let grandTotalCreditTmt = 0;
-    let grandTotalProfitUsd = 0;
-    let grandTotalProfitTmt = 0;
-    const totalSalePool = results.reduce((acc: number, row: any) => {
-      return acc + Number(row.sale_price_usd || 0) + Number(row.sale_price_tmt || 0);
-    }, 0);
+    const previousProfitMap = new Map<string, number>();
+    previousResults.forEach((row: any) =>
+      previousProfitMap.set(row.office_guid, Number(row.profit || 0)),
+    );
+    const totalSalePool = currentResults.reduce(
+      (acc: number, row: any) => acc + Number(row.sale_price || 0),
+      0,
+    );
     const formattedOffices = offices.map((office: any) => {
-      const stats = dataMap.get(office.guid) || {};
+      const currentStats = currentMap.get(office.guid) || {};
+      const salePrice = Number(currentStats.sale_price || 0);
+      const netPrice = Number(currentStats.net_price || 0);
+      const profit = Number(currentStats.profit || 0);
 
-      const saleUsd = Number(stats.sale_price_usd || 0);
-      const saleTmt = Number(stats.sale_price_tmt || 0);
-      const netUsd = Number(stats.net_price_usd || 0);
-      const netTmt = Number(stats.net_price_tmt || 0);
-      const creditUsd = Number(stats.credit_price_usd || 0);
-      const creditTmt = Number(stats.credit_price_tmt || 0);
-      const profitUsd = Number(stats.profit_usd || 0);
-      const profitTmt = Number(stats.profit_tmt || 0);
+      const previousProfit = previousProfitMap.get(office.guid) || 0;
+      let profitChangePercent = 0;
 
-      grandTotalSaleUsd += saleUsd;
-      grandTotalSaleTmt += saleTmt;
-      grandTotalNetUsd += netUsd;
-      grandTotalNetTmt += netTmt;
-      grandTotalCreditUsd += creditUsd;
-      grandTotalCreditTmt += creditTmt;
-      grandTotalProfitUsd += profitUsd;
-      grandTotalProfitTmt += profitTmt;
-
-      const officeTotal = saleUsd + saleTmt;
-      const percentageNum = totalSalePool > 0 ? Math.round((officeTotal / totalSalePool) * 100) : 0;
+      if (previousProfit !== 0) {
+        profitChangePercent = Number(
+          (((profit - previousProfit) / Math.abs(previousProfit)) * 100).toFixed(1),
+        );
+      } else if (previousProfit === 0 && profit !== 0) {
+        profitChangePercent = profit > 0 ? 100 : -100;
+      } else {
+        profitChangePercent = 0;
+      }
+      const officeSharePercent =
+        totalSalePool > 0
+          ? Number(((salePrice / totalSalePool) * 100).toFixed(1))
+          : 0;
 
       return {
         office_guid: office.guid,
         name: office.fullName,
-        rawPercentage: percentageNum,
-        percentage: `${percentageNum}%`,
-        sale_price: {
-          usd: saleUsd,
-          tmt: saleTmt,
-        },
-        net_price: {
-          usd: netUsd,
-          tmt: netTmt,
-        },
-        credit_price: {
-          usd: creditUsd,
-          tmt: creditTmt,
-        },
-        profit: {
-          usd: profitUsd,
-          tmt: profitTmt,
-        },
+        share_percentage: `${officeSharePercent}%`,
+        rawShare: officeSharePercent,
+        profit,
+        profit_change_percentage: profitChangePercent,
+        sale_price: salePrice,
+        net_price: netPrice,
       };
     });
-    formattedOffices.sort((a, b) => b.rawPercentage - a.rawPercentage);
-    const sortedOffices = formattedOffices.map(({ rawPercentage, ...rest }) => rest);
+    formattedOffices.sort((a, b) => b.rawShare - a.rawShare);
+    return formattedOffices.map(({ rawShare, ...rest }, index) => ({
+      rank: index + 1,
+      ...rest,
+    }));
+  }
+
+
+
+  async getCategoryAnalytics(filters: GetCategoryAnalyticsFilterDto) {
+    const { start_date, end_date, period_preset, office_guid, category_guid, currency = 'TMT' } = filters;
+
+    const now = new Date();
+    let currentStart: Date;
+    let currentEnd: Date;
+    let prevStart: Date;
+    let prevEnd: Date;
+
+    let groupByInterval: 'day' | 'week' | 'month' = 'day';
+    if (period_preset === 'this_month') {
+      groupByInterval = 'day';
+      currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      prevEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    } else if (period_preset === 'last_month') {
+      groupByInterval = 'day';
+      currentStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+      prevStart = new Date(now.getFullYear(), now.getMonth() - 2, 1, 0, 0, 0, 0);
+      prevEnd = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59, 999);
+    } else if (period_preset === 'last_3_months') {
+      groupByInterval = 'week';
+      currentStart = new Date(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      const durationMs = currentEnd.getTime() - currentStart.getTime();
+      prevEnd = new Date(currentStart.getTime() - 1);
+      prevStart = new Date(prevEnd.getTime() - durationMs);
+    } else if (period_preset === 'this_year') {
+      groupByInterval = 'month';
+      currentStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+
+      prevStart = new Date(now.getFullYear() - 1, 0, 1, 0, 0, 0, 0);
+      prevEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+    } else if (start_date && end_date) {
+      groupByInterval = 'day';
+      currentStart = new Date(start_date);
+      currentEnd = new Date(end_date);
+      currentEnd.setHours(23, 59, 59, 999);
+
+      const durationMs = currentEnd.getTime() - currentStart.getTime();
+      prevEnd = new Date(currentStart.getTime() - 1);
+      prevStart = new Date(prevEnd.getTime() - durationMs);
+    } else {
+      groupByInterval = 'day';
+      currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      currentEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      prevEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    }
+    const buildWhere = (start: Date, end: Date) => {
+      const where: any = {
+        datetime: { [Op.between]: [start, end] },
+      };
+
+      if (office_guid) where.office_guid = office_guid;
+      if (category_guid) where.category_guid = category_guid;
+
+      if (currency === 'USD') {
+        where[Op.or] = [
+          { currency: 'USD' },
+          { [Op.and]: [{ currency: 'TMT' }, { sale_price_usd: { [Op.gt]: 0 } }] }
+        ];
+      } else {
+        where.currency = 'TMT';
+      }
+
+      return where;
+    };
+    const saleExpr = currency === 'USD'
+      ? `SUM(CASE WHEN currency = 'USD' THEN COALESCE(sale_price, 0) ELSE COALESCE(sale_price_usd, 0) END)`
+      : `SUM(COALESCE(sale_price, 0))`;
+
+    const creditExpr = currency === 'USD'
+      ? `SUM(CASE WHEN currency = 'USD' THEN COALESCE(credit_price, 0) ELSE COALESCE(credit_usd, 0) END)`
+      : `SUM(COALESCE(credit_price, 0))`;
+
+    const profitExpr = `SUM(COALESCE(profit, 0))`;
+    const refundCountExpr = `COUNT(CASE WHEN status = 'REFUND' THEN 1 END)`;
+    let dateFormat = "TO_CHAR(datetime, 'DD.MM')";
+    if (groupByInterval === 'month') {
+      dateFormat = "TO_CHAR(datetime, 'MM.YYYY')";
+    } else if (groupByInterval === 'week') {
+      dateFormat = "TO_CHAR(DATE_TRUNC('week', datetime), 'DD.MM')";
+    }
+
+    const timeLabelLiteral = literal(dateFormat);
+    const [currentPeriodData, prevPeriodData, overallTotals, prevOverallTotals] = await Promise.all([
+      this.totalCalculationModel.findAll({
+        where: buildWhere(currentStart, currentEnd),
+        attributes: [
+          [timeLabelLiteral, 'time_label'],
+          [literal(saleExpr), 'total_sale'],
+          [literal(profitExpr), 'total_profit'],
+        ],
+        group: [timeLabelLiteral as any],
+        order: [[timeLabelLiteral as any, 'ASC']],
+        raw: true,
+      }),
+      this.totalCalculationModel.findAll({
+        where: buildWhere(prevStart, prevEnd),
+        attributes: [
+          [timeLabelLiteral, 'time_label'],
+          [literal(saleExpr), 'total_sale'],
+        ],
+        group: [timeLabelLiteral as any],
+        order: [[timeLabelLiteral as any, 'ASC']],
+        raw: true,
+      }),
+      this.totalCalculationModel.findOne({
+        where: buildWhere(currentStart, currentEnd),
+        attributes: [
+          [literal(saleExpr), 'total_sale'],
+          [literal(profitExpr), 'total_profit'],
+          [literal(creditExpr), 'total_credit'],
+          [literal('COUNT(*)'), 'total_count'],
+          [literal(refundCountExpr), 'total_refund_count'],
+        ],
+        raw: true,
+      }),
+      this.totalCalculationModel.findOne({
+        where: buildWhere(prevStart, prevEnd),
+        attributes: [
+          [literal(saleExpr), 'total_sale'],
+          [literal(profitExpr), 'total_profit'],
+        ],
+        raw: true,
+      }),
+    ]);
+    const currentTotalSale = Number(overallTotals?.['total_sale'] || 0);
+    const currentTotalProfit = Number(overallTotals?.['total_profit'] || 0);
+    const currentTotalCredit = Number(overallTotals?.['total_credit'] || 0);
+    const currentTotalCount = Number(overallTotals?.['total_count'] || 0);
+    const currentTotalRefundCount = Number(overallTotals?.['total_refund_count'] || 0);
+
+    const prevTotalSale = Number(prevOverallTotals?.['total_sale'] || 0);
+    const prevTotalProfit = Number(prevOverallTotals?.['total_profit'] || 0);
+    let salePercentageDiff = 0;
+    if (prevTotalSale > 0) {
+      salePercentageDiff = Number((((currentTotalSale - prevTotalSale) / prevTotalSale) * 100).toFixed(1));
+    } else if (currentTotalSale > 0) {
+      salePercentageDiff = 100;
+    }
+    let profitPercentageDiff = 0;
+    if (prevTotalProfit !== 0) {
+      profitPercentageDiff = Number((((currentTotalProfit - prevTotalProfit) / Math.abs(prevTotalProfit)) * 100).toFixed(1));
+    } else if (currentTotalProfit > 0) {
+      profitPercentageDiff = 100;
+    } else if (currentTotalProfit < 0) {
+      profitPercentageDiff = -100;
+    }
+    const generateLabels = (start: Date, end: Date, interval: 'day' | 'week' | 'month') => {
+      const labels: string[] = [];
+      const iter = new Date(start);
+
+      if (interval === 'day') {
+        while (iter <= end) {
+          const dd = String(iter.getDate()).padStart(2, '0');
+          const mm = String(iter.getMonth() + 1).padStart(2, '0');
+          labels.push(`${dd}.${mm}`);
+          iter.setDate(iter.getDate() + 1);
+        }
+      } else if (interval === 'month') {
+        while (iter <= end) {
+          const mm = String(iter.getMonth() + 1).padStart(2, '0');
+          const yyyy = iter.getFullYear();
+          labels.push(`${mm}.${yyyy}`);
+          iter.setMonth(iter.getMonth() + 1);
+        }
+      } else if (interval === 'week') {
+        const dayOfWeek = iter.getDay();
+        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        iter.setDate(iter.getDate() + diffToMonday);
+
+        while (iter <= end) {
+          const dd = String(iter.getDate()).padStart(2, '0');
+          const mm = String(iter.getMonth() + 1).padStart(2, '0');
+          const label = `${dd}.${mm}`;
+          if (!labels.includes(label)) {
+            labels.push(label);
+          }
+          iter.setDate(iter.getDate() + 7);
+        }
+      }
+      return labels;
+    };
+    const currentDataMap = new Map<string, { sale: number; profit: number }>();
+    currentPeriodData.forEach((row: any) => {
+      currentDataMap.set(row.time_label, {
+        sale: Number(row.total_sale || 0),
+        profit: Number(row.total_profit || 0),
+      });
+    });
+
+    const prevDataMap = new Map<string, number>();
+    prevPeriodData.forEach((row: any) => {
+      prevDataMap.set(row.time_label, Number(row.total_sale || 0));
+    });
+    const currentLabels = generateLabels(currentStart, currentEnd, groupByInterval);
+    const prevLabels = generateLabels(prevStart, prevEnd, groupByInterval);
+
+    const chart = currentLabels.map((label, index) => {
+      const currData = currentDataMap.get(label) || { sale: 0, profit: 0 };
+      const prevLabel = prevLabels[index];
+      const prevSale = prevLabel ? (prevDataMap.get(prevLabel) || 0) : 0;
+
+      return {
+        label,
+        sale: currData.sale,
+        profit: currData.profit,
+        prev_sale: prevSale,
+      };
+    });
 
     return {
-      offices: sortedOffices,
-      jemi: {
-        sale_price: {
-          usd: grandTotalSaleUsd,
-          tmt: grandTotalSaleTmt,
-        },
-        net_price: {
-          usd: grandTotalNetUsd,
-          tmt: grandTotalNetTmt,
-        },
-        credit_price: {
-          usd: grandTotalCreditUsd,
-          tmt: grandTotalCreditTmt,
-        },
-        profit: {
-          usd: grandTotalProfitUsd,
-          tmt: grandTotalProfitTmt,
-        },
+      currency,
+      total_sale: currentTotalSale,
+      total_profit: currentTotalProfit,
+      total_credit: currentTotalCredit,
+      total_count: currentTotalCount,
+      total_refund_count: currentTotalRefundCount,
+      comparison: {
+        sale_percentage: salePercentageDiff,
+        profit_percentage: profitPercentageDiff,
       },
+      chart,
     };
   }
 }
