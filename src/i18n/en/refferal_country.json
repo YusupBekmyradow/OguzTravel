@@ -1,0 +1,11 @@
+{
+  "created": "Refferal country created successfully",
+  "createFailed": "Failed to create refferal country",
+  "updated": "Refferal country updated successfully",
+  "updateFailed": "Failed to update refferal country",
+  "notFound": "Refferal country not found",
+  "deleted": "Refferal country deleted successfully",
+  "deleteFailed": "Failed to delete refferal country",
+  "listFetched": "Refferal countries list fetched successfully",
+  "fetchFailed": "Failed to fetch refferal countries list"
+}

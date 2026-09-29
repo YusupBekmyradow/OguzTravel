@@ -13,10 +13,16 @@ export class CreateRefferalLetterDto {
   @IsNotEmpty()
   declare client_guid: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => (value === "" ? null : value))
+  @IsUUID()
+  declare refferal_country_guid?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  declare destination_country: string;
+  declare destination_country?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

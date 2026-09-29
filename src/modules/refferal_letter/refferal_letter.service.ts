@@ -6,6 +6,7 @@ import { Employee } from '../employee/entities/employee.entity';
 import { Client } from '../client/entities/client.entity';
 import { InjectModel } from '@nestjs/sequelize';
 import { RefferalLetter } from './entities/refferal_letter.entity';
+import { RefferalCountry } from '../refferal_country/entities/refferal_country.entity';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { Office } from '../office/entities/office.entity';
@@ -43,6 +44,8 @@ export class RefferalLetterService implements OnModuleInit {
           END IF;
           -- BGN arrival, next to BGN departure
           ALTER TABLE "tbl_refferal_letter" ADD COLUMN IF NOT EXISTS "bgn_arrival" VARCHAR;
+          -- Refferal country guid
+          ALTER TABLE "tbl_refferal_letter" ADD COLUMN IF NOT EXISTS "refferal_country_guid" UUID;
         END $$;
       `);
     } catch (e) {
@@ -67,6 +70,11 @@ export class RefferalLetterService implements OnModuleInit {
         model: Client,
         as: 'client',
         attributes: ['guid', 'fullName', 'passport_number', 'dateOfBirth', 'gender', 'passport_count', 'passportHistory']
+      },
+      {
+        model: RefferalCountry,
+        as: 'refferalCountry',
+        attributes: ['guid', 'name', 'index_number']
       }
     ];
   }
@@ -90,6 +98,7 @@ export class RefferalLetterService implements OnModuleInit {
       }
     }
     delete client.passportHistory;
+    delete letterJson.refferal_country_guid;
     return letterJson;
   }
 
@@ -167,7 +176,8 @@ export class RefferalLetterService implements OnModuleInit {
         data: formattedData,
         message: this.i18n.t('refferal_letter.created', { lang }),
       };
-    } catch (error: any) { console.log(error)
+    } catch (error: any) {
+      console.log(error)
       await transaction.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.createFailed', { lang }), error);
     }
@@ -276,7 +286,8 @@ export class RefferalLetterService implements OnModuleInit {
         },
         message: this.i18n.t('refferal_letter.listFetched', { lang }),
       };
-    } catch (error: any) { console.log(error)
+    } catch (error: any) {
+      console.log(error)
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('refferal_letter.fetchFailed', { lang }), error);
     }
   }
@@ -661,6 +672,8 @@ export class RefferalLetterService implements OnModuleInit {
 
     const refferalOnlyFields = [
       'client_guid',
+      'refferal_country_guid',
+      'refferalCountry',
       'passport_count',
       'destination_country',
       'bgn_departure',

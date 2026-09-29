@@ -51,6 +51,7 @@ import { TotalCalculation } from './modules/total_calculations/entities/total_ca
 import { TotalCalculationsModule } from './modules/total_calculations/total_calculations.module';
 import { CategoryModule } from './modules/category/category.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { RefferalCountryModule } from './modules/refferal_country/refferal_country.module';
 dotenv.config();
 
 @Module({
@@ -118,6 +119,7 @@ dotenv.config();
     CategoryModule,
     SalaryModule,
     DashboardModule,
+    RefferalCountryModule,
   ],
   controllers: [AppController],
   providers: [

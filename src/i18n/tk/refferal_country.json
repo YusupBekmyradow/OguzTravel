@@ -1,0 +1,11 @@
+{
+  "created": "Ýollanma ýurdy üstünlikli döredildi",
+  "createFailed": "Ýollanma ýurdy döredilmedi. Ýalňyşlyk ýüze çykdy.",
+  "updated": "Ýollanma ýurduň maglumaty üstünlikli täzelendi",
+  "updateFailed": "Ýollanma ýurduň maglumatlary täzelenmedi. Ýalňyşlyk ýüze çykdy.",
+  "notFound": "Görkezilen ýollanma ýurdy tapylmady",
+  "deleted": "Ýollanma ýurdy üstünlikli pozuldy",
+  "deleteFailed": "Ýollanma ýurdy pozulmady. Ýalňyşlyk ýüze çykdy.",
+  "listFetched": "Ýollanma ýurtlaryň sanawy üstünlikli alyndy",
+  "fetchFailed": "Ýollanma ýurtlaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy."
+}

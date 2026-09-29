@@ -40,6 +40,7 @@ import { DocDetails } from '../modules/visa_doc/entities/doc_details.entity';
 import { UserDetail } from '../modules/user_datails/entities/user_datail.entity';
 import { TotalCalculation } from '../modules/total_calculations/entities/total_calculation.entity';
 import { Category } from '../modules/category/entities/category.entity';
+import { RefferalCountry } from '../modules/refferal_country/entities/refferal_country.entity';
 
 export const databaseConfig = (): SequelizeModuleOptions => {
   const isDev = process.env.NODE_ENV === 'development';
@@ -58,7 +59,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
    // sync: { alter: true }, /// automat clomn create
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
-      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria, TotalCalculation, Category, Salary, SalaryMonth]
+      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria, TotalCalculation, Category, Salary, SalaryMonth, RefferalCountry]
   };
 };
 

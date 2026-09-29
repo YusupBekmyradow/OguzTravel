@@ -1,6 +1,7 @@
 import { BelongsTo, Column, DataType, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Client } from "../../client/entities/client.entity";
+import { RefferalCountry } from "../../refferal_country/entities/refferal_country.entity";
 
 @Table({
     tableName: 'tbl_refferal_letter',
@@ -35,6 +36,12 @@ export class RefferalLetter extends Model<RefferalLetter> {
         allowNull: true
     })
     declare client_guid?: string;
+
+    @Column({
+        type: DataType.UUID,
+        allowNull: true
+    })
+    declare refferal_country_guid?: string;
 
     @Column({
         type: DataType.INTEGER,
@@ -166,4 +173,13 @@ export class RefferalLetter extends Model<RefferalLetter> {
         onUpdate: 'SET NULL'
     })
     declare client: Client;
+
+    @BelongsTo(() => RefferalCountry, {
+        targetKey: 'guid',
+        foreignKey: 'refferal_country_guid',
+        as: 'refferalCountry',
+        onDelete: 'SET NULL',
+        onUpdate: 'SET NULL'
+    })
+    declare refferalCountry: RefferalCountry;
 }
