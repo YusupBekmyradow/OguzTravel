@@ -137,13 +137,6 @@ export class Salary extends Model<Salary> {
   declare payable_amount: number;
 
   @Column({
-    type: DataType.DECIMAL(12, 2),
-    allowNull: false,
-    defaultValue: 0
-  })
-  declare paid_amount: number;
-
-  @Column({
     type: DataType.DATEONLY,
     allowNull: true
   })

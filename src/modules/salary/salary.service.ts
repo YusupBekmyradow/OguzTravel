@@ -42,7 +42,6 @@ const SUMMARY_FIELDS = [
   'bonus',
   'total_amount',
   'payable_amount',
-  'paid_amount',
 ] as const;
 
 const PREVIOUS_FIELDS = [
@@ -396,7 +395,6 @@ export class SalaryService implements OnModuleInit {
       const item = await this.salaryRepo.create({
         ...dto,
         ...this.normalize(dto),
-        paid_amount: Number(dto.paid_amount ?? 0),
         paid_date: dto.paid_date || null,
         created_by_guid: scope.employeeGuid,
       } as any);

@@ -83,12 +83,6 @@ export class CreateSalaryDto {
   @Max(100)
   declare bonus_percent?: number | null;
 
-  @ApiPropertyOptional({ description: 'BERLEN' })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  declare paid_amount?: number;
-
   @ApiPropertyOptional({ description: 'SENESI, YYYY-MM-DD' })
   @IsOptional()
   @IsDateString()
