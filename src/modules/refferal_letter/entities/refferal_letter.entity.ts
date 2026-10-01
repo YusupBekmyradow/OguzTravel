@@ -54,12 +54,6 @@ export class RefferalLetter extends Model<RefferalLetter> {
         type: DataType.STRING,
         allowNull: true
     })
-    declare destination_country?: string;
-
-    @Column({
-        type: DataType.STRING,
-        allowNull: true
-    })
     declare bgn_departure?: string;
 
     @Column({

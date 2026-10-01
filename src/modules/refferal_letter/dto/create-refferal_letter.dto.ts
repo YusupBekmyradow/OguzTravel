@@ -22,11 +22,6 @@ export class CreateRefferalLetterDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  declare destination_country?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
   declare bgn_departure?: string;
 
   @ApiPropertyOptional()
