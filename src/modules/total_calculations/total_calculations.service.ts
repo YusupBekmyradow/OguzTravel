@@ -97,9 +97,9 @@ export class TotalCalculationsService implements OnModuleInit {
 
   async addTotalCalculation(createDto: CreateTotalCalculationDto, lang: string = 'tk') {
     try {
-      let officeGuid: string | null = null;
+      let officeGuid: string | null = createDto.office_guid || null;
 
-      if (createDto.receiver_opr_guid) {
+      if (!officeGuid && createDto.receiver_opr_guid) {
         const employee = await this.employeeRepo.findOne({
           where: { guid: createDto.receiver_opr_guid }
         });
@@ -109,15 +109,21 @@ export class TotalCalculationsService implements OnModuleInit {
       }
       const type = createDto.type || 'EXPENSE';
       const amount = Number(createDto.amount ?? createDto.net_price) || 0;
+      const profit = type === 'INCOME' && createDto.profit != null ? Number(createDto.profit) : null;
+      if (this.isInvalidProfit(amount, profit)) {
+        return errorResponse(
+          HttpStatuses.BAD_REQUEST,
+          this.i18n.t('total_calculation.invalidProfit', { lang })
+        );
+      }
 
       const record = await this.totalCalculationModel.create({
         category_guid: createDto.category_guid || null,
         datetime: createDto.datetime ? new Date(createDto.datetime) : new Date(),
         receiver_opr_guid: createDto.receiver_opr_guid || null,
         office_guid: officeGuid,
-        ...this.splitAmount(type, amount),
+        ...this.splitAmount(type, amount, profit),
         currency: createDto.currency || 'USD',
-        profit: 0,
         credit_price: 0,
         status: null,
         is_manual: true,
@@ -174,14 +180,29 @@ export class TotalCalculationsService implements OnModuleInit {
         updateData.datetime = new Date(updateDto.datetime);
       }
       const nextAmount = updateDto.amount ?? updateDto.net_price;
-      if (updateDto.type !== undefined || nextAmount !== undefined) {
+      if (updateDto.type !== undefined || nextAmount !== undefined || updateDto.profit !== undefined) {
         const prevType = existing.type || 'EXPENSE';
         const type = updateDto.type || prevType;
         const amount = nextAmount !== undefined
           ? Number(nextAmount)
           : Number(prevType === 'INCOME' ? existing.sale_price : existing.net_price);
+        // A profit sent now wins. Otherwise an income row keeps the profit it
+        // had (Office cash), so editing it from Cash Flow — whose form has no
+        // profit field — recomputes the expense instead of dropping the split.
+        const hadProfit = prevType === 'INCOME' && (Number(existing.profit) > 0 || Number(existing.net_price) > 0);
+        const profit = type !== 'INCOME'
+          ? null
+          : updateDto.profit != null
+            ? Number(updateDto.profit)
+            : hadProfit ? Number(existing.profit) : null;
+        if (this.isInvalidProfit(amount, profit)) {
+          return errorResponse(
+            HttpStatuses.BAD_REQUEST,
+            this.i18n.t('total_calculation.invalidProfit', { lang })
+          );
+        }
         updateData.type = type;
-        Object.assign(updateData, this.splitAmount(type, amount));
+        Object.assign(updateData, this.splitAmount(type, amount, profit));
       }
       for (const key of ['description', 'giver', 'receiver', 'company'] as const) {
         if (updateDto[key] !== undefined) {
@@ -193,6 +214,16 @@ export class TotalCalculationsService implements OnModuleInit {
       }
       if (updateDto.receiver_opr_guid !== undefined) {
         updateData.receiver_opr_guid = updateDto.receiver_opr_guid || null;
+      }
+      // An explicit office wins. Otherwise the office follows the operator, but
+      // only when the operator actually changes, so editing a row (the Cash
+      // Flow form always sends receiver_opr_guid) keeps an office set by hand.
+      if (updateDto.office_guid !== undefined) {
+        updateData.office_guid = updateDto.office_guid || null;
+      } else if (
+        updateDto.receiver_opr_guid !== undefined &&
+        (updateDto.receiver_opr_guid || null) !== (existing.receiver_opr_guid || null)
+      ) {
         if (updateDto.receiver_opr_guid) {
           const employee = await this.employeeRepo.findOne({
             where: { guid: updateDto.receiver_opr_guid }
@@ -255,10 +286,17 @@ export class TotalCalculationsService implements OnModuleInit {
 
   // Cash-ledger rows keep income in sale_price and expense in net_price so
   // SUM(sale_price) / SUM(net_price) work the same for project and cash rows.
-  private splitAmount(type: string, amount: number) {
-    return type === 'INCOME'
-      ? { sale_price: amount, net_price: 0 }
-      : { sale_price: 0, net_price: amount };
+  // An income with a profit (Office cash) is split like a project sale:
+  // price in sale_price, profit in profit, and the money paid out
+  // (Çykdajy = price − profit) in net_price.
+  private splitAmount(type: string, amount: number, profit: number | null = null) {
+    if (type !== 'INCOME') return { sale_price: 0, net_price: amount, profit: 0 };
+    if (profit == null) return { sale_price: amount, net_price: 0, profit: 0 };
+    return { sale_price: amount, net_price: amount - profit, profit };
+  }
+
+  private isInvalidProfit(amount: number, profit: number | null) {
+    return profit != null && (isNaN(profit) || profit < 0 || profit > amount);
   }
 
 
@@ -349,6 +387,7 @@ export class TotalCalculationsService implements OnModuleInit {
       datetime?: string;
       receiver_opr_guid?: string;
       office_guid?: string;
+      has_office?: boolean;
       status?: string;
       currency?: string;
       is_manual?: boolean;
@@ -407,6 +446,10 @@ export class TotalCalculationsService implements OnModuleInit {
         conditions.push(`tc.office_guid = :office_guid`);
         replacements.office_guid = filters.office_guid;
       }
+      // Only rows booked to some office (Finance → Office cash, all offices)
+      if (filters?.has_office) {
+        conditions.push(`tc.office_guid IS NOT NULL`);
+      }
       if (filters?.status) {
         conditions.push(`tc.status = :status`);
         replacements.status = filters.status;
@@ -431,11 +474,11 @@ export class TotalCalculationsService implements OnModuleInit {
       } else if (filters?.type === 'EXPENSE') {
         conditions.push(`(tc.type = 'EXPENSE' OR (tc.type IS NULL AND tc.net_price > 0))`);
       }
-      if (filters?.date_from && /^d{4}-d{2}-d{2}/.test(filters.date_from)) {
+      if (filters?.date_from && /^\d{4}-\d{2}-\d{2}/.test(filters.date_from)) {
         conditions.push(`tc.datetime >= :rangeFrom`);
         replacements.rangeFrom = `${filters.date_from.substring(0, 10)} 00:00:00`;
       }
-      if (filters?.date_to && /^d{4}-d{2}-d{2}/.test(filters.date_to)) {
+      if (filters?.date_to && /^\d{4}-\d{2}-\d{2}/.test(filters.date_to)) {
         conditions.push(`tc.datetime <= :rangeTo`);
         replacements.rangeTo = `${filters.date_to.substring(0, 10)} 23:59:59`;
       }

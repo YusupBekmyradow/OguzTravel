@@ -47,7 +47,7 @@ export class AuthService {
             include: [
               {
                 model: Office,
-                attributes: ['fullName', 'shortName']
+                attributes: ['guid', 'fullName', 'shortName']
               }
             ]
           }
@@ -157,7 +157,7 @@ export class AuthService {
             include: [
               {
                 model: Office,
-                attributes: ['fullName', 'shortName']
+                attributes: ['guid', 'fullName', 'shortName']
               }
             ],
           },
