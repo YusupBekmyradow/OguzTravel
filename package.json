@@ -19,7 +19,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "migration:diff": "sequelize-auto-migrations-cli",
-    "migration:generate": "sequelize-cli migration:generate"
+    "migration:generate": "sequelize-cli migration:generate",
+    "db:migrate": "pnpm dlx sequelize-cli db:migrate --config src/config/database.js --env development",
+    "db:migrate:undo": "pnpm dlx sequelize-cli db:migrate:undo --config src/config/database.js --env development",
+    "db:migrate:undo:all": "pnpm dlx sequelize-cli db:migrate:undo:all --config src/config/database.js --env development",
+    "setup": "pnpm install && pnpm db:migrate"
   },
   "dependencies": {
     "@google/genai": "^2.5.0",
