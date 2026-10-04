@@ -8,8 +8,10 @@ import {
   IsUUID,
   ValidateIf,
   MinLength,
-  MaxLength
+  MaxLength,
+  IsEnum
 } from "class-validator";
+import { UserType } from "../../../enums/enums";
 
 export class CreateUserDto {
 
@@ -39,6 +41,11 @@ export class CreateUserDto {
   @IsString({ each: true })
   @IsOptional()
   declare permissions?: string[];
+
+  @ApiPropertyOptional({ enum: UserType, default: UserType.OPERATOR })
+  @IsEnum(UserType)
+  @IsOptional()
+  declare role?: UserType;
 
   @ApiPropertyOptional()
   @IsString()

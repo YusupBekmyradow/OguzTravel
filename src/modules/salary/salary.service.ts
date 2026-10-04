@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { DataTypes, Op, fn, col } from 'sequelize';
+import { DataTypes, Op, Transaction, fn, col, literal } from 'sequelize';
 import { I18nService } from 'nestjs-i18n';
 import { Salary } from './entities/salary.entity';
 import { SalaryMonth } from './entities/salary-month.entity';
@@ -91,7 +91,22 @@ const today = () => new Date().toISOString().slice(0, 10);
 const ADDED_COLUMNS = {
   sales_amount: { type: DataTypes.DECIMAL(14, 2), allowNull: true },
   bonus_percent: { type: DataTypes.DECIMAL(5, 2), allowNull: true },
+  bonus_currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'TMT' },
 };
+
+// The salary is always TMT; only the bonus may be USD. With no exchange rate
+// to fold it in, a USD bonus stays out of total_amount / payable_amount and
+// goes to the cash flow as its own USD row.
+const USD = 'USD';
+const toBonusCurrency = (value: any): 'TMT' | 'USD' => (value === USD ? USD : 'TMT');
+
+// Summary sums split by bonus currency: `bonus` is TMT only, `bonus_usd` USD.
+const BONUS_TMT_SUM = literal(
+  `COALESCE(SUM(CASE WHEN "Salary"."bonus_currency" = '${USD}' THEN 0 ELSE "Salary"."bonus" END), 0)`,
+);
+const BONUS_USD_SUM = literal(
+  `COALESCE(SUM(CASE WHEN "Salary"."bonus_currency" = '${USD}' THEN "Salary"."bonus" ELSE 0 END), 0)`,
+);
 
 @Injectable()
 export class SalaryService implements OnModuleInit {
@@ -118,15 +133,17 @@ export class SalaryService implements OnModuleInit {
     }
     try {
       const monthTable = await queryInterface.describeTable('tbl_salary_period');
-      if (!monthTable['salary_calc_guid']) {
-        await queryInterface.addColumn('tbl_salary_period', 'salary_calc_guid', {
-          type: DataTypes.UUID,
-          allowNull: true,
-        });
-        this.logger.log('Added column tbl_salary_period.salary_calc_guid');
+      for (const name of ['salary_calc_guid', 'salary_usd_calc_guid']) {
+        if (!monthTable[name]) {
+          await queryInterface.addColumn('tbl_salary_period', name, {
+            type: DataTypes.UUID,
+            allowNull: true,
+          });
+          this.logger.log(`Added column tbl_salary_period.${name}`);
+        }
       }
     } catch (e) {
-      this.logger.error('Error adding salary_calc_guid to tbl_salary_period:', e);
+      this.logger.error('Error adding cash flow guid columns to tbl_salary_period:', e);
     }
   }
 
@@ -227,10 +244,11 @@ export class SalaryService implements OnModuleInit {
   private calculate(values: {
     base_salary: number; work_days: number; worked_days: number;
     card_amount: number; advance: number; cafeteria_credit: number;
-    loan: number; bonus: number;
+    loan: number; bonus: number; bonus_currency: 'TMT' | 'USD';
   }) {
     const ratio = values.work_days > 0 ? values.worked_days / values.work_days : 1;
-    const total_amount = round2(values.base_salary * ratio + values.bonus);
+    const tmtBonus = values.bonus_currency === USD ? 0 : values.bonus;
+    const total_amount = round2(values.base_salary * ratio + tmtBonus);
     const payable_amount = round2(
       total_amount - values.card_amount - values.advance - values.cafeteria_credit - values.loan,
     );
@@ -255,6 +273,7 @@ export class SalaryService implements OnModuleInit {
       bonus: isPercentBonus
         ? round2(((sales_amount as number) * (bonus_percent as number)) / 100)
         : num(source.bonus),
+      bonus_currency: toBonusCurrency(source.bonus_currency),
     };
     return { ...values, sales_amount, bonus_percent, ...this.calculate(values) };
   }
@@ -444,7 +463,7 @@ export class SalaryService implements OnModuleInit {
 
       const previous = await this.salaryRepo.findOne({
         where: { employee_guid: employee.guid, month: { [Op.lt]: month } },
-        attributes: [...CARRY_OVER_FIELDS, 'bonus_percent'],
+        attributes: [...CARRY_OVER_FIELDS, 'bonus_percent', 'bonus_currency'],
         order: [['month', 'DESC']],
         raw: true,
       });
@@ -458,6 +477,7 @@ export class SalaryService implements OnModuleInit {
         worked_days: hiredThisMonth ? workDaysFrom(month, new Date(hiredAt).getDate()) : workDays,
         bonus_percent: previous?.bonus_percent ?? null,
         sales_amount: previous?.bonus_percent != null ? 0 : null,
+        bonus_currency: toBonusCurrency(previous?.bonus_currency),
       };
 
       const created = await this.salaryRepo.create({
@@ -519,7 +539,7 @@ export class SalaryService implements OnModuleInit {
           employee_guid: missing,
           month: { [Op.lt]: dto.month, [Op.gte]: shiftMonth(dto.month, -12) },
         },
-        attributes: ['employee_guid', 'month', ...CARRY_OVER_FIELDS, 'bonus_percent'],
+        attributes: ['employee_guid', 'month', ...CARRY_OVER_FIELDS, 'bonus_percent', 'bonus_currency'],
         order: [['month', 'DESC']],
         raw: true,
       });
@@ -538,6 +558,7 @@ export class SalaryService implements OnModuleInit {
           worked_days: workDays,
           bonus_percent: prev.bonus_percent ?? null,
           sales_amount: prev.bonus_percent != null ? 0 : null,
+          bonus_currency: toBonusCurrency(prev.bonus_currency),
         };
         return {
           month: dto.month,
@@ -603,7 +624,7 @@ export class SalaryService implements OnModuleInit {
   async getSummary(userPayload: any, filters?: SalaryFilters, lang: string = 'tk') {
     try {
       const scope = await this.resolveScope(userPayload);
-      const data: Record<string, number> = { count: 0 };
+      const data: Record<string, number> = { count: 0, bonus_usd: 0 };
       SUMMARY_FIELDS.forEach((f) => { data[f] = 0; });
 
       if (this.hasAccess(scope)) {
@@ -612,7 +633,12 @@ export class SalaryService implements OnModuleInit {
           include: [{ model: Employee, as: 'employee', attributes: [] }],
           attributes: [
             [fn('COUNT', col('Salary.guid')), 'count'],
-            ...SUMMARY_FIELDS.map((f) => [fn('COALESCE', fn('SUM', col(`Salary.${f}`)), 0), f] as [any, string]),
+            ...SUMMARY_FIELDS.map((f) =>
+              f === 'bonus'
+                ? ([BONUS_TMT_SUM, f] as [any, string])
+                : ([fn('COALESCE', fn('SUM', col(`Salary.${f}`)), 0), f] as [any, string]),
+            ),
+            [BONUS_USD_SUM, 'bonus_usd'],
           ],
           raw: true,
         });
@@ -620,6 +646,7 @@ export class SalaryService implements OnModuleInit {
         SUMMARY_FIELDS.forEach((f) => {
           data[f] = round2(Number(row?.[f] || 0));
         });
+        data.bonus_usd = round2(Number(row?.bonus_usd || 0));
       }
 
       return {
@@ -652,6 +679,7 @@ export class SalaryService implements OnModuleInit {
           locked_at: null,
           lockedBy: null,
           salary_calc_guid: null,
+          salary_usd_calc_guid: null,
           can_lock: Boolean(officeGuid),
         },
         message: await this.i18n.translate('salary.fetchSuccess', { lang }),
@@ -659,6 +687,15 @@ export class SalaryService implements OnModuleInit {
     } catch (error: any) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('salary.fetchFailed', { lang }), error);
     }
+  }
+
+
+  // Drops the month's cash flow rows (TMT salary + USD bonus) before a re-lock
+  // writes fresh ones, or when the month is unlocked.
+  private async destroyMonthCalcRows(existing: SalaryMonth | null, transaction: Transaction) {
+    const guids = [existing?.salary_calc_guid, existing?.salary_usd_calc_guid].filter(Boolean) as string[];
+    if (guids.length === 0) return;
+    await this.totalCalculationModel.destroy({ where: { guid: guids }, transaction });
   }
 
 
@@ -671,6 +708,7 @@ export class SalaryService implements OnModuleInit {
       const { settled, salaryCalcGuid } = await this.salaryRepo.sequelize!.transaction(async (transaction) => {
         let settled = 0;
         let salaryCalcGuid: string | null = null;
+        let salaryUsdCalcGuid: string | null = null;
 
         const existing = await this.salaryMonthRepo.findOne({
           where: { month: dto.month, office_guid: officeGuid },
@@ -702,7 +740,10 @@ export class SalaryService implements OnModuleInit {
             );
           }
 
+          // total_amount already leaves USD bonuses out, so the TMT row is the
+          // salaries + TMT bonuses and USD bonuses get a row of their own.
           let totalAmount = 0;
+          let usdBonusAmount = 0;
           if (employeeGuids.length > 0) {
             const summaryRow: any = await this.salaryRepo.findOne({
               where: {
@@ -711,47 +752,44 @@ export class SalaryService implements OnModuleInit {
               },
               attributes: [
                 [fn('COALESCE', fn('SUM', col('total_amount')), 0), 'total_amount'],
+                [BONUS_USD_SUM, 'bonus_usd'],
               ],
               raw: true,
               transaction,
             });
             totalAmount = round2(Number(summaryRow?.total_amount || 0));
+            usdBonusAmount = round2(Number(summaryRow?.bonus_usd || 0));
           }
 
-          if (existing?.salary_calc_guid) {
-            await this.totalCalculationModel.destroy({
-              where: { guid: existing.salary_calc_guid },
-              transaction,
-            });
-          }
+          await this.destroyMonthCalcRows(existing, transaction);
 
-          const calcRecord = await this.totalCalculationModel.create(
-            {
-              category_guid: SYSTEM_CATEGORIES.SALARY,
-              net_price: totalAmount,
-              sale_price: 0,
-              currency: 'TMT',
-              profit: 0,
-              credit_price: 0,
-              datetime: new Date(),
-              receiver_opr_guid: scope.employeeGuid,
-              office_guid: officeGuid,
-              is_manual: false,
-              source: 'PROJECT',
-              description: `${dto.month} aýlygy`,
-            } as any,
-            { transaction },
-          );
+          const calcRow = (net_price: number, currency: string, description: string) =>
+            this.totalCalculationModel.create(
+              {
+                category_guid: SYSTEM_CATEGORIES.SALARY,
+                net_price,
+                sale_price: 0,
+                currency,
+                profit: 0,
+                credit_price: 0,
+                datetime: new Date(),
+                receiver_opr_guid: scope.employeeGuid,
+                office_guid: officeGuid,
+                is_manual: false,
+                source: 'PROJECT',
+                description,
+              } as any,
+              { transaction },
+            );
 
-          salaryCalcGuid = calcRecord.guid;
+          salaryCalcGuid = (await calcRow(totalAmount, 'TMT', `${dto.month} aýlygy`)).guid;
+          salaryUsdCalcGuid = usdBonusAmount > 0
+            ? (await calcRow(usdBonusAmount, USD, `${dto.month} bonus (USD)`)).guid
+            : null;
         } else {
-          if (existing?.salary_calc_guid) {
-            await this.totalCalculationModel.destroy({
-              where: { guid: existing.salary_calc_guid },
-              transaction,
-            });
-          }
+          await this.destroyMonthCalcRows(existing, transaction);
           salaryCalcGuid = null;
+          salaryUsdCalcGuid = null;
         }
 
         const values = {
@@ -759,6 +797,7 @@ export class SalaryService implements OnModuleInit {
           locked_at: dto.is_locked ? new Date() : null,
           locked_by_guid: dto.is_locked ? scope.employeeGuid : null,
           salary_calc_guid: salaryCalcGuid,
+          salary_usd_calc_guid: salaryUsdCalcGuid,
         };
 
         if (existing) {

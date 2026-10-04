@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsDateString, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsBoolean, IsDateString, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsUUID, Min } from "class-validator";
 
 export class CreateVisaDto {
 
@@ -38,6 +38,18 @@ export class CreateVisaDto {
   @IsNumber()
   @IsOptional()
   declare price_usd?: number
+
+  @ApiPropertyOptional({ description: 'Profit inside price_tmt' })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  declare profit_tmt?: number
+
+  @ApiPropertyOptional({ description: 'Profit inside price_usd' })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  declare profit_usd?: number
 
   @ApiPropertyOptional()
   @IsBoolean()
