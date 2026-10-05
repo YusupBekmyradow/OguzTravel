@@ -32,8 +32,6 @@ const day = (value?: string | null) => (value ? String(value).slice(0, 10) : val
 const clean = (value?: string) => (typeof value === 'string' ? value.trim() : value);
 /** Typed text is matched literally: % and _ are not wildcards. */
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, '\\$&');
-
-/** Builds a check that the date in `endKey` is not before the one in `startKey`. */
 const datesInOrder = (startKey: string, endKey: string) => (row: Record<string, any>) =>
   !row[startKey] || !row[endKey] || String(row[endKey]) >= String(row[startKey]);
 const EXPECTED_DATES = datesInOrder('start_date', 'end_date');
