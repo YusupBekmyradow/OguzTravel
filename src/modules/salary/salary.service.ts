@@ -763,15 +763,19 @@ export class SalaryService implements OnModuleInit {
 
           await this.destroyMonthCalcRows(existing, transaction);
 
-          const calcRow = (net_price: number, currency: string, description: string) =>
+          const calcRow = (net_price: number, net_price_usd: number, description: string) =>
             this.totalCalculationModel.create(
               {
                 category_guid: SYSTEM_CATEGORIES.SALARY,
                 net_price,
+                net_price_usd,
                 sale_price: 0,
-                currency,
+                sale_price_usd: 0,
+                currency: 'TMT',
                 profit: 0,
+                profit_usd: 0,
                 credit_price: 0,
+                credit_usd: 0,
                 datetime: new Date(),
                 receiver_opr_guid: scope.employeeGuid,
                 office_guid: officeGuid,
@@ -782,10 +786,9 @@ export class SalaryService implements OnModuleInit {
               { transaction },
             );
 
-          salaryCalcGuid = (await calcRow(totalAmount, 'TMT', `${dto.month} aýlygy`)).guid;
-          salaryUsdCalcGuid = usdBonusAmount > 0
-            ? (await calcRow(usdBonusAmount, USD, `${dto.month} bonus (USD)`)).guid
-            : null;
+          const createdCalc = await calcRow(totalAmount, usdBonusAmount, `${dto.month} aýlygy`);
+          salaryCalcGuid = createdCalc.guid;
+          salaryUsdCalcGuid = null;
         } else {
           await this.destroyMonthCalcRows(existing, transaction);
           salaryCalcGuid = null;
