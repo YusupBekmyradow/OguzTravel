@@ -199,6 +199,7 @@ export class RefferalLetterService implements OnModuleInit {
       start_contract_date?: string;
       end_contract_date?: string;
       status?: string;
+      refferal_country_guid?: string;
     },
     lang: string = 'tk',
   ) {
@@ -223,11 +224,21 @@ export class RefferalLetterService implements OnModuleInit {
               { [Op.like]: `%${searchLower}%` }
             ),
             { '$client.fullName$': { [Op.iLike]: searchPattern } },
+            ...['tk', 'ru', 'en'].map((l) =>
+              this.sequelize.where(
+                this.sequelize.literal(`"refferalCountry"."name"->>'${l}'`),
+                { [Op.iLike]: searchPattern },
+              ),
+            ),
           ];
         }
 
         if (filters.received_opr_guid) {
           whereConditions.received_opr_guid = filters.received_opr_guid;
+        }
+
+        if (filters.refferal_country_guid) {
+          whereConditions.refferal_country_guid = filters.refferal_country_guid;
         }
 
         const startDep = filters.start_departure_date?.trim();

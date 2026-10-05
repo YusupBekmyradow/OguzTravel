@@ -1,0 +1,13 @@
+{
+  "created": "Record created successfully.",
+  "updated": "Record updated successfully.",
+  "deleted": "Record deleted successfully.",
+  "listFetched": "Inbound list fetched successfully.",
+  "summaryFetched": "Inbound summary fetched successfully.",
+  "notFound": "Record not found.",
+  "createFailed": "Failed to create the record.",
+  "updateFailed": "Failed to update the record.",
+  "deleteFailed": "Failed to delete the record.",
+  "fetchFailed": "Failed to fetch inbound data.",
+  "dateOrder": "The end date cannot be before the start date."
+}

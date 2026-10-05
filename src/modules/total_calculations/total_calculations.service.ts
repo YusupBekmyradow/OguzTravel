@@ -97,9 +97,9 @@ export class TotalCalculationsService implements OnModuleInit {
 
   async addTotalCalculation(createDto: CreateTotalCalculationDto, lang: string = 'tk') {
     try {
-      let officeGuid: string | null = null;
+      let officeGuid: string | null = createDto.office_guid || null;
 
-      if (createDto.receiver_opr_guid) {
+      if (!officeGuid && createDto.receiver_opr_guid) {
         const employee = await this.employeeRepo.findOne({
           where: { guid: createDto.receiver_opr_guid }
         });
@@ -109,15 +109,21 @@ export class TotalCalculationsService implements OnModuleInit {
       }
       const type = createDto.type || 'EXPENSE';
       const amount = Number(createDto.amount ?? createDto.net_price) || 0;
+      const profit = type === 'INCOME' && createDto.profit != null ? Number(createDto.profit) : null;
+      if (this.isInvalidProfit(amount, profit)) {
+        return errorResponse(
+          HttpStatuses.BAD_REQUEST,
+          this.i18n.t('total_calculation.invalidProfit', { lang })
+        );
+      }
 
       const record = await this.totalCalculationModel.create({
         category_guid: createDto.category_guid || null,
         datetime: createDto.datetime ? new Date(createDto.datetime) : new Date(),
         receiver_opr_guid: createDto.receiver_opr_guid || null,
         office_guid: officeGuid,
-        ...this.splitAmount(type, amount),
+        ...this.splitAmount(type, amount, profit),
         currency: createDto.currency || 'USD',
-        profit: 0,
         credit_price: 0,
         status: null,
         is_manual: true,
@@ -174,14 +180,29 @@ export class TotalCalculationsService implements OnModuleInit {
         updateData.datetime = new Date(updateDto.datetime);
       }
       const nextAmount = updateDto.amount ?? updateDto.net_price;
-      if (updateDto.type !== undefined || nextAmount !== undefined) {
+      if (updateDto.type !== undefined || nextAmount !== undefined || updateDto.profit !== undefined) {
         const prevType = existing.type || 'EXPENSE';
         const type = updateDto.type || prevType;
         const amount = nextAmount !== undefined
           ? Number(nextAmount)
           : Number(prevType === 'INCOME' ? existing.sale_price : existing.net_price);
+        // A profit sent now wins. Otherwise an income row keeps the profit it
+        // had (Office cash), so editing it from Cash Flow — whose form has no
+        // profit field — recomputes the expense instead of dropping the split.
+        const hadProfit = prevType === 'INCOME' && (Number(existing.profit) > 0 || Number(existing.net_price) > 0);
+        const profit = type !== 'INCOME'
+          ? null
+          : updateDto.profit != null
+            ? Number(updateDto.profit)
+            : hadProfit ? Number(existing.profit) : null;
+        if (this.isInvalidProfit(amount, profit)) {
+          return errorResponse(
+            HttpStatuses.BAD_REQUEST,
+            this.i18n.t('total_calculation.invalidProfit', { lang })
+          );
+        }
         updateData.type = type;
-        Object.assign(updateData, this.splitAmount(type, amount));
+        Object.assign(updateData, this.splitAmount(type, amount, profit));
       }
       for (const key of ['description', 'giver', 'receiver', 'company'] as const) {
         if (updateDto[key] !== undefined) {
@@ -193,6 +214,16 @@ export class TotalCalculationsService implements OnModuleInit {
       }
       if (updateDto.receiver_opr_guid !== undefined) {
         updateData.receiver_opr_guid = updateDto.receiver_opr_guid || null;
+      }
+      // An explicit office wins. Otherwise the office follows the operator, but
+      // only when the operator actually changes, so editing a row (the Cash
+      // Flow form always sends receiver_opr_guid) keeps an office set by hand.
+      if (updateDto.office_guid !== undefined) {
+        updateData.office_guid = updateDto.office_guid || null;
+      } else if (
+        updateDto.receiver_opr_guid !== undefined &&
+        (updateDto.receiver_opr_guid || null) !== (existing.receiver_opr_guid || null)
+      ) {
         if (updateDto.receiver_opr_guid) {
           const employee = await this.employeeRepo.findOne({
             where: { guid: updateDto.receiver_opr_guid }
@@ -255,10 +286,17 @@ export class TotalCalculationsService implements OnModuleInit {
 
   // Cash-ledger rows keep income in sale_price and expense in net_price so
   // SUM(sale_price) / SUM(net_price) work the same for project and cash rows.
-  private splitAmount(type: string, amount: number) {
-    return type === 'INCOME'
-      ? { sale_price: amount, net_price: 0 }
-      : { sale_price: 0, net_price: amount };
+  // An income with a profit (Office cash) is split like a project sale:
+  // price in sale_price, profit in profit, and the money paid out
+  // (Çykdajy = price − profit) in net_price.
+  private splitAmount(type: string, amount: number, profit: number | null = null) {
+    if (type !== 'INCOME') return { sale_price: 0, net_price: amount, profit: 0 };
+    if (profit == null) return { sale_price: amount, net_price: 0, profit: 0 };
+    return { sale_price: amount, net_price: amount - profit, profit };
+  }
+
+  private isInvalidProfit(amount: number, profit: number | null) {
+    return profit != null && (isNaN(profit) || profit < 0 || profit > amount);
   }
 
 
@@ -349,6 +387,7 @@ export class TotalCalculationsService implements OnModuleInit {
       datetime?: string;
       receiver_opr_guid?: string;
       office_guid?: string;
+      has_office?: boolean;
       status?: string;
       currency?: string;
       is_manual?: boolean;
@@ -407,12 +446,18 @@ export class TotalCalculationsService implements OnModuleInit {
         conditions.push(`tc.office_guid = :office_guid`);
         replacements.office_guid = filters.office_guid;
       }
+      // Only rows booked to some office (Finance → Office cash, all offices)
+      if (filters?.has_office) {
+        conditions.push(`tc.office_guid IS NOT NULL`);
+      }
       if (filters?.status) {
         conditions.push(`tc.status = :status`);
         replacements.status = filters.status;
       }
+      // Dual-currency rows (Visa, Salary with USD bonus) carry USD prices/expenses
+      // in sale_price_usd / net_price_usd, so a USD filter must also match them.
       if (filters?.currency) {
-        conditions.push(`tc.currency = :currency`);
+        conditions.push(`(tc.currency = :currency OR (:currency = 'USD' AND (COALESCE(tc.sale_price_usd, 0) > 0 OR COALESCE(tc.net_price_usd, 0) > 0)))`);
         replacements.currency = filters.currency;
       }
       if (filters?.is_manual !== undefined && filters?.is_manual !== null) {
@@ -427,15 +472,15 @@ export class TotalCalculationsService implements OnModuleInit {
       }
       // INCOME / EXPENSE: cash rows by their type, project rows by which side has money
       if (filters?.type === 'INCOME') {
-        conditions.push(`(tc.type = 'INCOME' OR (tc.type IS NULL AND tc.sale_price > 0))`);
+        conditions.push(`(tc.type = 'INCOME' OR (tc.type IS NULL AND (tc.sale_price > 0 OR COALESCE(tc.sale_price_usd, 0) > 0)))`);
       } else if (filters?.type === 'EXPENSE') {
-        conditions.push(`(tc.type = 'EXPENSE' OR (tc.type IS NULL AND tc.net_price > 0))`);
+        conditions.push(`(tc.type = 'EXPENSE' OR (tc.type IS NULL AND (tc.net_price > 0 OR COALESCE(tc.net_price_usd, 0) > 0)))`);
       }
-      if (filters?.date_from && /^d{4}-d{2}-d{2}/.test(filters.date_from)) {
+      if (filters?.date_from && /^\d{4}-\d{2}-\d{2}/.test(filters.date_from)) {
         conditions.push(`tc.datetime >= :rangeFrom`);
         replacements.rangeFrom = `${filters.date_from.substring(0, 10)} 00:00:00`;
       }
-      if (filters?.date_to && /^d{4}-d{2}-d{2}/.test(filters.date_to)) {
+      if (filters?.date_to && /^\d{4}-\d{2}-\d{2}/.test(filters.date_to)) {
         conditions.push(`tc.datetime <= :rangeTo`);
         replacements.rangeTo = `${filters.date_to.substring(0, 10)} 23:59:59`;
       }
@@ -454,6 +499,7 @@ export class TotalCalculationsService implements OnModuleInit {
             tc.receiver_opr_guid, tc.office_guid,
             tc.status, tc.net_price, tc.sale_price,
             tc.currency, tc.profit, tc.credit_price, tc.sale_price_usd, tc.credit_usd,
+            tc.net_price_usd, tc.profit_usd,
             tc.is_manual, tc.index_number,
             tc.type, COALESCE(tc.source, 'PROJECT') AS source,
             tc.description, tc.giver, tc.receiver, tc.company,
@@ -475,17 +521,32 @@ export class TotalCalculationsService implements OnModuleInit {
           { replacements, type: QueryTypes.SELECT }
         ),
 
-        // Totals per currency for the whole filtered set (not just this page)
+        // Totals per currency for the whole filtered set (not just this page).
+        // Dual-currency rows (Visa, Salary with USD bonus) are split into their own
+        // currency line plus a USD line when they carry USD sales/expenses.
         this.sequelize.query<any>(`
           SELECT
-            tc.currency,
-            COALESCE(SUM(tc.sale_price), 0) AS income,
-            COALESCE(SUM(tc.net_price), 0)  AS expense,
-            COALESCE(SUM(tc.profit), 0)     AS profit,
-            COUNT(*)                        AS count
-          ${baseQuery}
-          GROUP BY tc.currency
-          ORDER BY tc.currency
+            v.currency,
+            COALESCE(SUM(v.income), 0)  AS income,
+            COALESCE(SUM(v.expense), 0) AS expense,
+            COALESCE(SUM(v.profit), 0)  AS profit,
+            COUNT(*)                    AS count
+          FROM (
+            SELECT tc.currency, tc.sale_price, tc.net_price, tc.profit, tc.sale_price_usd,
+                   tc.net_price_usd, tc.profit_usd
+            ${baseQuery}
+          ) f
+          CROSS JOIN LATERAL (VALUES
+            (f.currency, f.sale_price, f.net_price, f.profit, TRUE),
+            ('USD', COALESCE(f.sale_price_usd, 0), COALESCE(f.net_price_usd, 0), COALESCE(f.profit_usd, 0), FALSE)
+          ) AS v(currency, income, expense, profit, is_own)
+          WHERE (
+            (v.is_own AND NOT ((COALESCE(f.sale_price_usd, 0) > 0 OR COALESCE(f.net_price_usd, 0) > 0) AND COALESCE(f.sale_price, 0) = 0 AND COALESCE(f.net_price, 0) = 0))
+            OR (NOT v.is_own AND (v.income > 0 OR v.expense > 0))
+          )
+          ${filters?.currency ? 'AND v.currency = :currency' : ''}
+          GROUP BY v.currency
+          ORDER BY v.currency
         `, { replacements, type: QueryTypes.SELECT }),
       ]);
 
@@ -516,6 +577,8 @@ export class TotalCalculationsService implements OnModuleInit {
         credit_price: r.credit_price,
         sale_price_usd: r.sale_price_usd,
         credit_usd: r.credit_usd,
+        net_price_usd: r.net_price_usd,
+        profit_usd: r.profit_usd,
         is_manual: r.is_manual,
         index_number: r.index_number,
         type: r.type,
@@ -598,7 +661,15 @@ export class TotalCalculationsService implements OnModuleInit {
           ADD COLUMN IF NOT EXISTS company VARCHAR(255),
           ADD COLUMN IF NOT EXISTS import_key VARCHAR(64),
           ADD COLUMN IF NOT EXISTS sale_price_usd DECIMAL(12,2) DEFAULT 0,
-          ADD COLUMN IF NOT EXISTS credit_usd DECIMAL(12,2) DEFAULT 0;
+          ADD COLUMN IF NOT EXISTS credit_usd DECIMAL(12,2) DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS net_price_usd DECIMAL(12,2) DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS profit_usd DECIMAL(12,2) DEFAULT 0;
+      `);
+      // A visa's profit per currency, read by its trigger below.
+      await sequelize.query(`
+        ALTER TABLE tbl_visa
+          ADD COLUMN IF NOT EXISTS profit_tmt DECIMAL(12,2) DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS profit_usd DECIMAL(12,2) DEFAULT 0;
       `);
       // Rows created from the UI before these columns existed were expenses.
       await sequelize.query(`
@@ -1493,9 +1564,10 @@ export class TotalCalculationsService implements OnModuleInit {
           FROM tbl_trans_payments 
           WHERE translation_guid = NEW.guid;
 
+          -- status 'true' / 'false' is urgent / normal, not a payment state.
           IF NEW.status = '0' OR NEW.status = 'REFUND' THEN
             v_status := 'REFUND';
-          ELSIF NEW.is_paid IS TRUE OR NEW.status = 'true' OR NEW.status = 'paid' THEN
+          ELSIF NEW.is_paid IS TRUE OR NEW.status = 'paid' THEN
             v_status := 'paid';
           ELSE
             v_status := 'notpaid';
@@ -1648,7 +1720,7 @@ export class TotalCalculationsService implements OnModuleInit {
           emp.office_guid,
           CASE 
             WHEN gt.status = '0' OR gt.status = 'REFUND' THEN 'REFUND'
-            WHEN gt.is_paid IS TRUE OR gt.status = 'true' OR gt.status = 'paid' THEN 'paid'
+            WHEN gt.is_paid IS TRUE OR gt.status = 'paid' THEN 'paid'
             ELSE 'notpaid'
           END,
           COALESCE(gt.expense_price, 0),
@@ -1955,6 +2027,10 @@ export class TotalCalculationsService implements OnModuleInit {
           v_credit_tmt DECIMAL(12, 2);
           v_credit_usd DECIMAL(12, 2);
           v_status VARCHAR(50);
+          v_profit_tmt DECIMAL(12, 2);
+          v_profit_usd DECIMAL(12, 2);
+          v_net_tmt DECIMAL(12, 2);
+          v_net_usd DECIMAL(12, 2);
         BEGIN
           IF TG_OP = 'DELETE' THEN
             DELETE FROM tbl_total_calculations WHERE guid = OLD.guid;
@@ -1971,6 +2047,14 @@ export class TotalCalculationsService implements OnModuleInit {
           INTO v_credit_tmt, v_credit_usd
           FROM tbl_visa_payments
           WHERE visa_guid = NEW.guid;
+
+          -- The profit is entered per currency; the cost is what is left of the
+          -- price. A visa with no profit entered keeps cost 0, as before: its
+          -- cost is unknown, not the whole price.
+          v_profit_tmt := COALESCE(NEW.profit_tmt, 0);
+          v_profit_usd := COALESCE(NEW.profit_usd, 0);
+          v_net_tmt := CASE WHEN v_profit_tmt > 0 THEN GREATEST(COALESCE(NEW.price_tmt, 0) - v_profit_tmt, 0) ELSE 0 END;
+          v_net_usd := CASE WHEN v_profit_usd > 0 THEN GREATEST(COALESCE(NEW.price_usd, 0) - v_profit_usd, 0) ELSE 0 END;
 
           IF NEW.status = 3 THEN
             v_status := 'REFUND';
@@ -1992,6 +2076,8 @@ export class TotalCalculationsService implements OnModuleInit {
             sale_price_usd,
             currency,
             profit,
+            net_price_usd,
+            profit_usd,
             credit_price,
             credit_usd,
             is_manual,
@@ -2004,11 +2090,13 @@ export class TotalCalculationsService implements OnModuleInit {
             NEW.receiver_opr_guid,
             v_office_guid,
             v_status,
-            0,
+            v_net_tmt,
             COALESCE(NEW.price_tmt, 0),
             COALESCE(NEW.price_usd, 0),
             'TMT',
-            0,
+            v_profit_tmt,
+            v_net_usd,
+            v_profit_usd,
             COALESCE(v_credit_tmt, 0),
             COALESCE(v_credit_usd, 0),
             FALSE,
@@ -2026,6 +2114,8 @@ export class TotalCalculationsService implements OnModuleInit {
             sale_price_usd   = EXCLUDED.sale_price_usd,
             currency         = EXCLUDED.currency,
             profit           = EXCLUDED.profit,
+            net_price_usd    = EXCLUDED.net_price_usd,
+            profit_usd       = EXCLUDED.profit_usd,
             credit_price     = EXCLUDED.credit_price,
             credit_usd       = EXCLUDED.credit_usd,
             is_manual        = FALSE,
@@ -2110,6 +2200,22 @@ export class TotalCalculationsService implements OnModuleInit {
         AFTER INSERT OR UPDATE OR DELETE ON tbl_visa_payments
         FOR EACH ROW EXECUTE FUNCTION sync_visa_payment_to_total_calculations();
       `);
+
+      // -------------------------------------------------------------
+      // Backfill: sales that never reached the cash flow
+      // -------------------------------------------------------------
+      // The triggers above only fire on a write, so a sale entered before its
+      // trigger existed has no cash-flow row. A no-op update on exactly those
+      // rows fires the row's own trigger, which writes it by the same rules as
+      // any new sale — the column mapping stays in one place. Rows already in
+      // the cash flow are not touched, so this is a no-op once they all are.
+      for (const table of ['tbl_b2b', 'tbl_airway', 'tbl_railway', 'tbl_hotel', 'tbl_tour', 'tbl_transfer', 'tbl_package', 'tbl_visa']) {
+        await sequelize.query(`
+          UPDATE "${table}" src
+          SET guid = src.guid
+          WHERE NOT EXISTS (SELECT 1 FROM tbl_total_calculations tc WHERE tc.guid = src.guid);
+        `);
+      }
 
       // -------------------------------------------------------------
       // Recalculate credit_price / credit_usd for all existing rows

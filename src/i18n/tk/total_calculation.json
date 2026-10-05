@@ -11,5 +11,6 @@
   "listFetched": "Hasaplaşyklaryň sanawy üstünlikli alyndy",
   "fetchFailed": "Hasaplaşyklaryň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
   "imported": "Kassa ýazgylary üstünlikli import edildi",
-  "importFailed": "Kassa ýazgylaryny import edip bolmady. Ýalňyşlyk ýüze çykdy."
+  "importFailed": "Kassa ýazgylaryny import edip bolmady. Ýalňyşlyk ýüze çykdy.",
+  "invalidProfit": "Peýda 0-dan az ýa-da bahadan köp bolup bilmez"
 }

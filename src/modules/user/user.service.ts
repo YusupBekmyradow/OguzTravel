@@ -123,6 +123,12 @@ export class UserService {
       }
       if (updateUserDto.password) updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
       await user.update(updateUserDto);
+      if (updateUserDto.role) {
+        await this.userDetailRepository.update(
+          { role: updateUserDto.role } as any,
+          { where: { user_guid: user.guid } },
+        );
+      }
       await user.reload({ include: [{ model: Employee }] });
       const plainUser = user.get({ plain: true });
       const { password, refresh_token, ...userResponse } = plainUser;

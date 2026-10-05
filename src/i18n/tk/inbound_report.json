@@ -1,0 +1,13 @@
+{
+  "created": "Ýazgy üstünlikli döredildi.",
+  "updated": "Ýazgy üstünlikli täzelendi.",
+  "deleted": "Ýazgy üstünlikli pozuldy.",
+  "listFetched": "Inbound sanawy üstünlikli alyndy.",
+  "summaryFetched": "Inbound jemleýji maglumaty üstünlikli alyndy.",
+  "notFound": "Ýazgy tapylmady.",
+  "createFailed": "Ýazgyny döretmekde ýalňyşlyk ýüze çykdy.",
+  "updateFailed": "Ýazgyny täzelemekde ýalňyşlyk ýüze çykdy.",
+  "deleteFailed": "Ýazgyny pozmakda ýalňyşlyk ýüze çykdy.",
+  "fetchFailed": "Inbound maglumatlaryny almakda ýalňyşlyk ýüze çykdy.",
+  "dateOrder": "Gutarýan sene başlanýan seneden öň bolup bilmez."
+}

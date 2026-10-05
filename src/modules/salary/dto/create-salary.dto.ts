@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -82,6 +83,11 @@ export class CreateSalaryDto {
   @Min(0)
   @Max(100)
   declare bonus_percent?: number | null;
+
+  @ApiPropertyOptional({ enum: ['TMT', 'USD'], default: 'TMT', description: 'A USD bonus stays out of the TMT totals' })
+  @IsOptional()
+  @IsIn(['TMT', 'USD'])
+  declare bonus_currency?: 'TMT' | 'USD';
 
   @ApiPropertyOptional({ description: 'SENESI, YYYY-MM-DD' })
   @IsOptional()

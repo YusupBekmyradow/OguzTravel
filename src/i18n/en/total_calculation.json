@@ -11,5 +11,6 @@
   "listFetched": "Calculation list fetched successfully",
   "fetchFailed": "Failed to fetch calculation list.",
   "imported": "Kassa records imported successfully",
-  "importFailed": "Failed to import kassa records."
+  "importFailed": "Failed to import kassa records.",
+  "invalidProfit": "Profit cannot be negative or greater than the price"
 }

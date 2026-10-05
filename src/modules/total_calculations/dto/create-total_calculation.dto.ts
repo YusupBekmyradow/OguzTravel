@@ -19,6 +19,11 @@ export class CreateTotalCalculationDto {
   @IsOptional()
   declare receiver_opr_guid?: string;
 
+  @ApiPropertyOptional({ example: 'c1234567-89ab-cdef-0123-456789abcdef', description: "Office whose cash this is — wins over the operator's office" })
+  @IsUUID()
+  @IsOptional()
+  declare office_guid?: string;
+
   @ApiPropertyOptional({ enum: CASH_TYPES, default: 'EXPENSE' })
   @IsIn(CASH_TYPES)
   @IsOptional()
@@ -28,6 +33,11 @@ export class CreateTotalCalculationDto {
   @IsNumber()
   @IsOptional()
   declare amount?: number;
+
+  @ApiPropertyOptional({ example: 150, description: 'Income only: profit of the amount; the expense (net_price) becomes amount − profit' })
+  @IsNumber()
+  @IsOptional()
+  declare profit?: number;
 
   @ApiPropertyOptional({ example: 100.5, description: 'Legacy expense amount — prefer amount + type' })
   @IsNumber()

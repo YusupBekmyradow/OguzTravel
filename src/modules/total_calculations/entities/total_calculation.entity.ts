@@ -90,6 +90,22 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare sale_price_usd: number;
 
+  // USD cost and profit of a dual-currency row (a visa): its TMT side keeps
+  // net_price / profit, like every single-currency row.
+  @Column({
+    type: DataType.DECIMAL(12, 2),
+    allowNull: true,
+    defaultValue: 0
+  })
+  declare net_price_usd: number;
+
+  @Column({
+    type: DataType.DECIMAL(12, 2),
+    allowNull: true,
+    defaultValue: 0
+  })
+  declare profit_usd: number;
+
   // USD credit (paid amount) — used for dual-currency modules (e.g. Visa)
   @Column({
     type: DataType.DECIMAL(12, 2),
