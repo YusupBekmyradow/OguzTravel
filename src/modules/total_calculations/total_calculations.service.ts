@@ -454,10 +454,10 @@ export class TotalCalculationsService implements OnModuleInit {
         conditions.push(`tc.status = :status`);
         replacements.status = filters.status;
       }
-      // Visa rows are booked as TMT but carry their USD price in sale_price_usd,
-      // so a USD filter must also match them.
+      // Dual-currency rows (Visa, Salary with USD bonus) carry USD prices/expenses
+      // in sale_price_usd / net_price_usd, so a USD filter must also match them.
       if (filters?.currency) {
-        conditions.push(`(tc.currency = :currency OR (:currency = 'USD' AND COALESCE(tc.sale_price_usd, 0) > 0))`);
+        conditions.push(`(tc.currency = :currency OR (:currency = 'USD' AND (COALESCE(tc.sale_price_usd, 0) > 0 OR COALESCE(tc.net_price_usd, 0) > 0)))`);
         replacements.currency = filters.currency;
       }
       if (filters?.is_manual !== undefined && filters?.is_manual !== null) {
@@ -474,7 +474,7 @@ export class TotalCalculationsService implements OnModuleInit {
       if (filters?.type === 'INCOME') {
         conditions.push(`(tc.type = 'INCOME' OR (tc.type IS NULL AND (tc.sale_price > 0 OR COALESCE(tc.sale_price_usd, 0) > 0)))`);
       } else if (filters?.type === 'EXPENSE') {
-        conditions.push(`(tc.type = 'EXPENSE' OR (tc.type IS NULL AND tc.net_price > 0))`);
+        conditions.push(`(tc.type = 'EXPENSE' OR (tc.type IS NULL AND (tc.net_price > 0 OR COALESCE(tc.net_price_usd, 0) > 0)))`);
       }
       // Compared as local (Ashgabat) calendar days, both included: with UTC day bounds a row
       // entered between 00:00 and 05:00 local time landed on the day before.
@@ -524,9 +524,8 @@ export class TotalCalculationsService implements OnModuleInit {
         ),
 
         // Totals per currency for the whole filtered set (not just this page).
-        // A visa row is booked as TMT with its USD price in sale_price_usd, so
-        // each row is split into its own currency line plus a USD income line
-        // when it has a USD price — TMT and USD are never added together.
+        // Dual-currency rows (Visa, Salary with USD bonus) are split into their own
+        // currency line plus a USD line when they carry USD sales/expenses.
         this.sequelize.query<any>(`
           SELECT
             v.currency,
@@ -544,8 +543,8 @@ export class TotalCalculationsService implements OnModuleInit {
             ('USD', COALESCE(f.sale_price_usd, 0), COALESCE(f.net_price_usd, 0), COALESCE(f.profit_usd, 0), FALSE)
           ) AS v(currency, income, expense, profit, is_own)
           WHERE (
-            (v.is_own AND NOT (COALESCE(f.sale_price_usd, 0) > 0 AND COALESCE(f.sale_price, 0) = 0 AND COALESCE(f.net_price, 0) = 0))
-            OR (NOT v.is_own AND v.income > 0)
+            (v.is_own AND NOT ((COALESCE(f.sale_price_usd, 0) > 0 OR COALESCE(f.net_price_usd, 0) > 0) AND COALESCE(f.sale_price, 0) = 0 AND COALESCE(f.net_price, 0) = 0))
+            OR (NOT v.is_own AND (v.income > 0 OR v.expense > 0))
           )
           ${filters?.currency ? 'AND v.currency = :currency' : ''}
           GROUP BY v.currency

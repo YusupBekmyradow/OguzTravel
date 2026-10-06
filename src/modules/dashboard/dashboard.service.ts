@@ -30,7 +30,7 @@ const SALES_ONLY_SQL =
 // counts in USD when it has a USD price and in TMT unless it is USD-only.
 const inCurrencySql = (c: Currency) =>
   c === 'USD'
-    ? `(${T}.currency = 'USD' OR COALESCE(${T}.sale_price_usd, 0) > 0 OR COALESCE(${T}.credit_usd, 0) > 0)`
+    ? `(${T}.currency = 'USD' OR COALESCE(${T}.sale_price_usd, 0) > 0 OR COALESCE(${T}.net_price_usd, 0) > 0 OR COALESCE(${T}.profit_usd, 0) > 0 OR COALESCE(${T}.credit_usd, 0) > 0)`
     : `(${T}.currency = 'TMT' AND NOT (COALESCE(${T}.sale_price_usd, 0) > 0 AND COALESCE(${T}.sale_price, 0) = 0))`;
 
 // Per-row amounts in one currency; every endpoint sums these, so a figure means
@@ -824,7 +824,7 @@ export class DashboardService {
   }
 
 
-  
+
 
   async getOfficesPerformanceData(filters: GetSummaryFilterDto) {
     const { start_date, end_date, period_preset, currency = 'TMT' } = filters;
@@ -894,9 +894,9 @@ export class DashboardService {
       raw: true,
     });
     // Money out beside the cost of sales, per office, with the same meaning as
-  // in getMoneyOut: salaries (locked months and USD bonuses) and kassa
-  // expenses entered by hand or imported from Excel. Neither is a sale, so
-  // they are read apart from the sales rows above.
+    // in getMoneyOut: salaries (locked months and USD bonuses) and kassa
+    // expenses entered by hand or imported from Excel. Neither is a sale, so
+    // they are read apart from the sales rows above.
     const net = `COALESCE(${T}.net_price, 0)`;
     const otherOutResults = await this.totalCalculationModel.findAll({
       where: { datetime: { [Op.between]: [currentStart, currentEnd] }, currency: currencyParam },
