@@ -36,7 +36,7 @@ export class ClientService {
     page: number = 1,
     limit: number = 10,
     search?: string,
-    filters?: { gender?: string, passportExpiryDate?: string, passportIssueDate?: string },
+    filters?: { gender?: string, dateOfBirth?: string, passportExpiryDate?: string, passportIssueDate?: string },
     lang: string = 'tk',
   ) {
     try {
@@ -57,6 +57,10 @@ export class ClientService {
 
       if (filters?.gender) {
         whereClause.gender = filters.gender;
+      }
+
+      if (filters?.dateOfBirth) {
+        whereClause.dateOfBirth = filters.dateOfBirth;
       }
 
       if (filters?.passportExpiryDate) {

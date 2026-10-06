@@ -226,30 +226,26 @@ export class TurkishAirlinesService {
   }
 
 
-  private parseStartDate(date: string | Date): Date {
-    if (typeof date === 'string') {
-      const trimmed = date.trim();
-      if (/^\d{4}$/.test(trimmed)) {
-        return new Date(`${trimmed}-01-01T00:00:00.000Z`);
-      }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-        return new Date(`${trimmed}T00:00:00.000Z`);
-      }
-    }
-    return new Date(date);
-  }
-
-  private parseEndDate(date: string | Date): Date {
-    if (typeof date === 'string') {
-      const trimmed = date.trim();
-      if (/^\d{4}$/.test(trimmed)) {
-        return new Date(`${trimmed}-12-31T23:59:59.999Z`);
-      }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-        return new Date(`${trimmed}T23:59:59.999Z`);
-      }
-    }
-    return new Date(date);
+  /**
+   * start_date / end_date as local (Ashgabat) calendar days, both included. Tickets are stored
+   * as instants, so comparing them with UTC day bounds put the first five hours of a local day
+   * on the day before. A bare year ("2026") still means the whole year.
+   */
+  private localDayRange(column: string, start?: string | Date, end?: string | Date) {
+    const toDay = (value: string | Date | undefined, yearEdge: string) => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      if (/^\d{4}$/.test(trimmed)) return `${trimmed}-${yearEdge}`;
+      const day = trimmed.slice(0, 10);
+      return /^\d{4}-\d{2}-\d{2}$/.test(day) && !Number.isNaN(Date.parse(day)) ? day : null;
+    };
+    const localDay = `(${column} AT TIME ZONE 'Asia/Ashgabat')::date`;
+    const conditions: any[] = [];
+    const from = toDay(start, '01-01');
+    const to = toDay(end, '12-31');
+    if (from) conditions.push(this.sequelize.literal(`${localDay} >= ${this.sequelize.escape(from)}`));
+    if (to) conditions.push(this.sequelize.literal(`${localDay} <= ${this.sequelize.escape(to)}`));
+    return conditions;
   }
 
   async getAllTurkishAirline(page: number = 1, limit: number = 10,
@@ -278,29 +274,8 @@ export class TurkishAirlinesService {
           { '$client.fullName$': { [Op.iLike]: searchPattern } },
         ];
       }
-      if (filters.start_date && filters.end_date) {
-        const startDate = this.parseStartDate(filters.start_date);
-        const endDate = this.parseEndDate(filters.end_date);
-        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-          whereCondition.datetime = {
-            [Op.between]: [startDate, endDate],
-          };
-        }
-      } else if (filters.start_date) {
-        const startDate = this.parseStartDate(filters.start_date);
-        if (!isNaN(startDate.getTime())) {
-          whereCondition.datetime = {
-            [Op.gte]: startDate,
-          };
-        }
-      } else if (filters.end_date) {
-        const endDate = this.parseEndDate(filters.end_date);
-        if (!isNaN(endDate.getTime())) {
-          whereCondition.datetime = {
-            [Op.lte]: endDate,
-          };
-        }
-      }
+      const dayRange = this.localDayRange('"TurkishAirline"."datetime"', filters.start_date, filters.end_date);
+      if (dayRange.length) whereCondition[Op.and] = dayRange;
       if (filters.assignment_opr_guid) {
         whereCondition.assignment_opr_guid = filters.assignment_opr_guid;
       }

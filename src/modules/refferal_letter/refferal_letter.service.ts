@@ -15,6 +15,20 @@ import { Op } from 'sequelize';
 import { CreateOtherLetterDto } from './dto/sub_report.dto';
 import { UpdateOtherLetterDto } from './dto/sub_report_update.dto';
 
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+/**
+ * Letter dates are stored as the instant of local (Ashgabat) midnight, so a day picked in the
+ * filter is compared with the local calendar day, not the UTC one.
+ */
+const localDay = (column: string) => `("RefferalLetter"."${column}" AT TIME ZONE 'Asia/Ashgabat')::date`;
+/** A filter day that is a real YYYY-MM-DD date, or null: anything else is ignored. */
+const validDay = (value?: string) => {
+  const day = value?.trim().slice(0, 10);
+  return day && DAY_RE.test(day) && !Number.isNaN(Date.parse(day)) ? day : null;
+};
+/** Typed text is matched literally: % and _ are not wildcards. */
+const escapeLike = (value: string) => value.replace(/[\\%_]/g, '\\$&');
+
 @Injectable()
 export class RefferalLetterService implements OnModuleInit {
   constructor(
@@ -46,6 +60,36 @@ export class RefferalLetterService implements OnModuleInit {
           ALTER TABLE "tbl_refferal_letter" ADD COLUMN IF NOT EXISTS "bgn_arrival" VARCHAR;
           -- Refferal country guid
           ALTER TABLE "tbl_refferal_letter" ADD COLUMN IF NOT EXISTS "refferal_country_guid" UUID;
+          -- The country is picked from tbl_refferal_countries now. The old free-text column is
+          -- dropped once no referral letter depends on it: letters that only have the text are
+          -- first matched to a country by name, and the column stays if any is left unmatched.
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'tbl_refferal_letter' AND column_name = 'destination_country'
+          ) THEN
+            ALTER TABLE "tbl_refferal_letter" ALTER COLUMN "destination_country" DROP NOT NULL;
+            IF to_regclass('tbl_refferal_countries') IS NOT NULL THEN
+              UPDATE "tbl_refferal_letter" l
+              SET "refferal_country_guid" = c."guid"
+              FROM "tbl_refferal_countries" c
+              WHERE l."isRefferal" IS TRUE
+                AND l."refferal_country_guid" IS NULL
+                AND COALESCE(TRIM(l."destination_country"), '') <> ''
+                AND LOWER(TRIM(l."destination_country")) IN (
+                  LOWER(TRIM(c."name"->>'tk')), LOWER(TRIM(c."name"->>'ru')), LOWER(TRIM(c."name"->>'en'))
+                );
+            END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM "tbl_refferal_letter"
+              WHERE "isRefferal" IS TRUE
+                AND "refferal_country_guid" IS NULL
+                AND COALESCE(TRIM("destination_country"), '') <> ''
+            ) THEN
+              ALTER TABLE "tbl_refferal_letter" DROP COLUMN "destination_country";
+            ELSE
+              RAISE WARNING 'tbl_refferal_letter.destination_country kept: some referral letters have a country text that matches no row of tbl_refferal_countries';
+            END IF;
+          END IF;
         END $$;
       `);
     } catch (e) {
@@ -109,7 +153,6 @@ export class RefferalLetterService implements OnModuleInit {
       'received_opr_guid',
       'client_guid',
       'passport_count',
-      'destination_country',
       'bgn_departure',
       'bgn_arrival',
       'travel_document_number',
@@ -211,10 +254,10 @@ export class RefferalLetterService implements OnModuleInit {
       const whereConditions: any = { isRefferal: true };
       if (filters) {
         if (filters.search && filters.search.trim() !== '') {
-          const searchPattern = `%${filters.search.trim()}%`;
-          const searchLower = filters.search.trim().toLowerCase();
+          const searchText = escapeLike(filters.search.trim());
+          const searchPattern = `%${searchText}%`;
+          const searchLower = searchText.toLowerCase();
           whereConditions[Op.or] = [
-            { destination_country: { [Op.iLike]: searchPattern } },
             { bgn_departure: { [Op.iLike]: searchPattern } },
             { bgn_arrival: { [Op.iLike]: searchPattern } },
             { travel_document_number: { [Op.iLike]: searchPattern } },
@@ -241,36 +284,18 @@ export class RefferalLetterService implements OnModuleInit {
           whereConditions.refferal_country_guid = filters.refferal_country_guid;
         }
 
-        const startDep = filters.start_departure_date?.trim();
-        const endDep = filters.end_departure_date?.trim();
-        if (startDep && endDep) {
-          whereConditions.departure_date = { [Op.between]: [new Date(`${startDep}T00:00:00.000Z`), new Date(`${endDep}T23:59:59.999Z`)] };
-        } else if (startDep) {
-          whereConditions.departure_date = { [Op.gte]: new Date(`${startDep}T00:00:00.000Z`) };
-        } else if (endDep) {
-          whereConditions.departure_date = { [Op.lte]: new Date(`${endDep}T23:59:59.999Z`) };
-        }
-
-        const startRet = filters.start_return_date?.trim();
-        const endRet = filters.end_return_date?.trim();
-        if (startRet && endRet) {
-          whereConditions.return_date = { [Op.between]: [new Date(`${startRet}T00:00:00.000Z`), new Date(`${endRet}T23:59:59.999Z`)] };
-        } else if (startRet) {
-          whereConditions.return_date = { [Op.gte]: new Date(`${startRet}T00:00:00.000Z`) };
-        } else if (endRet) {
-          whereConditions.return_date = { [Op.lte]: new Date(`${endRet}T23:59:59.999Z`) };
-        }
-
-
-        const startCon = filters.start_contract_date?.trim();
-        const endCon = filters.end_contract_date?.trim();
-        if (startCon && endCon) {
-          whereConditions.contract_date = { [Op.between]: [new Date(`${startCon}T00:00:00.000Z`), new Date(`${endCon}T23:59:59.999Z`)] };
-        } else if (startCon) {
-          whereConditions.contract_date = { [Op.gte]: new Date(`${startCon}T00:00:00.000Z`) };
-        } else if (endCon) {
-          whereConditions.contract_date = { [Op.lte]: new Date(`${endCon}T23:59:59.999Z`) };
-        }
+        // Both ends of a range are included; an end without a start (or the reverse) works alone.
+        const dayConditions: any[] = [];
+        const addDayRange = (column: string, start?: string, end?: string) => {
+          const from = validDay(start);
+          const to = validDay(end);
+          if (from) dayConditions.push(this.sequelize.literal(`${localDay(column)} >= ${this.sequelize.escape(from)}`));
+          if (to) dayConditions.push(this.sequelize.literal(`${localDay(column)} <= ${this.sequelize.escape(to)}`));
+        };
+        addDayRange('departure_date', filters.start_departure_date, filters.end_departure_date);
+        addDayRange('return_date', filters.start_return_date, filters.end_return_date);
+        addDayRange('contract_date', filters.start_contract_date, filters.end_contract_date);
+        if (dayConditions.length) whereConditions[Op.and] = dayConditions;
 
         if (filters.status !== undefined && filters.status !== null && String(filters.status).trim() !== '') {
           whereConditions.status = filters.status;
@@ -291,7 +316,7 @@ export class RefferalLetterService implements OnModuleInit {
         data: formattedRows,
         meta: {
           totalItems: count,
-          totalPages: Math.ceil(count / limit),
+          totalPages: Math.ceil(count / currentLimit),
           currentPage: currentPage,
           subQuery: false
         },
@@ -518,6 +543,11 @@ export class RefferalLetterService implements OnModuleInit {
             as: 'refferaloperator',
             attributes: ['guid', 'fullName'],
           },
+          {
+            model: RefferalCountry,
+            as: 'refferalCountry',
+            attributes: ['guid', 'name', 'index_number'],
+          },
         ],
         order: [['index_number', 'DESC']],
         limit: currentLimit,
@@ -686,7 +716,6 @@ export class RefferalLetterService implements OnModuleInit {
       'refferal_country_guid',
       'refferalCountry',
       'passport_count',
-      'destination_country',
       'bgn_departure',
       'bgn_arrival',
       'departure_date',
@@ -743,6 +772,11 @@ export class RefferalLetterService implements OnModuleInit {
             model: Employee,
             as: 'refferaloperator',
             attributes: ['guid', 'fullName'],
+          },
+          {
+            model: RefferalCountry,
+            as: 'refferalCountry',
+            attributes: ['guid', 'name', 'index_number'],
           },
         ],
         order: [['index_number', 'DESC']],

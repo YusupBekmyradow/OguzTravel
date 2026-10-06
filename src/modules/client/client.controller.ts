@@ -45,11 +45,12 @@ export class ClientController {
     @Query('limit') limit: number = 10,
     @Query('search') search?: string,
     @Query('gender') gender?: string,
+    @Query('dateOfBirth') dateOfBirth?: string,
     @Query('passportExpiryDate') passportExpiryDate?: string,
     @Query('passportIssueDate') passportIssueDate?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    const filters = { gender, passportExpiryDate, passportIssueDate };
+    const filters = { gender, dateOfBirth, passportExpiryDate, passportIssueDate };
     return this.clientService.getAllClient(Number(page), Number(limit), search, filters, lang);
   }
 
