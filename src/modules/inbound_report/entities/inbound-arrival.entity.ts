@@ -1,10 +1,8 @@
 import { Column, DataType, Model, Table } from "sequelize-typescript";
 
-/** "GELEN" report: foreign tourists received, one row per person. */
 @Table({
   tableName: 'tbl_inbound_arrivals',
   timestamps: true,
-  // Every list, summary and export filters and orders by this date.
   indexes: [{ fields: ['entry_date'] }],
 })
 export class InboundArrival extends Model<InboundArrival> {
@@ -79,14 +77,12 @@ export class InboundArrival extends Model<InboundArrival> {
   })
   declare exit_date?: string | null;
 
-  /** Border checkpoint (BGN / GGÝMN) of entry. */
   @Column({
     type: DataType.STRING,
     allowNull: true
   })
   declare entry_border?: string;
 
-  /** Border checkpoint (BGN / GGÝMN) of exit. */
   @Column({
     type: DataType.STRING,
     allowNull: true

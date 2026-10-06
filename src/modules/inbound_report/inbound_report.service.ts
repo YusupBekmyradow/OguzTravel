@@ -12,12 +12,10 @@ import { errorResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-/** The export reads 100 rows a page; nothing needs more than this. */
 const MAX_PAGE_SIZE = 200;
 
 export type InboundReportFilters = { search?: string; start_date?: string; end_date?: string };
 
-/** The date a row is reported under, and the text columns `search` looks in. */
 const EXPECTED = { dateField: 'start_date', searchFields: ['country', 'route', 'transport'] };
 const ARRIVAL = {
   dateField: 'entry_date',
@@ -30,7 +28,6 @@ const INVITATION = { dateField: 'report_month', searchFields: ['country'] };
 
 const day = (value?: string | null) => (value ? String(value).slice(0, 10) : value);
 const clean = (value?: string) => (typeof value === 'string' ? value.trim() : value);
-/** Typed text is matched literally: % and _ are not wildcards. */
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, '\\$&');
 const datesInOrder = (startKey: string, endKey: string) => (row: Record<string, any>) =>
   !row[startKey] || !row[endKey] || String(row[endKey]) >= String(row[startKey]);
@@ -133,7 +130,6 @@ export class InboundReportService {
       if (!item) {
         return errorResponse(HttpStatuses.NOT_FOUND, this.msg('notFound', lang));
       }
-      // A partial update is checked against the row it will produce.
       if (isValid && !isValid({ ...item.get({ plain: true }), ...data })) {
         return errorResponse(HttpStatuses.BAD_REQUEST, this.msg('dateOrder', lang));
       }
@@ -179,7 +175,6 @@ export class InboundReportService {
   private invitationData(dto: Partial<CreateInboundInvitationDto>) {
     const data: Record<string, any> = { ...dto };
     if (dto.country !== undefined) data.country = clean(dto.country);
-    // Any day of the month is accepted; the month itself is what is stored.
     if (dto.report_month !== undefined) data.report_month = `${String(dto.report_month).slice(0, 7)}-01`;
     return data;
   }
@@ -235,8 +230,6 @@ export class InboundReportService {
     return this.deleteRow(this.invitationRepo, guid, lang);
   }
 
-
-  /** Totals of the three reports for the same filters as the lists. */
   async getSummary(filters: InboundReportFilters, lang: string = 'tk') {
     try {
       const sum = (field: string) => Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col(field)), 0);

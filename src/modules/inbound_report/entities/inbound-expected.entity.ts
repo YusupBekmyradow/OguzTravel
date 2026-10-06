@@ -1,10 +1,8 @@
 import { Column, DataType, Model, Table } from "sequelize-typescript";
 
-/** "GARAŞYLÝAN" report: tourists expected to arrive, one row per group. */
 @Table({
   tableName: 'tbl_inbound_expected',
   timestamps: true,
-  // Every list, summary and export filters and orders by this date.
   indexes: [{ fields: ['start_date'] }],
 })
 export class InboundExpected extends Model<InboundExpected> {

@@ -1,13 +1,7 @@
 import { Column, DataType, Model, Table } from "sequelize-typescript";
-
-/**
- * "ÇAKYLYKLAR-Migrasiýa" report: results of the invitation applications
- * handed to the State Migration Service, counted in people, per country and month.
- */
 @Table({
   tableName: 'tbl_inbound_invitations',
   timestamps: true,
-  // Every list, summary and export filters and orders by this date.
   indexes: [{ fields: ['report_month'] }],
 })
 export class InboundInvitation extends Model<InboundInvitation> {
@@ -27,7 +21,6 @@ export class InboundInvitation extends Model<InboundInvitation> {
   })
   declare index_number: number;
 
-  /** First day of the report month. */
   @Column({
     type: DataType.DATEONLY,
     allowNull: false
@@ -61,7 +54,6 @@ export class InboundInvitation extends Model<InboundInvitation> {
   })
   declare pending_count: number;
 
-  /** Applications submitted = granted + refused + pending, as in the report form. */
   @Column({
     type: DataType.VIRTUAL,
     get(this: InboundInvitation) {
