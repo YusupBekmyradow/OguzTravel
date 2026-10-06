@@ -81,7 +81,6 @@ export class Visa extends Model<Visa> {
   })
   declare price_usd: number;
 
-  // The profit inside each price, entered by hand; 0 = not entered.
   @Column({
     type: DataType.DECIMAL(12, 2),
     defaultValue: 0

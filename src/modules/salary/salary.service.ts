@@ -93,14 +93,8 @@ const ADDED_COLUMNS = {
   bonus_percent: { type: DataTypes.DECIMAL(5, 2), allowNull: true },
   bonus_currency: { type: DataTypes.STRING(3), allowNull: false, defaultValue: 'TMT' },
 };
-
-// The salary is always TMT; only the bonus may be USD. With no exchange rate
-// to fold it in, a USD bonus stays out of total_amount / payable_amount and
-// goes to the cash flow as its own USD row.
 const USD = 'USD';
 const toBonusCurrency = (value: any): 'TMT' | 'USD' => (value === USD ? USD : 'TMT');
-
-// Summary sums split by bonus currency: `bonus` is TMT only, `bonus_usd` USD.
 const BONUS_TMT_SUM = literal(
   `COALESCE(SUM(CASE WHEN "Salary"."bonus_currency" = '${USD}' THEN 0 ELSE "Salary"."bonus" END), 0)`,
 );
@@ -689,9 +683,6 @@ export class SalaryService implements OnModuleInit {
     }
   }
 
-
-  // Drops the month's cash flow rows (TMT salary + USD bonus) before a re-lock
-  // writes fresh ones, or when the month is unlocked.
   private async destroyMonthCalcRows(existing: SalaryMonth | null, transaction: Transaction) {
     const guids = [existing?.salary_calc_guid, existing?.salary_usd_calc_guid].filter(Boolean) as string[];
     if (guids.length === 0) return;
@@ -739,9 +730,6 @@ export class SalaryService implements OnModuleInit {
               },
             );
           }
-
-          // total_amount already leaves USD bonuses out, so the TMT row is the
-          // salaries + TMT bonuses and USD bonuses get a row of their own.
           let totalAmount = 0;
           let usdBonusAmount = 0;
           if (employeeGuids.length > 0) {

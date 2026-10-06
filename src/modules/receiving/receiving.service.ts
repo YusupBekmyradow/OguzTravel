@@ -187,7 +187,6 @@ export class ReceivingService {
   ) {
     try {
       const page = Math.max(1, Number(query.page) || 1);
-      // Up to 500 per page, so an Excel export needs only a few requests.
       const limit = Math.max(1, Math.min(500, Number(query.limit) || 10));
       const offset = (page - 1) * limit;
 
@@ -206,7 +205,6 @@ export class ReceivingService {
         conditions.push(`r.operator_guid = :operator_guid`);
         replacements.operator_guid = query.operator_guid;
       }
-      // Application dates are compared as local (Ashgabat) calendar days.
       const localDay = `(r.application_date AT TIME ZONE 'Asia/Ashgabat')::date`;
       const day = (v?: string) => {
         const d = v?.trim().slice(0, 10);
@@ -226,7 +224,7 @@ export class ReceivingService {
       }
       if (query.status?.trim()) {
         conditions.push(`r.status ILIKE :status`);
-        replacements.status= `%${query.status.trim()}%`;
+        replacements.status = `%${query.status.trim()}%`;
       }
       if (query.search?.trim()) {
         conditions.push(`(

@@ -122,7 +122,6 @@ export class Salary extends Model<Salary> {
   })
   declare bonus: number;
 
-  // TMT bonuses are part of total_amount; a USD bonus is paid separately.
   @Column({
     type: DataType.STRING(3),
     allowNull: false,

@@ -30,10 +30,8 @@ export class GeneralTranslationService implements OnModuleInit {
         ADD COLUMN IF NOT EXISTS "expense_price" NUMERIC(12, 2) DEFAULT 0;
       `);
     } catch (e) {
-      // Ignore if table doesn't exist yet or already altered
     }
 
-    // The completion fields are optional: a translation can be registered before it is done.
     try {
       await this.sequelize.query(`
         ALTER TABLE "tbl_general_translations"
@@ -42,7 +40,6 @@ export class GeneralTranslationService implements OnModuleInit {
         ALTER COLUMN "completed_day" DROP NOT NULL;
       `);
     } catch (e) {
-      // Ignore if table doesn't exist yet
     }
   }
 

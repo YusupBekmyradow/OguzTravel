@@ -205,7 +205,6 @@ export class RefferalLetterService implements OnModuleInit {
   ) {
     try {
       const currentPage = Math.max(1, Number(page));
-      // Paged list: at most 500 rows per request (the Excel export asks for 500).
       const currentLimit = Math.max(1, Math.min(500, Number(limit) || 10));
       const offset = (currentPage - 1) * currentLimit;
       const whereConditions: any = { isRefferal: true };

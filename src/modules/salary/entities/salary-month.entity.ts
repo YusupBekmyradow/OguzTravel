@@ -71,7 +71,6 @@ export class SalaryMonth extends Model<SalaryMonth> {
   })
   declare salary_calc_guid?: string | null;
 
-  // Cash flow row for the month's USD bonuses (null when there are none).
   @Column({
     type: DataType.UUID,
     allowNull: true,

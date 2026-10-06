@@ -13,29 +13,14 @@ import { SYSTEM_CATEGORIES } from '../total_calculations/total_calculations.serv
 type Currency = 'USD' | 'TMT';
 
 const T = '"TotalCalculation"';
-
-// The query's `currency` is not validated; anything but USD reads as TMT, and
-// only these two literals ever reach the SQL below.
 const toCurrency = (value: any): Currency => (value === 'USD' ? 'USD' : 'TMT');
-
-// Dashboards report sales: the rows the project triggers write for a sold
-// service (B2B, tickets, visa…). Kassa rows (MANUAL / EXCEL) are cash moves,
-// not sales, and the month's salary is a cost of the office — both stay out.
 const SALES_ONLY_SQL =
   `COALESCE(${T}.source, 'PROJECT') = 'PROJECT' ` +
   `AND ${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'`;
-
-// USD and TMT are reported separately and never converted. A visa row is
-// booked as TMT with its USD price in sale_price_usd / credit_usd, so it
-// counts in USD when it has a USD price and in TMT unless it is USD-only.
 const inCurrencySql = (c: Currency) =>
   c === 'USD'
     ? `(${T}.currency = 'USD' OR COALESCE(${T}.sale_price_usd, 0) > 0 OR COALESCE(${T}.net_price_usd, 0) > 0 OR COALESCE(${T}.profit_usd, 0) > 0 OR COALESCE(${T}.credit_usd, 0) > 0)`
     : `(${T}.currency = 'TMT' AND NOT (COALESCE(${T}.sale_price_usd, 0) > 0 AND COALESCE(${T}.sale_price, 0) = 0))`;
-
-// Per-row amounts in one currency; every endpoint sums these, so a figure means
-// the same on every card. A visa row is booked as TMT and keeps its USD side
-// in the *_usd columns, so each USD amount takes those from a non-USD row.
 const AMOUNT_SQL = {
   sale: (c: Currency) =>
     c === 'USD'
@@ -61,15 +46,11 @@ const round2 = (value: number) => Math.round(value * 100) / 100;
 
 type Interval = 'day' | 'week' | 'month';
 
-// A picked range is bucketed by its length, so a chart never draws hundreds of
-// daily spikes: about a month by day, about half a year by week, longer by month.
 const intervalFor = (start: Date, end: Date): Interval => {
   const days = (end.getTime() - start.getTime()) / 86400000;
   return days <= 45 ? 'day' : days <= 190 ? 'week' : 'month';
 };
 
-// Sortable bucket key that carries the year: a date for days and for weeks (a
-// week is keyed by its Monday), "YYYY-MM" for months.
 const bucketKeySql = (interval: Interval) =>
   interval === 'month'
     ? `TO_CHAR(${T}.datetime, 'YYYY-MM')`
@@ -77,14 +58,11 @@ const bucketKeySql = (interval: Interval) =>
       ? `TO_CHAR(DATE_TRUNC('week', ${T}.datetime), 'YYYY-MM-DD')`
       : `TO_CHAR(${T}.datetime, 'YYYY-MM-DD')`;
 
-// `base` narrowed to sales rows, and to one currency when given.
 const salesWhere = (base: any, currency?: Currency) => ({
   ...base,
   [Op.and]: [literal(SALES_ONLY_SQL), ...(currency ? [literal(inCurrencySql(currency))] : [])],
 });
 
-// Sales in either currency. Counted over this, a visa priced in both TMT and
-// USD is one sale, while the per-currency counts above take it in each.
 const anyCurrencySalesWhere = (base: any) => ({
   ...base,
   [Op.and]: [literal(SALES_ONLY_SQL), literal(`(${inCurrencySql('TMT')} OR ${inCurrencySql('USD')})`)],
@@ -199,7 +177,6 @@ export class DashboardService {
         usd: { value: currentUsdData.totalProfit, ...profitUsdStats },
         tmt: { value: currentTmtData.totalProfit, ...profitTmtStats },
       },
-      // Not a sale: the locked months' salaries (TMT) and USD bonuses.
       salary: {
         usd: { value: currentSalary.USD, ...this.calcPercentage(currentSalary.USD, prevSalary.USD) },
         tmt: { value: currentSalary.TMT, ...this.calcPercentage(currentSalary.TMT, prevSalary.TMT) },
@@ -223,10 +200,6 @@ export class DashboardService {
 
 
 
-
-  // Every sale once, whatever its currency: the `count_all` the endpoints send
-  // beside their per-currency figures, so a page showing TMT and USD together
-  // has one sales count. Keyed by `groupSql`'s value, or '' when not grouped.
   private async countAllSales(whereCondition: any, groupSql?: string): Promise<Map<string, number>> {
     const group = groupSql ? literal(groupSql) : null;
     const rows: any[] = await this.totalCalculationModel.findAll({
@@ -261,11 +234,6 @@ export class DashboardService {
   }
 
 
-  // Money going out in one currency, per day / week / month, split by where it
-  // goes: the cost of the period's sales, salaries (locked months and USD
-  // bonuses) and kassa expenses entered by hand or imported from Excel. Kassa
-  // expenses are kept as their own group, so a supplier payment or salary also
-  // booked in the kassa shows up next to its twin instead of hiding in a sum.
   async getMoneyOut(filters: GetSummaryFilterDto) {
     const { start_date, end_date, period_preset, office_guid } = filters;
     const currencyParam = toCurrency(filters.currency);
@@ -295,15 +263,11 @@ export class DashboardService {
       currentEnd.setHours(23, 59, 59, 999);
       interval = intervalFor(currentStart, currentEnd);
     }
-    // The previous period is the same length right before, as on the cards.
     const prevEnd = new Date(currentStart.getTime() - 1);
     const prevStart = new Date(prevEnd.getTime() - (currentEnd.getTime() - currentStart.getTime()));
 
     const net = `COALESCE(${T}.net_price, 0)`;
     const own = `${T}.currency = '${currencyParam}'`;
-    // The cost of sales is summed like on every other card (a visa's USD cost
-    // sits on a TMT row), so the rows are not narrowed to one currency here;
-    // salaries and kassa expenses are rows of the asked currency.
     const groupSums: [any, string][] = [
       [sumOf(`CASE WHEN ${SALES_ONLY_SQL} THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'cost'],
       [sumOf(`CASE WHEN ${own} AND ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${net} ELSE 0 END`), 'salary'],
@@ -571,8 +535,6 @@ export class DashboardService {
 
       overallTotalCount += count;
     });
-
-    // The currency-free count per status; an unknown status folds into "no status", as above.
     const countAll = { paid: 0, notpaid: 0, REFUND: 0, null: 0 };
     countAllByStatus.forEach((count, status) => {
       countAll[status in countAll && status !== '' ? status : 'null'] += count;
@@ -893,10 +855,6 @@ export class DashboardService {
       group: ['office_guid'],
       raw: true,
     });
-    // Money out beside the cost of sales, per office, with the same meaning as
-    // in getMoneyOut: salaries (locked months and USD bonuses) and kassa
-    // expenses entered by hand or imported from Excel. Neither is a sale, so
-    // they are read apart from the sales rows above.
     const net = `COALESCE(${T}.net_price, 0)`;
     const otherOutResults = await this.totalCalculationModel.findAll({
       where: { datetime: { [Op.between]: [currentStart, currentEnd] }, currency: currencyParam },
@@ -1105,7 +1063,6 @@ export class DashboardService {
     } else if (currentTotalProfit < 0) {
       profitPercentageDiff = -100;
     }
-    // Every bucket key of a range, in order, matching bucketKeySql; weeks start on Monday.
     const pad = (n: number) => String(n).padStart(2, '0');
     const dayKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const generateKeys = (start: Date, end: Date, interval: Interval) => {
@@ -1119,7 +1076,6 @@ export class DashboardService {
       }
       return keys;
     };
-    // Display label: "DD.MM" (with the year when the range spans two), "MM.YYYY" per month.
     const spansYears = currentStart.getFullYear() !== currentEnd.getFullYear();
     const labelOf = (key: string) => {
       const [y, m, d] = key.split('-');
@@ -1140,8 +1096,6 @@ export class DashboardService {
     });
     const currentKeys = generateKeys(currentStart, currentEnd, groupByInterval);
     const prevKeys = generateKeys(prevStart, prevEnd, groupByInterval);
-
-    // The previous period lines up bucket by bucket (1st day with 1st day).
     const chart = currentKeys.map((key, index) => {
       const currData = currentDataMap.get(key) || { sale: 0, profit: 0 };
       const prevKey = prevKeys[index];

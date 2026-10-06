@@ -16,7 +16,6 @@ import { FilterVisaDto } from './dto/get-visas.dto';
 
 const VISA_STATUS_CODES: Record<string, number> = { PROCESS: 1, DONE: 2, FAIL: 3 };
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-/** Visa dates are compared as local (Ashgabat) calendar days. */
 const LOCAL_DAY = `("Visa"."datetime" AT TIME ZONE 'Asia/Ashgabat')::date`;
 
 @Injectable()
@@ -212,7 +211,8 @@ export class VisaService {
         data: { ...this.formatVisaPassport(newVisa), paymentStats },
         message: this.i18n.t('visa.created', { lang })
       };
-    } catch (error: any) { console.log(error)
+    } catch (error: any) {
+      console.log(error)
       await t.rollback();
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('visa.createFailed', { lang }), error);
     }
@@ -236,7 +236,6 @@ export class VisaService {
     const search = filters.search?.trim();
     if (search) {
       const term = this.sequelize.escape(`%${search}%`);
-      // Client fields via EXISTS, so the paginated query needs no join in its WHERE.
       and.push(Sequelize.literal(`(
         CAST("Visa"."index_number" AS TEXT) ILIKE ${term}
         OR "Visa"."note" ILIKE ${term}
@@ -276,8 +275,9 @@ export class VisaService {
         meta: { totalItems: count, totalPages: Math.ceil(count / currentLimit), currentPage },
         message: this.i18n.t('visa.listFetched', { lang })
       };
-    } catch (error: any) { console.log(error);
-  
+    } catch (error: any) {
+      console.log(error);
+
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('visa.fetchFailed', { lang }), error);
     }
   }
@@ -303,14 +303,11 @@ export class VisaService {
       let updateData: any = { ...updateDto };
 
       if (isStatusRefund) {
-        // Status 3 (Gaýtarylan / Refund) bolanda:
-        // 1. Öňki bar bolan ähli tölegleri arassalaýarys
         await this.visaPaymentRepo.destroy({
           where: { visa_guid: existingVisa.guid },
           transaction: t
         });
 
-        // 2. Doly baha möçberinde täze tölegler ýazylýar (Airway / Railway / B2B ýaly)
         if (newPriceTmt > 0) {
           await this.visaPaymentRepo.create({
             visa_guid: existingVisa.guid,
@@ -332,11 +329,9 @@ export class VisaService {
 
         updateData.is_paid = true;
       } else {
-        // Status 3 däl bolanda:
         const willBePaid = isPaidTrue || (existingVisa.is_paid === true && !isPaidFalse);
 
         if (willBePaid) {
-          // Tölenen (is_paid === true)
           for (const { currency, targetPrice } of [
             { currency: 'TMT', targetPrice: newPriceTmt },
             { currency: 'USD', targetPrice: newPriceUsd },
@@ -401,9 +396,6 @@ export class VisaService {
           }
           updateData.is_paid = true;
         } else if (isPaidFalse) {
-          // Kredit (is_paid === false)
-          // Eger öň status 3 (Gaýtarylan) bolup, indi status 3-den kredite geçirilýän bolsa,
-          // gaýtarylan wagty ýazylan awtomatiki tölegi aýyrmaly
           if (Number(existingVisa.status) === 3) {
             await this.visaPaymentRepo.destroy({
               where: { visa_guid: existingVisa.guid },

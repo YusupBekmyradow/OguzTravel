@@ -186,9 +186,6 @@ export class TotalCalculationsService implements OnModuleInit {
         const amount = nextAmount !== undefined
           ? Number(nextAmount)
           : Number(prevType === 'INCOME' ? existing.sale_price : existing.net_price);
-        // A profit sent now wins. Otherwise an income row keeps the profit it
-        // had (Office cash), so editing it from Cash Flow — whose form has no
-        // profit field — recomputes the expense instead of dropping the split.
         const hadProfit = prevType === 'INCOME' && (Number(existing.profit) > 0 || Number(existing.net_price) > 0);
         const profit = type !== 'INCOME'
           ? null
@@ -215,9 +212,6 @@ export class TotalCalculationsService implements OnModuleInit {
       if (updateDto.receiver_opr_guid !== undefined) {
         updateData.receiver_opr_guid = updateDto.receiver_opr_guid || null;
       }
-      // An explicit office wins. Otherwise the office follows the operator, but
-      // only when the operator actually changes, so editing a row (the Cash
-      // Flow form always sends receiver_opr_guid) keeps an office set by hand.
       if (updateDto.office_guid !== undefined) {
         updateData.office_guid = updateDto.office_guid || null;
       } else if (
@@ -252,6 +246,7 @@ export class TotalCalculationsService implements OnModuleInit {
   }
 
 
+
   async deleteTotalCalculation(guid: string, lang: string = 'tk') {
     try {
       const existing = await this.totalCalculationModel.findByPk(guid);
@@ -284,11 +279,6 @@ export class TotalCalculationsService implements OnModuleInit {
 
 
 
-  // Cash-ledger rows keep income in sale_price and expense in net_price so
-  // SUM(sale_price) / SUM(net_price) work the same for project and cash rows.
-  // An income with a profit (Office cash) is split like a project sale:
-  // price in sale_price, profit in profit, and the money paid out
-  // (Çykdajy = price − profit) in net_price.
   private splitAmount(type: string, amount: number, profit: number | null = null) {
     if (type !== 'INCOME') return { sale_price: 0, net_price: amount, profit: 0 };
     if (profit == null) return { sale_price: amount, net_price: 0, profit: 0 };
@@ -303,7 +293,6 @@ export class TotalCalculationsService implements OnModuleInit {
   async importTotalCalculations(rows: ImportTotalCalculationRowDto[], lang: string = 'tk') {
     const transaction = await this.sequelize.transaction();
     try {
-      // Drop rows already imported earlier (or repeated inside this batch).
       const keys = [...new Set(rows.map(r => r.import_key))];
       const existing = await this.totalCalculationModel.findAll({
         where: { import_key: { [Op.in]: keys } },
@@ -316,8 +305,6 @@ export class TotalCalculationsService implements OnModuleInit {
         seen.add(r.import_key);
         return true;
       });
-
-      // Resolve category names against tk/ru/en names, creating missing ones.
       const categories = await this.categoryRepo.findAll({ attributes: ['guid', 'name'], transaction });
       const categoryByName = new Map<string, string>();
       for (const cat of categories) {
@@ -446,7 +433,6 @@ export class TotalCalculationsService implements OnModuleInit {
         conditions.push(`tc.office_guid = :office_guid`);
         replacements.office_guid = filters.office_guid;
       }
-      // Only rows booked to some office (Finance → Office cash, all offices)
       if (filters?.has_office) {
         conditions.push(`tc.office_guid IS NOT NULL`);
       }
@@ -454,8 +440,6 @@ export class TotalCalculationsService implements OnModuleInit {
         conditions.push(`tc.status = :status`);
         replacements.status = filters.status;
       }
-      // Dual-currency rows (Visa, Salary with USD bonus) carry USD prices/expenses
-      // in sale_price_usd / net_price_usd, so a USD filter must also match them.
       if (filters?.currency) {
         conditions.push(`(tc.currency = :currency OR (:currency = 'USD' AND (COALESCE(tc.sale_price_usd, 0) > 0 OR COALESCE(tc.net_price_usd, 0) > 0)))`);
         replacements.currency = filters.currency;
@@ -464,13 +448,11 @@ export class TotalCalculationsService implements OnModuleInit {
         conditions.push(`tc.is_manual = :is_manual`);
         replacements.is_manual = filters.is_manual;
       }
-      // source accepts a comma list, e.g. "MANUAL,EXCEL" for the kassa tab
       const sources = (filters?.source || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
       if (sources.length) {
         conditions.push(`COALESCE(tc.source, 'PROJECT') IN (:sources)`);
         replacements.sources = sources;
       }
-      // INCOME / EXPENSE: cash rows by their type, project rows by which side has money
       if (filters?.type === 'INCOME') {
         conditions.push(`(tc.type = 'INCOME' OR (tc.type IS NULL AND (tc.sale_price > 0 OR COALESCE(tc.sale_price_usd, 0) > 0)))`);
       } else if (filters?.type === 'EXPENSE') {
@@ -521,9 +503,6 @@ export class TotalCalculationsService implements OnModuleInit {
           { replacements, type: QueryTypes.SELECT }
         ),
 
-        // Totals per currency for the whole filtered set (not just this page).
-        // Dual-currency rows (Visa, Salary with USD bonus) are split into their own
-        // currency line plus a USD line when they carry USD sales/expenses.
         this.sequelize.query<any>(`
           SELECT
             v.currency,
@@ -2289,9 +2268,9 @@ export class TotalCalculationsService implements OnModuleInit {
         WHERE tc.guid = v.guid;
       `);
 
-      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation, Referral Letter, Aylyk, Cafeteria, Visa we Töleg triggerlary üstünlikli döredildi/täsirleşdirildi.');
+      console.log('✅ B2B, Airway, Railway, Hotel, Tour, Transfer, Package, Translation, Referral Letter, Aylyk, Cafeteria, Visa we Töleg triggerlary created successfully');
     } catch (error) {
-      console.error('❌ Total Calculations trigger döredilende ýalňyşlyk:', error);
+      console.error('❌ Total Calculations trigger creating error:', error);
     }
   }
 }
