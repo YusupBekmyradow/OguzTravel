@@ -14,7 +14,7 @@ const GUID_BODY = { schema: { type: 'object', properties: { guid: { type: 'strin
 @ApiTags('Inbound reports')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/inbound')
+@RequirePermissions('/Inbound')
 @Controller('inbound-reports')
 export class InboundReportController {
   constructor(private readonly inboundReportService: InboundReportService) { }

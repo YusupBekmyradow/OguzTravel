@@ -10,8 +10,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Inbound')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/intake')
+@UseGuards(JwtAuthGuard)
 @Controller('inbound')
 export class InboundController {
   constructor(private readonly inboundService: InboundService) { }
