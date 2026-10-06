@@ -198,8 +198,8 @@ export class TourService {
             t.guests_count::text ILIKE :search
           ))
 
-          AND (:start_date::date IS NULL OR t.application_date::date >= :start_date::date)
-          AND (:end_date::date IS NULL OR t.application_date::date <= :end_date::date)
+          AND (:start_date::date IS NULL OR (t.application_date AT TIME ZONE 'Asia/Ashgabat')::date >= :start_date::date)
+          AND (:end_date::date IS NULL OR (t.application_date AT TIME ZONE 'Asia/Ashgabat')::date <= :end_date::date)
           AND (:opr_guid::uuid IS NULL OR t.opr_guid = :opr_guid::uuid)
           AND (:prepared_opr_guid::uuid IS NULL OR t.prepared_opr_guid = :prepared_opr_guid::uuid)
           AND (:is_paid::integer IS NULL OR t.is_paid = :is_paid::integer)

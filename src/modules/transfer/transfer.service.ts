@@ -203,8 +203,8 @@ export class TransferService {
             tr.route ILIKE :search OR
             tr.guests_count::text ILIKE :search
           ))
-          AND (:start_date::date IS NULL OR tr.application_date::date >= :start_date::date)
-          AND (:end_date::date IS NULL OR tr.application_date::date <= :end_date::date)
+          AND (:start_date::date IS NULL OR (tr.application_date AT TIME ZONE 'Asia/Ashgabat')::date >= :start_date::date)
+          AND (:end_date::date IS NULL OR (tr.application_date AT TIME ZONE 'Asia/Ashgabat')::date <= :end_date::date)
           AND (:opr_guid::uuid IS NULL OR tr.opr_guid = :opr_guid::uuid)
           AND (:prepared_opr_guid::uuid IS NULL OR tr.prepared_opr_guid = :prepared_opr_guid::uuid)
           AND (:transfer_type::text IS NULL OR tr.transfer_type = :transfer_type::text)

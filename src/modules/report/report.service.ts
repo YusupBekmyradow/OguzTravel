@@ -230,8 +230,14 @@ export class ReportService {
     limit: number = 10,
     search?: string,
     lang: string = 'tk',
+    dates: { start_date?: string; end_date?: string } = {},
   ) {
     try {
+      // A batch is filtered by the local (Ashgabat) day it was created on, both ends included.
+      const day = (value?: string) => {
+        const v = value?.trim().slice(0, 10);
+        return v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) ? v : null;
+      };
       const pageNum = Math.max(1, Number(page) || 1);
       const limitNum = Math.max(1, Math.min(100, Number(limit) || 10));
       const offset = (pageNum - 1) * limitNum;
@@ -240,6 +246,8 @@ export class ReportService {
         limit: limitNum,
         offset,
         search: search?.trim() ? `%${search.trim()}%` : null,
+        startDate: day(dates.start_date),
+        endDate: day(dates.end_date),
       };
 
       const sqlQuery = `
@@ -263,6 +271,8 @@ export class ReportService {
           OR note ILIKE :search
           OR "createdAt"::text ILIKE :search
         ))
+        AND (:startDate::date IS NULL OR ("createdAt" AT TIME ZONE 'Asia/Ashgabat')::date >= :startDate::date)
+        AND (:endDate::date IS NULL OR ("createdAt" AT TIME ZONE 'Asia/Ashgabat')::date <= :endDate::date)
         ORDER BY "createdAt" DESC
         LIMIT :limit OFFSET :offset
       `;
