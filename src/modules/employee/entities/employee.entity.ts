@@ -20,7 +20,6 @@ import { Transfer } from "../../transfer/entities/transfer.entity";
 import { Package } from "../../package/entities/package.entity";
 import { HarPayment } from "../../har_payment/entities/har_payment.entity";
 import { TtpPayment } from "../../ttp_payment/entities/ttp_payment.entity";
-import { Inbound } from "../../inbound/entities/inbound.entity";
 import { Receiving } from "../../receiving/entities/receiving.entity";
 import { Cafeteria } from "../../cafeteria/entities/cafeteria.entity";
 import { TotalCalculation } from "../../total_calculations/entities/total_calculation.entity";
@@ -298,13 +297,6 @@ export class Employee extends Model<Employee> {
     as: 'ttpPaymentOpr'
   })
   declare ttpPayment: TtpPayment[];
-
-  @HasMany(() => Inbound, {
-    foreignKey: 'receiver_opr_guid',
-    sourceKey: 'guid',
-    as: 'INreceiveroperator'
-  })
-  declare inbound: Inbound[];
 
   @HasMany(() => Receiving, {
     foreignKey: 'operator_guid',

@@ -7,11 +7,6 @@ export class CreateVisaPaymentDto {
   @IsOptional()
   declare visa_guid: string;
 
-  @ApiPropertyOptional()
-  @IsUUID()
-  @IsOptional()
-  declare inbound_guid: string;
-
   @ApiProperty()
   @IsNumber()
   @IsNotEmpty()

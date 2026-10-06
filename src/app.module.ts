@@ -35,7 +35,6 @@ import { TransferModule } from './modules/transfer/transfer.module';
 import { PackageModule } from './modules/package/package.module';
 import { HarPaymentModule } from './modules/har_payment/har_payment.module';
 import { TtpPaymentModule } from './modules/ttp_payment/ttp_payment.module';
-import { InboundModule } from './modules/inbound/inbound.module';
 import { InboundReportModule } from './modules/inbound_report/inbound_report.module';
 import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 import { APP_FILTER } from '@nestjs/core';
@@ -106,8 +105,7 @@ dotenv.config();
     PackageModule,
     HarPaymentModule,
     TtpPaymentModule,
-    InboundModule,
-    InboundReportModule,
+        InboundReportModule,
     MessagesModule,
     ReportModule,
     ImageUploadModule,

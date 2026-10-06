@@ -1,7 +1,6 @@
 import { Table, Model, Column, DataType, BelongsTo, ForeignKey } from "sequelize-typescript";
 import { Visa } from "../../visa/entities/visa.entity";
 import { Employee } from "../../employee/entities/employee.entity";
-import { Inbound } from "../../inbound/entities/inbound.entity";
 
 @Table({
   tableName: 'tbl_visa_payments',
@@ -37,13 +36,6 @@ export class VisaPayment extends Model<VisaPayment> {
     allowNull: true
   })
   declare visa_guid: string;
-
-  @ForeignKey(() => Inbound)
-  @Column({
-    type: DataType.UUID,
-    allowNull: true
-  })
-  declare inbound_guid: string;
 
   @Column({
     type: DataType.DATE,
@@ -88,12 +80,4 @@ export class VisaPayment extends Model<VisaPayment> {
     onUpdate: 'SET NULL'
   })
   declare operator: Employee;
-
-  @BelongsTo(() => Inbound, {
-    targetKey: 'guid',
-    foreignKey: 'inbound_guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare inbound: Inbound;
 }

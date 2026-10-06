@@ -64,7 +64,7 @@ export class TotalCalculation extends Model<TotalCalculation> {
   @Column({
     type: DataType.STRING,
     allowNull: false,
-    defaultValue: 'USD'
+    defaultValue: 'TMT'
   })
   declare currency: string;
 
@@ -82,7 +82,6 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare credit_price: number;
 
-  // USD sale price — used for dual-currency modules (e.g. Visa)
   @Column({
     type: DataType.DECIMAL(12, 2),
     allowNull: true,
@@ -90,8 +89,6 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare sale_price_usd: number;
 
-  // USD cost and profit of a dual-currency row (a visa): its TMT side keeps
-  // net_price / profit, like every single-currency row.
   @Column({
     type: DataType.DECIMAL(12, 2),
     allowNull: true,
@@ -106,7 +103,6 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare profit_usd: number;
 
-  // USD credit (paid amount) — used for dual-currency modules (e.g. Visa)
   @Column({
     type: DataType.DECIMAL(12, 2),
     allowNull: true,
@@ -129,15 +125,12 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare index_number: number;
 
-  // INCOME | EXPENSE — direction for cash-ledger rows (manual / Excel).
-  // Project (trigger) rows leave it null and use sale_price / net_price.
   @Column({
     type: DataType.STRING(20),
     allowNull: true
   })
   declare type?: string;
 
-  // PROJECT (DB triggers) | MANUAL (added from UI) | EXCEL (imported kassa book)
   @Column({
     type: DataType.STRING(20),
     allowNull: true,
@@ -151,7 +144,6 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare description?: string;
 
-  // Free-text "Tabşyran" / "Kabul eden" from the kassa book
   @Column({
     type: DataType.STRING,
     allowNull: true
@@ -164,14 +156,12 @@ export class TotalCalculation extends Model<TotalCalculation> {
   })
   declare receiver?: string;
 
-  // "Kärhana üçin" (Oguztravel, Oguzabat, ...)
   @Column({
     type: DataType.STRING,
     allowNull: true
   })
   declare company?: string;
 
-  // Deterministic key of an imported Excel row; a unique index prevents re-importing it.
   @Column({
     type: DataType.STRING(64),
     allowNull: true

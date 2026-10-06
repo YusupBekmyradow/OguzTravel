@@ -28,7 +28,6 @@ import { Transfer } from '../modules/transfer/entities/transfer.entity';
 import { Package } from '../modules/package/entities/package.entity';
 import { HarPayment } from '../modules/har_payment/entities/har_payment.entity';
 import { TtpPayment } from '../modules/ttp_payment/entities/ttp_payment.entity';
-import { Inbound } from '../modules/inbound/entities/inbound.entity';
 import { InboundExpected } from '../modules/inbound_report/entities/inbound-expected.entity';
 import { InboundArrival } from '../modules/inbound_report/entities/inbound-arrival.entity';
 import { InboundInvitation } from '../modules/inbound_report/entities/inbound-invitation.entity';
@@ -62,7 +61,7 @@ export const databaseConfig = (): SequelizeModuleOptions => {
    // sync: { alter: true }, /// automat clomn create
     logging: false,
     models: [Department, Office, Position, Employee, Client, User, Tstatus, B2b, TurkishAirline, TicketPayment, Visa, TurkishPayment, VisaPayment, RefferalLetter, Translator, GeneralTranslation, TransPayment, Hotel, Airway, Railway, Tour, Transfer,
-      Package, HarPayment, TtpPayment, Inbound, Message, TaskAssignee, Report, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria, TotalCalculation, Category, Salary, SalaryMonth, RefferalCountry, InboundExpected, InboundArrival, InboundInvitation]
+      Package, HarPayment, TtpPayment, Message, TaskAssignee, Report, CustomField, Country, Receiving, VisaDoc, DocDetails, UserDetail, Cafeteria, TotalCalculation, Category, Salary, SalaryMonth, RefferalCountry, InboundExpected, InboundArrival, InboundInvitation]
   };
 };
 

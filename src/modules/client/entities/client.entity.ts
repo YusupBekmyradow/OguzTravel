@@ -10,7 +10,7 @@ import { Railway } from "../../railway/entities/railway.entity";
 import { Tour } from "../../tour/entities/tour.entity";
 import { Transfer } from "../../transfer/entities/transfer.entity";
 import { Package } from "../../package/entities/package.entity";
-import { Inbound } from "../../inbound/entities/inbound.entity";
+
 import { Receiving } from "../../receiving/entities/receiving.entity";
 
 
@@ -118,12 +118,6 @@ export class Client extends Model<Client> {
     sourceKey: 'guid'
   })
   declare b2b: B2b[];
-
-  @HasMany(() => Inbound, {
-    foreignKey: 'client_guid',
-    sourceKey: 'guid'
-  })
-  declare inbound: Inbound[];
 
 
   @HasMany(() => TurkishAirline, {
