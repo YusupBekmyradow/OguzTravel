@@ -270,7 +270,9 @@ export class DashboardService {
     const own = `${T}.currency = '${currencyParam}'`;
     const groupSums: [any, string][] = [
       [sumOf(`CASE WHEN ${SALES_ONLY_SQL} THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'cost'],
-      [sumOf(`CASE WHEN ${own} AND ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${net} ELSE 0 END`), 'salary'],
+      // A closed salary month is one TMT row that can also carry USD bonuses (net_price_usd),
+      // so its part in the asked currency is taken whatever the row's own currency is.
+      [sumOf(`CASE WHEN ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'salary'],
       [sumOf(`CASE WHEN ${own} AND ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' THEN ${net} ELSE 0 END`), 'expense'],
     ];
     const whereFor = (start: Date, end: Date) => ({
@@ -857,11 +859,13 @@ export class DashboardService {
     });
     const net = `COALESCE(${T}.net_price, 0)`;
     const otherOutResults = await this.totalCalculationModel.findAll({
-      where: { datetime: { [Op.between]: [currentStart, currentEnd] }, currency: currencyParam },
+      where: { datetime: { [Op.between]: [currentStart, currentEnd] } },
       attributes: [
         'office_guid',
-        [sumOf(`CASE WHEN ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${net} ELSE 0 END`), 'salary'],
-        [sumOf(`CASE WHEN ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' THEN ${net} ELSE 0 END`), 'expense'],
+        // A closed salary month is one TMT row that can also carry USD bonuses (net_price_usd),
+        // so its part in the asked currency is taken whatever the row's own currency is.
+        [sumOf(`CASE WHEN ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'salary'],
+        [sumOf(`CASE WHEN ${T}.currency = '${currencyParam}' AND ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' THEN ${net} ELSE 0 END`), 'expense'],
       ],
       group: ['office_guid'],
       raw: true,
