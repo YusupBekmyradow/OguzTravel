@@ -672,6 +672,7 @@ export class TotalCalculationsService implements OnModuleInit {
         CREATE OR REPLACE FUNCTION sync_b2b_to_total_calculations()
         RETURNS TRIGGER AS $$
         DECLARE
+          v_operator_guid UUID;
           v_office_guid UUID;
           v_credit_price DECIMAL(12, 2);
           v_status VARCHAR(50);
@@ -681,9 +682,13 @@ export class TotalCalculationsService implements OnModuleInit {
             RETURN OLD;
           END IF;
 
-          SELECT office_guid INTO v_office_guid 
-          FROM tbl_employees 
-          WHERE guid = NEW.receiver_opr_guid;
+          -- A B2B sale is booked to the assigning operator ("Tabşyryjy") and their office,
+          -- not to the receiving one. A ticket saved without one falls back to the receiver.
+          v_operator_guid := COALESCE(NEW.assignment_opr_guid, NEW.receiver_opr_guid);
+
+          SELECT office_guid INTO v_office_guid
+          FROM tbl_employees
+          WHERE guid = v_operator_guid;
 
           SELECT GREATEST(COALESCE(NEW.sale_price, 0) - COALESCE(SUM(amount), 0), 0) INTO v_credit_price 
           FROM tbl_ticket_payments 
@@ -716,7 +721,7 @@ export class TotalCalculationsService implements OnModuleInit {
             NEW.guid,
             '${SYSTEM_CATEGORIES.B2B}'::uuid,
             COALESCE(NEW.datetime, NOW()),
-            NEW.receiver_opr_guid,
+            v_operator_guid,
             v_office_guid,
             v_status,
             COALESCE(NEW.net_price, 0),
