@@ -32,7 +32,6 @@ export class DashboardController {
   } //test-edilen
 
 
-  // Money out per period: cost of sales, salaries and kassa expenses.
   @Get('/money-out')
   async getMoneyOut(@Query() filters: GetSummaryFilterDto, @Query('currency') currency?: 'USD' | 'TMT') {
     return await this.dashboardService.getMoneyOut({ ...filters, currency: currency || 'TMT' });

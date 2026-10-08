@@ -20,24 +20,24 @@ const SALES_ONLY_SQL =
 const inCurrencySql = (c: Currency) =>
   c === 'USD'
     ? `(${T}.currency = 'USD' OR COALESCE(${T}.sale_price_usd, 0) > 0 OR COALESCE(${T}.net_price_usd, 0) > 0 OR COALESCE(${T}.profit_usd, 0) > 0 OR COALESCE(${T}.credit_usd, 0) > 0)`
-    : `(${T}.currency = 'TMT' AND NOT (COALESCE(${T}.sale_price_usd, 0) > 0 AND COALESCE(${T}.sale_price, 0) = 0))`;
+    : `${T}.currency = 'TMT'`;
 const AMOUNT_SQL = {
   sale: (c: Currency) =>
     c === 'USD'
-      ? `CASE WHEN ${T}.currency = 'USD' THEN COALESCE(${T}.sale_price, 0) ELSE COALESCE(${T}.sale_price_usd, 0) END`
-      : `CASE WHEN ${T}.currency = 'TMT' THEN COALESCE(${T}.sale_price, 0) ELSE 0 END`,
+      ? `((CASE WHEN ${T}.currency = 'USD' THEN COALESCE(${T}.sale_price, 0) ELSE 0 END) + COALESCE(${T}.sale_price_usd, 0))`
+      : `(CASE WHEN ${T}.currency = 'TMT' THEN COALESCE(${T}.sale_price, 0) ELSE 0 END)`,
   credit: (c: Currency) =>
     c === 'USD'
-      ? `CASE WHEN ${T}.currency = 'USD' THEN COALESCE(${T}.credit_price, 0) ELSE COALESCE(${T}.credit_usd, 0) END`
-      : `CASE WHEN ${T}.currency = 'TMT' THEN COALESCE(${T}.credit_price, 0) ELSE 0 END`,
+      ? `((CASE WHEN ${T}.currency = 'USD' THEN COALESCE(${T}.credit_price, 0) ELSE 0 END) + COALESCE(${T}.credit_usd, 0))`
+      : `(CASE WHEN ${T}.currency = 'TMT' THEN COALESCE(${T}.credit_price, 0) ELSE 0 END)`,
   net: (c: Currency) =>
     c === 'USD'
-      ? `CASE WHEN ${T}.currency = 'USD' THEN COALESCE(${T}.net_price, 0) ELSE COALESCE(${T}.net_price_usd, 0) END`
-      : `CASE WHEN ${T}.currency = 'TMT' THEN COALESCE(${T}.net_price, 0) ELSE 0 END`,
+      ? `((CASE WHEN ${T}.currency = 'USD' THEN COALESCE(${T}.net_price, 0) ELSE 0 END) + COALESCE(${T}.net_price_usd, 0))`
+      : `(CASE WHEN ${T}.currency = 'TMT' THEN COALESCE(${T}.net_price, 0) ELSE 0 END)`,
   profit: (c: Currency) =>
     c === 'USD'
-      ? `CASE WHEN ${T}.currency = 'USD' THEN COALESCE(${T}.profit, 0) ELSE COALESCE(${T}.profit_usd, 0) END`
-      : `CASE WHEN ${T}.currency = 'TMT' THEN COALESCE(${T}.profit, 0) ELSE 0 END`,
+      ? `((CASE WHEN ${T}.currency = 'USD' THEN COALESCE(${T}.profit, 0) ELSE 0 END) + COALESCE(${T}.profit_usd, 0))`
+      : `(CASE WHEN ${T}.currency = 'TMT' THEN COALESCE(${T}.profit, 0) ELSE 0 END)`,
 };
 
 const sumOf = (sql: string) => literal(`COALESCE(SUM(${sql}), 0)`);
@@ -113,15 +113,12 @@ export class DashboardService {
 
     const baseWhere: any = {
       datetime: { [Op.between]: [currentStart, currentEnd] },
+      office_guid: office_guid ? office_guid : { [Op.ne]: null },
     };
     const prevWhere: any = {
       datetime: { [Op.between]: [prevStart, prevEnd] },
+      office_guid: office_guid ? office_guid : { [Op.ne]: null },
     };
-
-    if (office_guid) {
-      baseWhere.office_guid = office_guid;
-      prevWhere.office_guid = office_guid;
-    }
 
     const [currentUsdData, prevUsdData, currentTmtData, prevTmtData, currentSalary, prevSalary, currentAll, prevAll] =
       await Promise.all([
@@ -270,8 +267,6 @@ export class DashboardService {
     const own = `${T}.currency = '${currencyParam}'`;
     const groupSums: [any, string][] = [
       [sumOf(`CASE WHEN ${SALES_ONLY_SQL} THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'cost'],
-      // A closed salary month is one TMT row that can also carry USD bonuses (net_price_usd),
-      // so its part in the asked currency is taken whatever the row's own currency is.
       [sumOf(`CASE WHEN ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'salary'],
       [sumOf(`CASE WHEN ${own} AND ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' THEN ${net} ELSE 0 END`), 'expense'],
     ];
@@ -841,7 +836,13 @@ export class DashboardService {
     }
     const offices = await Office.findAll({ raw: true });
     const currentResults = await this.totalCalculationModel.findAll({
-      where: salesWhere({ datetime: { [Op.between]: [currentStart, currentEnd] } }, currencyParam),
+      where: salesWhere(
+        {
+          datetime: { [Op.between]: [currentStart, currentEnd] },
+          office_guid: { [Op.ne]: null },
+        },
+        currencyParam,
+      ),
       attributes: [
         'office_guid',
         [sumOf(AMOUNT_SQL.sale(currencyParam)), 'sale_price'],
@@ -852,18 +853,25 @@ export class DashboardService {
       raw: true,
     });
     const previousResults = await this.totalCalculationModel.findAll({
-      where: salesWhere({ datetime: { [Op.between]: [previousStart, previousEnd] } }, currencyParam),
+      where: salesWhere(
+        {
+          datetime: { [Op.between]: [previousStart, previousEnd] },
+          office_guid: { [Op.ne]: null },
+        },
+        currencyParam,
+      ),
       attributes: ['office_guid', [sumOf(AMOUNT_SQL.profit(currencyParam)), 'profit']],
       group: ['office_guid'],
       raw: true,
     });
     const net = `COALESCE(${T}.net_price, 0)`;
     const otherOutResults = await this.totalCalculationModel.findAll({
-      where: { datetime: { [Op.between]: [currentStart, currentEnd] } },
+      where: {
+        datetime: { [Op.between]: [currentStart, currentEnd] },
+        office_guid: { [Op.ne]: null },
+      } as any,
       attributes: [
         'office_guid',
-        // A closed salary month is one TMT row that can also carry USD bonuses (net_price_usd),
-        // so its part in the asked currency is taken whatever the row's own currency is.
         [sumOf(`CASE WHEN ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'salary'],
         [sumOf(`CASE WHEN ${T}.currency = '${currencyParam}' AND ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' THEN ${net} ELSE 0 END`), 'expense'],
       ],
