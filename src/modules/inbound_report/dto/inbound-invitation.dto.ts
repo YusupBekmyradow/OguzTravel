@@ -30,6 +30,12 @@ export class CreateInboundInvitationDto {
   @IsOptional()
   declare pending_count?: number;
 
+  @ApiPropertyOptional({ description: "Granted an invitation but did not come (part of granted_count)" })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  declare not_arrived_count?: number;
+
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { I18nService } from 'nestjs-i18n';
 import { Op, Sequelize } from 'sequelize';
@@ -35,13 +35,24 @@ const EXPECTED_DATES = datesInOrder('start_date', 'end_date');
 const ARRIVAL_DATES = datesInOrder('entry_date', 'exit_date');
 
 @Injectable()
-export class InboundReportService {
+export class InboundReportService implements OnModuleInit {
   constructor(
     @InjectModel(InboundExpected) private expectedRepo: typeof InboundExpected,
     @InjectModel(InboundArrival) private arrivalRepo: typeof InboundArrival,
     @InjectModel(InboundInvitation) private invitationRepo: typeof InboundInvitation,
     private readonly i18n: I18nService,
   ) { }
+
+  // Tables that exist already do not get new columns from sync.
+  async onModuleInit() {
+    try {
+      await this.invitationRepo.sequelize?.query(
+        `ALTER TABLE IF EXISTS "tbl_inbound_invitations" ADD COLUMN IF NOT EXISTS "not_arrived_count" INTEGER NOT NULL DEFAULT 0;`,
+      );
+    } catch (error) {
+      console.error("InboundReportService: could not add not_arrived_count", error);
+    }
+  }
 
   private msg(key: string, lang: string) {
     return this.i18n.t(`inbound_report.${key}`, { lang });
@@ -254,6 +265,7 @@ export class InboundReportService {
             [sum('granted_count'), 'granted'],
             [sum('refused_count'), 'refused'],
             [sum('pending_count'), 'pending'],
+            [sum('not_arrived_count'), 'not_arrived'],
           ],
           where: this.buildWhere(INVITATION, filters),
           raw: true,
@@ -266,6 +278,7 @@ export class InboundReportService {
       const granted = Number(invitations?.granted) || 0;
       const refused = Number(invitations?.refused) || 0;
       const pending = Number(invitations?.pending) || 0;
+      const notArrived = Number(invitations?.not_arrived) || 0;
 
       return {
         status: 200,
@@ -278,7 +291,7 @@ export class InboundReportService {
             total: byCountry.reduce((acc, row) => acc + row.count, 0),
             countries: byCountry,
           },
-          invitations: { submitted: granted + refused + pending, granted, refused, pending },
+          invitations: { submitted: granted + refused + pending, granted, refused, pending, not_arrived: notArrived },
         },
         message: this.msg('summaryFetched', lang),
       };

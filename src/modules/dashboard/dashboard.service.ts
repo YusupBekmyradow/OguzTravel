@@ -120,7 +120,10 @@ export class DashboardService {
       office_guid: office_guid ? office_guid : { [Op.ne]: null },
     };
 
-    const [currentUsdData, prevUsdData, currentTmtData, prevTmtData, currentSalary, prevSalary, currentAll, prevAll] =
+    const [
+      currentUsdData, prevUsdData, currentTmtData, prevTmtData,
+      currentSalary, prevSalary, currentExpense, prevExpense, currentAll, prevAll,
+    ] =
       await Promise.all([
         this.calculateMetrics(baseWhere, 'USD'),
         this.calculateMetrics(prevWhere, 'USD'),
@@ -128,9 +131,22 @@ export class DashboardService {
         this.calculateMetrics(prevWhere, 'TMT'),
         this.salaryExpense(baseWhere),
         this.salaryExpense(prevWhere),
+        this.kassaExpense(baseWhere),
+        this.kassaExpense(prevWhere),
         this.countAllSales(baseWhere),
         this.countAllSales(prevWhere),
       ]);
+    // Money out: the cost of sales, salaries and kassa expenses together, per currency.
+    const totalOut = (metrics: { totalNetPrice: number }, salary: number, expense: number) =>
+      round2(metrics.totalNetPrice + salary + expense);
+    const currentOut = {
+      USD: totalOut(currentUsdData, currentSalary.USD, currentExpense.USD),
+      TMT: totalOut(currentTmtData, currentSalary.TMT, currentExpense.TMT),
+    };
+    const prevOut = {
+      USD: totalOut(prevUsdData, prevSalary.USD, prevExpense.USD),
+      TMT: totalOut(prevTmtData, prevSalary.TMT, prevExpense.TMT),
+    };
     const currentAllCount = currentAll.get('') || 0;
     const prevAllCount = prevAll.get('') || 0;
     const activeCurrentCount = currency === 'USD' ? currentUsdData.count : currentTmtData.count;
@@ -178,7 +194,33 @@ export class DashboardService {
         usd: { value: currentSalary.USD, ...this.calcPercentage(currentSalary.USD, prevSalary.USD) },
         tmt: { value: currentSalary.TMT, ...this.calcPercentage(currentSalary.TMT, prevSalary.TMT) },
       },
+      expense: {
+        usd: { value: currentExpense.USD, ...this.calcPercentage(currentExpense.USD, prevExpense.USD) },
+        tmt: { value: currentExpense.TMT, ...this.calcPercentage(currentExpense.TMT, prevExpense.TMT) },
+      },
+      total_out: {
+        usd: { value: currentOut.USD, ...this.calcPercentage(currentOut.USD, prevOut.USD) },
+        tmt: { value: currentOut.TMT, ...this.calcPercentage(currentOut.TMT, prevOut.TMT) },
+      },
     };
+  }
+
+  // Kassa expenses: hand-entered and Excel-imported expense rows, in the row's own currency.
+  private async kassaExpense(whereCondition: any): Promise<Record<Currency, number>> {
+    const expenseIn = (c: Currency) =>
+      sumOf(
+        `CASE WHEN ${T}.currency = '${c}' AND ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' ` +
+        `THEN COALESCE(${T}.net_price, 0) ELSE 0 END`,
+      );
+    const result: any = await this.totalCalculationModel.findOne({
+      where: whereCondition,
+      attributes: [
+        [expenseIn('USD'), 'usd'],
+        [expenseIn('TMT'), 'tmt'],
+      ],
+      raw: true,
+    });
+    return { USD: round2(Number(result?.usd || 0)), TMT: round2(Number(result?.tmt || 0)) };
   }
 
 
@@ -898,6 +940,8 @@ export class DashboardService {
       const netPrice = Number(currentStats.net_price || 0);
       const profit = Number(currentStats.profit || 0);
       const otherOut = otherOutMap.get(office.guid) || {};
+      const salary = round2(Number(otherOut.salary || 0));
+      const expense = round2(Number(otherOut.expense || 0));
 
       const previousProfit = previousProfitMap.get(office.guid) || 0;
       let profitChangePercent = 0;
@@ -925,8 +969,9 @@ export class DashboardService {
         profit_change_percentage: profitChangePercent,
         sale_price: salePrice,
         net_price: netPrice,
-        salary: round2(Number(otherOut.salary || 0)),
-        expense: round2(Number(otherOut.expense || 0)),
+        salary,
+        expense,
+        total_out: round2(netPrice + salary + expense),
       };
     });
     formattedOffices.sort((a, b) => b.rawShare - a.rawShare);

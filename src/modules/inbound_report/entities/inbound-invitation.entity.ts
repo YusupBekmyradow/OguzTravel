@@ -54,6 +54,14 @@ export class InboundInvitation extends Model<InboundInvitation> {
   })
   declare pending_count: number;
 
+  // Granted an invitation but did not come. Part of granted_count, so not in submitted_count.
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  })
+  declare not_arrived_count: number;
+
   @Column({
     type: DataType.VIRTUAL,
     get(this: InboundInvitation) {
