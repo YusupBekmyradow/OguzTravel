@@ -518,15 +518,14 @@ export class RefferalLetterService implements OnModuleInit {
           whereConditions.received_opr_guid = filters.received_opr_guid;
         }
 
-        const startDt = filters.start_date_time?.trim();
-        const endDt = filters.end_date_time?.trim();
-        if (startDt && endDt) {
-          whereConditions.date_time = { [Op.between]: [new Date(`${startDt}T00:00:00.000Z`), new Date(`${endDt}T23:59:59.999Z`)] };
-        } else if (startDt) {
-          whereConditions.date_time = { [Op.gte]: new Date(`${startDt}T00:00:00.000Z`) };
-        } else if (endDt) {
-          whereConditions.date_time = { [Op.lte]: new Date(`${endDt}T23:59:59.999Z`) };
-        }
+        // Local (Ashgabat) calendar days, both included; either end works alone. With UTC day
+        // bounds a letter dated between 00:00 and 05:00 local time fell on the day before.
+        const startDt = validDay(filters.start_date_time);
+        const endDt = validDay(filters.end_date_time);
+        const dayConditions: any[] = [];
+        if (startDt) dayConditions.push(this.sequelize.literal(`${localDay('date_time')} >= ${this.sequelize.escape(startDt)}`));
+        if (endDt) dayConditions.push(this.sequelize.literal(`${localDay('date_time')} <= ${this.sequelize.escape(endDt)}`));
+        if (dayConditions.length) whereConditions[Op.and] = dayConditions;
 
         if (filters.status !== undefined && filters.status !== null && String(filters.status).trim() !== '') {
           whereConditions.status = filters.status;

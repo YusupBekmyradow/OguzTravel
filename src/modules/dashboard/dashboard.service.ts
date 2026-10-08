@@ -51,12 +51,15 @@ const intervalFor = (start: Date, end: Date): Interval => {
   return days <= 45 ? 'day' : days <= 190 ? 'week' : 'month';
 };
 
+// Buckets are local (Ashgabat) calendar days, like the series they fill: in the session's
+// UTC a sale entered between 00:00 and 05:00 local time fell into the day before.
+const LOCAL_DATETIME = `(${T}.datetime AT TIME ZONE 'Asia/Ashgabat')`;
 const bucketKeySql = (interval: Interval) =>
   interval === 'month'
-    ? `TO_CHAR(${T}.datetime, 'YYYY-MM')`
+    ? `TO_CHAR(${LOCAL_DATETIME}, 'YYYY-MM')`
     : interval === 'week'
-      ? `TO_CHAR(DATE_TRUNC('week', ${T}.datetime), 'YYYY-MM-DD')`
-      : `TO_CHAR(${T}.datetime, 'YYYY-MM-DD')`;
+      ? `TO_CHAR(DATE_TRUNC('week', ${LOCAL_DATETIME}), 'YYYY-MM-DD')`
+      : `TO_CHAR(${LOCAL_DATETIME}, 'YYYY-MM-DD')`;
 
 const salesWhere = (base: any, currency?: Currency) => ({
   ...base,
@@ -99,6 +102,7 @@ export class DashboardService {
       }
     } else if (start_date && end_date) {
       currentStart = new Date(start_date);
+      currentStart.setHours(0, 0, 0, 0);
       currentEnd = new Date(end_date);
       currentEnd.setHours(23, 59, 59);
     } else {
@@ -520,6 +524,7 @@ export class DashboardService {
       }
     } else if (start_date && end_date) {
       currentStart = new Date(start_date);
+      currentStart.setHours(0, 0, 0, 0);
       currentEnd = new Date(end_date);
       currentEnd.setHours(23, 59, 59);
     } else {
@@ -626,6 +631,7 @@ export class DashboardService {
       }
     } else if (start_date && end_date) {
       currentStart = new Date(start_date);
+      currentStart.setHours(0, 0, 0, 0);
       currentEnd = new Date(end_date);
       currentEnd.setHours(23, 59, 59, 999);
     } else {
@@ -724,6 +730,7 @@ export class DashboardService {
       }
     } else if (start_date && end_date) {
       currentStart = new Date(start_date);
+      currentStart.setHours(0, 0, 0, 0);
       currentEnd = new Date(end_date);
       currentEnd.setHours(23, 59, 59, 999);
     } else {
