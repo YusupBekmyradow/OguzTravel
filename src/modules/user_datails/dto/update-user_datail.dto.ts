@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsArray, IsObject, ValidateNested, ValidateIf } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 
@@ -16,6 +16,12 @@ const transformJson = ({ value }: { value: any }) => {
   }
   return value;
 };
+
+// A multipart body carries objects as JSON text. @Type has already run by the time the text is
+// parsed, so the parsed objects are turned into the DTO class here: left as plain objects, the
+// whitelist validation strips every field of them and an empty {} is saved.
+const jsonAs = (cls: new () => object) => ({ value }: { value: any }) =>
+  typeof value === 'string' ? plainToInstance(cls, transformJson({ value })) : value;
 
 export class ContactDto {
   @ApiPropertyOptional()
@@ -46,6 +52,7 @@ export class EducationDto {
 }
 
 export class LanguageDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() declare id?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() declare name?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() declare level?: string;
 }
@@ -72,7 +79,7 @@ export class UpdateUserProfileDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(transformJson)
+  @Transform(jsonAs(ContactDto))
   @IsObject()
   @ValidateNested()
   @Type(() => ContactDto)
@@ -92,7 +99,7 @@ export class UpdateUserProfileDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(transformJson)
+  @Transform(jsonAs(WorkExperienceDto))
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => WorkExperienceDto)
@@ -100,7 +107,7 @@ export class UpdateUserProfileDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(transformJson)
+  @Transform(jsonAs(EducationDto))
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EducationDto)
@@ -108,7 +115,7 @@ export class UpdateUserProfileDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(transformJson)
+  @Transform(jsonAs(LanguageDto))
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => LanguageDto)
@@ -116,7 +123,7 @@ export class UpdateUserProfileDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(transformJson)
+  @Transform(jsonAs(ReferenceDto))
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ReferenceDto)
