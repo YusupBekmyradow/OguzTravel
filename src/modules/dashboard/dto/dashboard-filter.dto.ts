@@ -25,9 +25,9 @@ export class DashboardFilterDto {
 
 
 export class GetSummaryFilterDto extends DashboardFilterDto {
- @ApiPropertyOptional({ 
-    example: 'this_month', 
-    enum: ['this_month', 'last_month', 'last_3_months', 'this_year'] 
+  @ApiPropertyOptional({
+    example: 'this_month',
+    enum: ['this_month', 'last_month', 'last_3_months', 'this_year']
   })
   @IsIn(['this_month', 'last_month', 'last_3_months', 'this_year'])
   @IsOptional()

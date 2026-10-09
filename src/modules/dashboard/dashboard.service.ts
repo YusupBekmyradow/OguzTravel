@@ -129,16 +129,16 @@ export class DashboardService {
       currentSalary, prevSalary, currentExpense, prevExpense, currentAll, prevAll,
     ] =
       await Promise.all([
-        this.calculateMetrics(baseWhere, 'USD'),
-        this.calculateMetrics(prevWhere, 'USD'),
-        this.calculateMetrics(baseWhere, 'TMT'),
-        this.calculateMetrics(prevWhere, 'TMT'),
+        this.calculateMetrics(baseWhere, 'USD', false),
+        this.calculateMetrics(prevWhere, 'USD', false),
+        this.calculateMetrics(baseWhere, 'TMT', false),
+        this.calculateMetrics(prevWhere, 'TMT', false),
         this.salaryExpense(baseWhere),
         this.salaryExpense(prevWhere),
         this.kassaExpense(baseWhere),
         this.kassaExpense(prevWhere),
-        this.countAllSales(baseWhere),
-        this.countAllSales(prevWhere),
+        this.countAllSales(baseWhere, undefined, false),
+        this.countAllSales(prevWhere, undefined, false),
       ]);
     // Money out: the cost of sales, salaries and kassa expenses together, per currency.
     const totalOut = (metrics: { totalNetPrice: number }, salary: number, expense: number) =>
@@ -243,17 +243,21 @@ export class DashboardService {
 
 
 
-  private async countAllSales(whereCondition: any, groupSql?: string): Promise<Map<string, number>> {
+  private async countAllSales(whereCondition: any, groupSql?: string, applyTypeFilter = true): Promise<Map<string, number>> {
     const group = groupSql ? literal(groupSql) : null;
-    // source'dan bağımsız: MANUAL + PROJECT + EXCEL hepsi dahil — sadece SALARY hariç + type=INCOME
-    const countIncomeSql =
-      `${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'` +
-      ` AND ${T}.type = 'INCOME'` +
-      ` AND (${inCurrencySql('TMT')} OR ${inCurrencySql('USD')})`;
+    const andConditions: any[] = [];
+    if (applyTypeFilter) {
+      // source'dan bağımsız: MANUAL + PROJECT + EXCEL hepsi dahil — sadece SALARY hariç + type=INCOME
+      andConditions.push(literal(
+        `${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'` +
+        ` AND ${T}.type = 'INCOME'` +
+        ` AND (${inCurrencySql('TMT')} OR ${inCurrencySql('USD')})`
+      ));
+    }
     const rows: any[] = await this.totalCalculationModel.findAll({
       where: {
         ...whereCondition,
-        [Op.and]: [literal(countIncomeSql)],
+        ...(andConditions.length ? { [Op.and]: andConditions } : {}),
       },
       attributes: [...(group ? [[group, 'group_key'] as any] : []), [literal('COUNT(*)'), 'count']],
       ...(group ? { group: [group as any] } : {}),
@@ -262,19 +266,20 @@ export class DashboardService {
     return new Map(rows.map((row) => [group ? String(row.group_key ?? '') : '', Number(row.count || 0)]));
   }
 
-  private async calculateMetrics(whereCondition: any, currency: Currency) {
-    // source'dan bağımsız: MANUAL, PROJECT, EXCEL hepsi dahil — sadece SALARY hariç + type=INCOME
-    const incomeOnlySql =
-      `${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'` +
-      ` AND ${T}.type = 'INCOME'`;
+  private async calculateMetrics(whereCondition: any, currency: Currency, applyTypeFilter = true) {
+    const andConditions: any[] = [literal(inCurrencySql(currency))];
+    if (applyTypeFilter) {
+      // source'dan bağımsız: MANUAL, PROJECT, EXCEL hepsi dahil — sadece SALARY hariç + type=INCOME
+      andConditions.unshift(literal(
+        `${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'` +
+        ` AND ${T}.type = 'INCOME'`
+      ));
+    }
 
     const result = await this.totalCalculationModel.findOne({
       where: {
         ...whereCondition,
-        [Op.and]: [
-          literal(incomeOnlySql),
-          literal(inCurrencySql(currency)),
-        ],
+        [Op.and]: andConditions,
       },
       attributes: [
         [literal('COUNT(*)'), 'count'],
@@ -903,20 +908,17 @@ export class DashboardService {
       previousEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
     }
     const offices = await Office.findAll({ raw: true });
-    // office_guid dolu olan tüm INCOME kayıtlarını topla (source'dan bağımsız, sadece SALARY hariç)
-    const officeIncomeSql =
-      `${T}.office_guid IS NOT NULL` +
-      ` AND ${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'` +
-      ` AND ${T}.type = 'INCOME'`;
+    const officeWhereBase = (start: Date, end: Date) => ({
+      datetime: { [Op.between]: [start, end] },
+      office_guid: filters.office_guid
+        ? filters.office_guid
+        : { [Op.ne]: null },
+    });
 
     const currentResults = await this.totalCalculationModel.findAll({
       where: {
-        datetime: { [Op.between]: [currentStart, currentEnd] },
-        office_guid: { [Op.ne]: null },
-        [Op.and]: [
-          literal(officeIncomeSql),
-          ...(currencyParam ? [literal(inCurrencySql(currencyParam))] : []),
-        ],
+        ...officeWhereBase(currentStart, currentEnd),
+        ...(currencyParam ? { [Op.and]: [literal(inCurrencySql(currencyParam))] } : {}),
       } as any,
       attributes: [
         'office_guid',
@@ -929,12 +931,8 @@ export class DashboardService {
     });
     const previousResults = await this.totalCalculationModel.findAll({
       where: {
-        datetime: { [Op.between]: [previousStart, previousEnd] },
-        office_guid: { [Op.ne]: null },
-        [Op.and]: [
-          literal(officeIncomeSql),
-          ...(currencyParam ? [literal(inCurrencySql(currencyParam))] : []),
-        ],
+        ...officeWhereBase(previousStart, previousEnd),
+        ...(currencyParam ? { [Op.and]: [literal(inCurrencySql(currencyParam))] } : {}),
       } as any,
       attributes: ['office_guid', [sumOf(AMOUNT_SQL.profit(currencyParam)), 'profit']],
       group: ['office_guid'],
@@ -942,10 +940,7 @@ export class DashboardService {
     });
     const net = `COALESCE(${T}.net_price, 0)`;
     const otherOutResults = await this.totalCalculationModel.findAll({
-      where: {
-        datetime: { [Op.between]: [currentStart, currentEnd] },
-        office_guid: { [Op.ne]: null },
-      } as any,
+      where: officeWhereBase(currentStart, currentEnd) as any,
       attributes: [
         'office_guid',
         [sumOf(`CASE WHEN ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'salary'],
