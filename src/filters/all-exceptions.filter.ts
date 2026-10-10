@@ -38,7 +38,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
   ): string {
     const cleanProp = property || 'Meýdança';
 
-    // Extract numbers from raw message if any (e.g. "must be longer than or equal to 12 characters" -> "12")
     const digits = rawMessage ? rawMessage.match(/\d+/g) || [] : [];
     const firstNum = digits[0] || '';
     const secondNum = digits[1] || '';
@@ -60,7 +59,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    // Fallback parsing of English class-validator default strings
     if (rawMessage && typeof rawMessage === 'string') {
       if (rawMessage.includes('must be longer than or equal to')) {
         const min = firstNum;
