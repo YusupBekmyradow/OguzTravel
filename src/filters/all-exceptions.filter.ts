@@ -189,6 +189,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     if (status >= HttpStatus.BAD_REQUEST) {
+      console.error(`\x1b[31m[AllExceptionsFilter ${status}] [${request.method}] ${request.url}:\x1b[0m`, errorMessage);
       logger.error(`Server Error [${request.method}] ${request.url} - Status: ${status}`, {
         status,
         path: request.url,

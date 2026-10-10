@@ -77,6 +77,52 @@ module.exports = {
         employee_guid: { [Op.ne]: null },
       },
     });
+
+    const defaultPermissions = [
+      '/',
+      '/tasks',
+      '/finance/offices',
+      '/finance/office-cash',
+      '/finance/salary',
+      '/reports/turkish-airlines',
+      '/clients',
+      '/visa/applications',
+      '/visa/package',
+      '/intake',
+      '/ticket/b2b',
+      '/ticket/turkish-airlines',
+      '/translation',
+      '/professional-translation/office',
+      '/professional-translation/department',
+      '/professional-translation/position',
+      '/professional-translation/translator',
+      '/professional-translation/category',
+      '/professional-translation/referral-country',
+      '/referal-letters',
+      '/outbound',
+      '/inbound',
+      '/cafeteria',
+      '/employee',
+      '/employee/users',
+      '/notifications',
+      '/profile',
+    ];
+
+    await queryInterface.bulkInsert('tbl_users', [
+      {
+        guid: '3758eaff-658d-497d-9738-65f6cfc3c328',
+        employee_guid: null,
+        isActive: true,
+        isExternalUser: true,
+        password: '$2b$10$oEDIPR8ZeOjYcrbdlkkFkOhrXpAswH4Yg5WtLAStBYBG4G/MKCmR2', // 123456
+        permissions: JSON.stringify(defaultPermissions),
+        phone_number: '+99361000000',
+        role: 'Admin',
+        refresh_token: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
   },
 
   down: async (queryInterface: QueryInterface): Promise<void> => {

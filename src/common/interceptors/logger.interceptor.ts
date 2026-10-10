@@ -17,11 +17,22 @@ export class LoggerInterceptor implements NestInterceptor {
         const now = Date.now();
 
         return next.handle().pipe(
-            tap(() => {
-                const res = context.switchToHttp().getResponse();
-                const statusCode = res.statusCode;
-                const delay = Date.now() - now;
-                this.logger.log(`${method} ${url} → ${statusCode} [${delay}ms]`);
+            tap({
+                next: () => {
+                    const res = context.switchToHttp().getResponse();
+                    const statusCode = res.statusCode;
+                    const delay = Date.now() - now;
+                    if (statusCode >= 400) {
+                        this.logger.error(`${method} ${url} → ${statusCode} [${delay}ms]`);
+                    } else {
+                        this.logger.log(`${method} ${url} → ${statusCode} [${delay}ms]`);
+                    }
+                },
+                error: (err) => {
+                    const delay = Date.now() - now;
+                    this.logger.error(`${method} ${url} → ERROR [${delay}ms]`);
+                    console.error(`\x1b[31m[Unhandled Exception]:\x1b[0m`, err?.stack || err);
+                },
             }),
         );
     }

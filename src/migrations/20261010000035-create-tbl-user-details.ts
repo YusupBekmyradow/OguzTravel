@@ -86,6 +86,33 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
     });
+
+    const [adminUser]: any = await queryInterface.sequelize.query(
+      `SELECT guid FROM tbl_users WHERE guid = '3758eaff-658d-497d-9738-65f6cfc3c328' LIMIT 1;`,
+    );
+
+    if (adminUser && adminUser.length > 0) {
+      await queryInterface.bulkInsert('tbl_user_details', [
+        {
+          guid: '53a17e56-1fc9-464f-9cde-997cbcf2447a',
+          user_guid: '3758eaff-658d-497d-9738-65f6cfc3c328',
+          full_name: 'Administrator',
+          role: 'Admin',
+          status: 'Active',
+          avatar_url: null,
+          contact: JSON.stringify({ phone: '+99361000000' }),
+          skills: JSON.stringify([]),
+          personal_summary: 'System Administrator',
+          work_experience: JSON.stringify([]),
+          education: JSON.stringify([]),
+          certifications: JSON.stringify([]),
+          languages: JSON.stringify([]),
+          references: JSON.stringify([]),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+    }
   },
 
   down: async (queryInterface: QueryInterface): Promise<void> => {

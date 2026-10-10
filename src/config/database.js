@@ -25,5 +25,5 @@ module.exports = {
 ///            pnpm db:migrate
 ///            pnpm exec sequelize-cli db:migrate --to 20261010000001-create-tbl-offices.ts
 /// yza almak
-///            pnpm db:migrate:undo
+///            pnpm db:migrate:undo:all            hemmesi
 ///            pnpm exec sequelize-cli db:migrate:undo --to 20261010000016-create-tbl-employees.ts
