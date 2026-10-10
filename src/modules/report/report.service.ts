@@ -34,11 +34,7 @@ export class ReportService {
     const isDigits = (value?: string) => typeof value === 'string' && /^[0-9]{1,20}$/.test(value);
 
     if (!isDigits(data.start_yh_number) || !isDigits(data.end_yh_number)) {
-      const errorMsg = lang === 'ru'
-        ? 'Введен неверный или пересекающийся диапазон'
-        : lang === 'en'
-          ? 'Invalid or malformed number range provided'
-          : 'Ýalňyş ýa-da kesişýän aralyk girizildi';
+      const errorMsg = this.i18n.t('report.invalidRange', { lang });
       return { error: errorResponse(HttpStatuses.BAD_REQUEST, errorMsg) };
     }
 
@@ -46,11 +42,7 @@ export class ReportService {
     const end = BigInt(data.end_yh_number!);
 
     if (end < start) {
-      const errorMsg = lang === 'ru'
-        ? 'Введен неверный или пересекающийся диапазон'
-        : lang === 'en'
-          ? 'Invalid or malformed number range provided'
-          : 'Ýalňyş ýa-da kesişýän aralyk girizildi';
+      const errorMsg = this.i18n.t('report.invalidRange', { lang });
       return { error: errorResponse(HttpStatuses.BAD_REQUEST, errorMsg) };
     }
 
@@ -75,25 +67,9 @@ export class ReportService {
     });
 
     if (overlapping) {
-      let message = '';
-      try {
-        message = await this.i18n.t('report.rangeOverlap', { lang });
-      } catch (e) {
-        message = '';
-      }
-      if (!message || message === 'report.rangeOverlap') {
-        if (lang === 'ru') {
-          message = `Введенный диапазон (${overlapping.start_yh_number} - ${overlapping.end_yh_number}) уже пересекается с другим отчетом!`;
-        } else if (lang === 'en') {
-          message = `The entered range (${overlapping.start_yh_number} - ${overlapping.end_yh_number}) overlaps with an existing report!`;
-        } else {
-          message = `Girilen aralyk (${overlapping.start_yh_number} - ${overlapping.end_yh_number}) eýýäm başga bir hasabat bilen kesişýär!`;
-        }
-      } else {
-        message = message
-          .replace('{start}', overlapping.start_yh_number)
-          .replace('{end}', overlapping.end_yh_number);
-      }
+      const message = String(this.i18n.t('report.rangeOverlap', { lang }))
+        .replace('{start}', overlapping.start_yh_number)
+        .replace('{end}', overlapping.end_yh_number);
 
       return {
         error: errorResponse(HttpStatuses.CONFLICT, message),

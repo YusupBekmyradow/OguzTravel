@@ -66,3 +66,4 @@ export class TurkishAirlinesController {
     return this.turkishAirlinesService.deleteTurkishAirline(guid, lang);
   }
 }
+

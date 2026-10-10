@@ -154,7 +154,12 @@ export class CustomFieldService {
   async deleteCustomField(guid: string, lang: string = 'tk') {
     try {
       if (!guid) {
-        throw new BadRequestException('guid is required');
+        throw new BadRequestException(
+          this.i18n.t('validation.isNotEmpty', {
+            lang,
+            args: { property: 'guid' },
+          }) || 'guid hökmany doldurylmaly.',
+        );
       }
 
       const field = await this.customFieldRepository.findOne({ where: { guid } });

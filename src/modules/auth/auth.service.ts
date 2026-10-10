@@ -179,9 +179,9 @@ export class AuthService {
         office: existUser.employee?.office ?? null,
         positions,
         userDetail: existUser.userDetail ?? null,
-      }, this.i18n.t('auth.loginSuccess', { lang }));
+      }, this.i18n.t('user.meFetched', { lang }));
     } catch (error: any) {
-      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('auth.loginFailed', { lang }));
+      return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('user.meFailed', { lang }));
     }
   }
 

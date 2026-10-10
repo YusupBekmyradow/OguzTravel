@@ -18,6 +18,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       request.headers?.['x-lang'] ||
       request.headers?.['lang'] ||
       request.query?.lang ||
+      request.query?.l ||
       request.headers?.['accept-language'] ||
       'tk';
 
@@ -25,7 +26,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       rawLang = rawLang.toLowerCase();
       if (rawLang.includes('ru')) return 'ru';
       if (rawLang.includes('en')) return 'en';
-      if (rawLang.includes('tk')) return 'tk';
+      if (rawLang.includes('tk') || rawLang.includes('tm')) return 'tk';
     }
     return 'tk';
   }
@@ -94,6 +95,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
     return `Invalid value for field ${cleanProp}.`;
   }
 
+  private extractValidationErrors(errors: any[], lang: string, prefix = ''): string[] {
+    const messages: string[] = [];
+    for (const err of errors) {
+      const prop = prefix ? `${prefix}.${err.property}` : err.property || '';
+      if (err.constraints) {
+        for (const [key, msg] of Object.entries(err.constraints)) {
+          messages.push(this.formatConstraintMessage(prop, key, String(msg), lang));
+        }
+      }
+      if (err.children && Array.isArray(err.children) && err.children.length > 0) {
+        messages.push(...this.extractValidationErrors(err.children, lang, prop));
+      }
+    }
+    return messages;
+  }
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
@@ -102,20 +119,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const lang = this.resolveLang(request);
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
 
+    // 1. Validation exceptions from class-validator
     if (exception instanceof I18nValidationException) {
       const errors = (exception as any).errors || [];
-      const messages: string[] = [];
-
-      for (const err of errors) {
-        const prop = err.property || '';
-        if (err.constraints) {
-          for (const [key, msg] of Object.entries(err.constraints)) {
-            const formatted = this.formatConstraintMessage(prop, key, String(msg), lang);
-            messages.push(formatted);
-          }
-        }
-      }
-
+      const messages = this.extractValidationErrors(errors, lang);
       const finalMsg = messages.join('; ') || this.i18n.t('validation.validationFailed', { lang });
 
       return response.status(HttpStatus.BAD_REQUEST).json({
@@ -125,51 +132,103 @@ export class AllExceptionsFilter implements ExceptionFilter {
       });
     }
 
+    // 2. Sequelize Database Errors
+    const excName = (exception as any)?.name;
+    if (excName === 'SequelizeUniqueConstraintError' || excName === 'UniqueConstraintError') {
+      const msg = String(this.i18n.t('common.uniqueError', { lang }) || 'Bu maglumat ulgamda eýýäm bar.');
+      return response.status(HttpStatus.CONFLICT).json({
+        status: HttpStatus.CONFLICT,
+        message: msg,
+        data: null,
+      });
+    }
+
+    if (excName === 'SequelizeForeignKeyConstraintError' || excName === 'ForeignKeyConstraintError') {
+      const msg = String(this.i18n.t('common.foreignKeyError', { lang }) || 'Baglanyşykly maglumat tapylmady ýa-da ulanylýar.');
+      return response.status(HttpStatus.BAD_REQUEST).json({
+        status: HttpStatus.BAD_REQUEST,
+        message: msg,
+        data: null,
+      });
+    }
+
+    if (excName === 'SequelizeDatabaseError' || excName === 'DatabaseError') {
+      console.error(`\x1b[31m[Database Error] [${request.method}] ${request.url}:\x1b[0m`, (exception as any)?.stack || exception);
+      const msg = String(this.i18n.t('common.databaseError', { lang }) || 'Maglumatlar bazasynda näsazlyk ýüze çykdy.');
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: msg,
+        data: null,
+      });
+    }
+
+    // 3. NestJS HttpExceptions
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res: any = exception.getResponse();
+      let resMessage = typeof res === 'object' ? res?.message : res;
 
       let translatedMessage = '';
-      if (status === HttpStatus.UNAUTHORIZED) {
-        translatedMessage = String(this.i18n.t('common.unauthorized', { lang }) || '');
-      } else if (status === HttpStatus.FORBIDDEN) {
-        translatedMessage = String(this.i18n.t('common.forbidden', { lang }) || '');
-      } else if (status === HttpStatus.NOT_FOUND) {
-        if (typeof res === 'object' && res?.message && typeof res.message === 'string' && res.message.includes('.')) {
-          const t = String(this.i18n.t(res.message, { lang }) || '');
-          if (t && t !== res.message) {
-            translatedMessage = t;
+
+      // Check if message is a translation key (e.g., 'common.notFound' or 'auth.invalidCredentials')
+      if (typeof resMessage === 'string' && resMessage.includes('.')) {
+        const t = String(this.i18n.t(resMessage, { lang }) || '');
+        if (t && t !== resMessage) {
+          translatedMessage = t;
+        }
+      }
+
+      if (!translatedMessage) {
+        if (status === HttpStatus.UNAUTHORIZED) {
+          if (!resMessage || resMessage === 'Unauthorized') {
+            translatedMessage = String(this.i18n.t('common.unauthorized', { lang }) || '');
           }
-        }
-        if (!translatedMessage) {
-          translatedMessage = String(this.i18n.t('common.notFound', { lang }) || '');
-        }
-      } else if (status === HttpStatus.BAD_REQUEST) {
-        if (res && typeof res === 'object' && res.message) {
-          const rawMsgs = Array.isArray(res.message) ? res.message : [res.message];
-          const parsedMsgs = rawMsgs.map((m: string) => {
-            if (typeof m === 'string') {
-              if (m.includes('.')) {
-                const t = String(this.i18n.t(m, { lang }) || '');
-                if (t && t !== m) return t;
+        } else if (status === HttpStatus.FORBIDDEN) {
+          if (!resMessage || resMessage === 'Forbidden resource' || resMessage === 'Forbidden') {
+            translatedMessage = String(this.i18n.t('common.forbidden', { lang }) || '');
+          }
+        } else if (status === HttpStatus.NOT_FOUND) {
+          if (!resMessage || resMessage === 'Not Found') {
+            translatedMessage = String(this.i18n.t('common.notFound', { lang }) || '');
+          }
+        } else if (status === HttpStatus.CONFLICT) {
+          if (!resMessage || resMessage === 'Conflict') {
+            translatedMessage = String(this.i18n.t('common.conflict', { lang }) || '');
+          }
+        } else if (status === HttpStatus.PAYLOAD_TOO_LARGE) {
+          if (!resMessage || resMessage === 'Payload Too Large') {
+            translatedMessage = String(this.i18n.t('common.payloadTooLarge', { lang }) || '');
+          }
+        } else if (status === HttpStatus.UNSUPPORTED_MEDIA_TYPE) {
+          if (!resMessage || resMessage === 'Unsupported Media Type') {
+            translatedMessage = String(this.i18n.t('common.unsupportedMediaType', { lang }) || '');
+          }
+        } else if (status === HttpStatus.BAD_REQUEST) {
+          if (Array.isArray(resMessage)) {
+            const parsedMsgs = resMessage.map((m: string) => {
+              if (typeof m === 'string') {
+                if (m.includes('.')) {
+                  const t = String(this.i18n.t(m, { lang }) || '');
+                  if (t && t !== m) return t;
+                }
+                const parts = m.split(' ');
+                const fieldName = parts[0] || '';
+                return this.formatConstraintMessage(fieldName, '', m, lang);
               }
-              const parts = m.split(' ');
-              const fieldName = parts[0] || '';
-              return this.formatConstraintMessage(fieldName, '', m, lang);
-            }
-            return String(m);
-          });
-          translatedMessage = parsedMsgs.join('; ');
-        } else {
-          translatedMessage = String(this.i18n.t('common.badRequest', { lang }) || '');
+              return String(m);
+            });
+            translatedMessage = parsedMsgs.join('; ');
+          } else if (!resMessage || resMessage === 'Bad Request') {
+            translatedMessage = String(this.i18n.t('common.badRequest', { lang }) || '');
+          }
+        } else if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+          translatedMessage = String(this.i18n.t('common.serverError', { lang }) || '');
         }
-      } else if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-        translatedMessage = String(this.i18n.t('common.serverError', { lang }) || '');
       }
 
       const finalMessage =
         translatedMessage ||
-        (typeof res === 'string' ? res : res?.message) ||
+        (typeof resMessage === 'string' ? resMessage : null) ||
         this.i18n.t('common.serverError', { lang });
 
       return response.status(status).json({
@@ -177,10 +236,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message: finalMessage,
         data: null,
       });
-    } else if (exception && typeof exception === 'object' && 'status' in exception) {
-      status = Number(exception['status']) || HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
+    // 4. Other exceptions / Server errors
     let errorMessage: any;
     if (exception instanceof Error) {
       errorMessage = exception.stack || exception.message;
@@ -188,15 +246,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       errorMessage = exception;
     }
 
-    if (status >= HttpStatus.BAD_REQUEST) {
-      console.error(`\x1b[31m[AllExceptionsFilter ${status}] [${request.method}] ${request.url}:\x1b[0m`, errorMessage);
-      logger.error(`Server Error [${request.method}] ${request.url} - Status: ${status}`, {
-        status,
-        path: request.url,
-        method: request.method,
-        error: errorMessage,
-      });
-    }
+    console.error(`\x1b[31m[AllExceptionsFilter ${status}] [${request.method}] ${request.url}:\x1b[0m`, errorMessage);
+    logger.error(`Server Error [${request.method}] ${request.url} - Status: ${status}`, {
+      status,
+      path: request.url,
+      method: request.method,
+      error: errorMessage,
+    });
 
     const fallbackMessage = this.i18n.t('common.serverError', { lang });
 

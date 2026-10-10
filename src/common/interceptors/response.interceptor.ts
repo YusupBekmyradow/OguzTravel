@@ -6,6 +6,7 @@ import {
     Logger,
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
+import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
@@ -18,8 +19,17 @@ export class ResponseInterceptor implements NestInterceptor {
 
         return next.handle().pipe(
             map((data) => {
+                const i18n = I18nContext.current(context);
+
                 if (data?.status && (data?.message || data?.errorMessage)) {
                     response.statusCode = data.status;
+
+                    if (i18n && typeof data.message === 'string' && data.message.includes('.')) {
+                        const translated = i18n.t(data.message);
+                        if (translated && translated !== data.message) {
+                            data.message = translated;
+                        }
+                    }
 
                     if (data.status >= 400) {
                         const err = data.errorMessage?.stack || data.errorMessage || data.message;

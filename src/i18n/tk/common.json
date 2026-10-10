@@ -4,5 +4,12 @@
   "fetchError": "Maglumatlary alyp bolmaýar. Biraz soň täzeden synanyşyň.",
   "unauthorized": "Ilki bilen ulgama girmegiňizi haýyş edýäris.",
   "forbidden": "Bu işi ýerine ýetirmäge ygtyýaryňyz ýok.",
-  "badRequest": "Nädogry haýyş. Maglumatlaryňyzy barlap, täzeden synanyşyň."
+  "badRequest": "Nädogry haýyş. Maglumatlaryňyzy barlap, täzeden synanyşyň.",
+  "conflict": "Maglumat gapma-garşylygy ýüze çykdy.",
+  "payloadTooLarge": "Ýüklenýän faýl ýa-da maglumat göwrümi aşa uly.",
+  "unsupportedMediaType": "Goldanylmaýan faýl formaty.",
+  "uniqueError": "Bu maglumat ulgamda eýýäm bar.",
+  "foreignKeyError": "Baglanyşykly maglumat tapylmady ýa-da ulanylýar.",
+  "databaseError": "Maglumatlar bazasynda näsazlyk ýüze çykdy.",
+  "success": "Amal üstünlikli ýerine ýetirildi."
 }

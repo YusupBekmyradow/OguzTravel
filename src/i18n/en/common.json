@@ -4,5 +4,12 @@
   "fetchError": "Failed to fetch data. Please try again later.",
   "unauthorized": "Authentication required to access the system.",
   "forbidden": "You do not have permission to perform this action.",
-  "badRequest": "Invalid request. Please check your input."
+  "badRequest": "Invalid request. Please check your input.",
+  "conflict": "Data conflict occurred. Record already exists or is in conflict.",
+  "payloadTooLarge": "Uploaded file or payload size is too large.",
+  "unsupportedMediaType": "Unsupported media type or file format.",
+  "uniqueError": "A record with these details already exists in the system.",
+  "foreignKeyError": "Referenced record not found or is currently in use.",
+  "databaseError": "A database operation error occurred.",
+  "success": "Operation completed successfully."
 }

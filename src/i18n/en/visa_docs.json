@@ -2,6 +2,7 @@
   "created": "Visa document created successfully.",
   "createFailed": "Failed to create visa document.",
   "listFetched": "Visa documents list fetched successfully.",
+  "fetched": "Visa document fetched successfully.",
   "notFound": "Visa document not found.",
   "fetchFailed": "Failed to fetch visa document.",
   "updated": "Visa document updated successfully.",
