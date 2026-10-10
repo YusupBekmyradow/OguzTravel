@@ -20,3 +20,10 @@ module.exports = {
     database: process.env.REMOTE_DB_NAME,
   }
 };
+
+/// migration etmek
+///            pnpm db:migrate
+///            pnpm exec sequelize-cli db:migrate --to 20261010000001-create-tbl-offices.ts
+/// yza almak
+///            pnpm db:migrate:undo
+///            pnpm exec sequelize-cli db:migrate:undo --to 20261010000016-create-tbl-employees.ts
