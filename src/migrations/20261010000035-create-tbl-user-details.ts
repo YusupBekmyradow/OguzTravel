@@ -96,11 +96,11 @@ module.exports = {
         {
           guid: '53a17e56-1fc9-464f-9cde-997cbcf2447a',
           user_guid: '3758eaff-658d-497d-9738-65f6cfc3c328',
-          full_name: 'Administrator',
+          full_name: 'Yusup Bekmyradow',
           role: 'Admin',
           status: 'Active',
           avatar_url: null,
-          contact: JSON.stringify({ phone: '+99361000000' }),
+          contact: JSON.stringify({ phone: '+99363680655', email: 'yusupbekmyradov07@gmail.com' }),
           skills: JSON.stringify([]),
           personal_summary: 'System Administrator',
           work_experience: JSON.stringify([]),

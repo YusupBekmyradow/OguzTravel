@@ -28,6 +28,16 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
     });
+
+    await queryInterface.bulkInsert('tbl_offices', [
+      {
+        guid: 'e963e319-b5e7-484c-bb70-a70c40316b3d',
+        fullName: JSON.stringify({ tk: 'Mary', ru: 'Мары', en: 'Mary' }),
+        shortName: JSON.stringify({ tk: 'Mr', ru: 'Мр', en: 'Mr' }),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
   },
 
   down: async (queryInterface: QueryInterface): Promise<void> => {

@@ -111,12 +111,12 @@ module.exports = {
     await queryInterface.bulkInsert('tbl_users', [
       {
         guid: '3758eaff-658d-497d-9738-65f6cfc3c328',
-        employee_guid: null,
+        employee_guid: '1265c8cb-aea0-4463-abd3-4bd98a2f1a27',
         isActive: true,
-        isExternalUser: true,
+        isExternalUser: false,
         password: '$2b$10$oEDIPR8ZeOjYcrbdlkkFkOhrXpAswH4Yg5WtLAStBYBG4G/MKCmR2', // 123456
         permissions: JSON.stringify(defaultPermissions),
-        phone_number: '+99361000000',
+        phone_number: '+99363680655',
         role: 'Admin',
         refresh_token: null,
         createdAt: new Date(),

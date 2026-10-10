@@ -7,8 +7,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetCategoryAnalyticsFilterDto } from './dto/GetCategoryAnalyticsFilterDto-filter.dto';
 
 @ApiTags('Dashboard')
-@ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+// @ApiBearerAuth('bearerAuth')
+// @UseGuards(JwtAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) { }
