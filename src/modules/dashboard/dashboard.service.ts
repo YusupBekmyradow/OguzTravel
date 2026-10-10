@@ -209,7 +209,7 @@ export class DashboardService {
     };
   }
 
-  // Kassa expenses: hand-entered and Excel-imported expense rows, in the row's own currency.
+
   private async kassaExpense(whereCondition: any): Promise<Record<Currency, number>> {
     const expenseIn = (c: Currency) =>
       sumOf(
@@ -247,7 +247,6 @@ export class DashboardService {
     const group = groupSql ? literal(groupSql) : null;
     const andConditions: any[] = [];
     if (applyTypeFilter) {
-      // source'dan bağımsız: MANUAL + PROJECT + EXCEL hepsi dahil — sadece SALARY hariç + type=INCOME
       andConditions.push(literal(
         `${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'` +
         ` AND ${T}.type = 'INCOME'` +
@@ -269,7 +268,6 @@ export class DashboardService {
   private async calculateMetrics(whereCondition: any, currency: Currency, applyTypeFilter = true) {
     const andConditions: any[] = [literal(inCurrencySql(currency))];
     if (applyTypeFilter) {
-      // source'dan bağımsız: MANUAL, PROJECT, EXCEL hepsi dahil — sadece SALARY hariç + type=INCOME
       andConditions.unshift(literal(
         `${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'` +
         ` AND ${T}.type = 'INCOME'`

@@ -6,9 +6,9 @@ import { DashboardFilterDto, GetSummaryFilterDto } from './dto/dashboard-filter.
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetCategoryAnalyticsFilterDto } from './dto/GetCategoryAnalyticsFilterDto-filter.dto';
 
-// @ApiTags('Dashboard')
-// @ApiBearerAuth('bearerAuth')
-// @UseGuards(JwtAuthGuard)
+@ApiTags('Dashboard')
+@ApiBearerAuth('bearerAuth')
+@UseGuards(JwtAuthGuard)
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) { }
@@ -17,7 +17,7 @@ export class DashboardController {
   @Get('/admin-vs-maliya-vs-office-cards')
   async getSummary(@Query() filters: GetSummaryFilterDto) {
     return await this.dashboardService.getDashboardSummary(filters);
-  } ///test edilen
+  }
 
 
   @Get('/admin-vs-maliya-chart-data')
@@ -29,7 +29,7 @@ export class DashboardController {
       ...filters,
       currency: currency || 'TMT',
     });
-  } //test-edilen
+  }
 
 
   @Get('/money-out')
@@ -47,7 +47,7 @@ export class DashboardController {
       ...filters,
       currency: currency || 'TMT',
     });
-  } //test-edilen
+  }
 
 
   @Get('/admin-vs-maliya-operators')
@@ -55,7 +55,7 @@ export class DashboardController {
     @Query() filters: GetCategoryAnalyticsFilterDto,
   ) {
     return await this.dashboardService.getOperatorsRanking(filters);
-  } //test-edilen
+  }
 
 
   @Get('/maliya-by-categories')
@@ -67,7 +67,7 @@ export class DashboardController {
       ...filters,
       currency: currency || 'TMT',
     });
-  } ///test-edilen
+  }
 
 
   @Get('/offices-by-office')
@@ -79,13 +79,12 @@ export class DashboardController {
       ...filters,
       currency: currency || 'TMT',
     });
-  } ///test-edilen
-
+  }
 
   @Get('/admin-category-grifik')
   async getCategoryAnalytics(
     @Query() filters: GetCategoryAnalyticsFilterDto) {
     return await this.dashboardService.getCategoryAnalytics(filters);
-  }//test-edilen
+  }
 }
 
