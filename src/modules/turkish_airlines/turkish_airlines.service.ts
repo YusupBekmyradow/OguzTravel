@@ -149,6 +149,19 @@ export class TurkishAirlinesService {
         WHERE tp.turkish_airline_guid = "TurkishAirline"."guid"
       )`),
         'paidPercentage'
+      ],
+      [
+        Sequelize.literal(`(
+        SELECT ROUND(
+          GREATEST(
+            COALESCE("TurkishAirline".total_price, 0) - COALESCE(SUM(tp.amount), 0),
+            0
+          )::numeric, 2
+        )
+        FROM "tbl_turkish_payments" AS tp
+        WHERE tp.turkish_airline_guid = "TurkishAirline"."guid"
+      )`),
+        'credit_price'
       ]
     ];
   }
@@ -386,34 +399,52 @@ export class TurkishAirlinesService {
     try {
       const currentYear = new Date().getFullYear();
       const previousYear = currentYear - 1;
-      const rawData: any = await this.sequelize.query(
-        `SELECT 
-         EXTRACT(YEAR FROM datetime)::int AS year,
-         ROUND(SUM(base_fare)::numeric, 2) AS total_base_fare,
-         ROUND(SUM(quoted_price)::numeric, 2) AS total_quoted_price,
-         ROUND(SUM(quoted_price - base_fare)::numeric, 2) AS profit
-       FROM tbl_turkish_airlines
-       WHERE EXTRACT(QUARTER FROM datetime) = :quarter
-         AND EXTRACT(YEAR FROM datetime) IN (:currentYear, :previousYear)
-       GROUP BY EXTRACT(YEAR FROM datetime)
-       ORDER BY year ASC`,
+      const rawData: any[] = await this.sequelize.query(
+        `SELECT
+           EXTRACT(YEAR FROM t.datetime)::int AS year,
+           ROUND(SUM(t.base_fare)::numeric, 2)                   AS total_base_fare,
+           ROUND(SUM(t.quoted_price)::numeric, 2)                AS total_quoted_price,
+           ROUND(SUM(t.quoted_price - t.base_fare)::numeric, 2) AS profit,
+           ROUND(
+             GREATEST(
+               COALESCE(SUM(t.total_price), 0) - COALESCE(SUM(tp.paid_amount), 0),
+               0
+             )::numeric, 2
+           ) AS credit_price
+         FROM tbl_turkish_airlines t
+         LEFT JOIN LATERAL (
+           SELECT COALESCE(SUM(p.amount), 0) AS paid_amount
+           FROM tbl_turkish_payments p
+           WHERE p.turkish_airline_guid = t.guid
+         ) tp ON TRUE
+         WHERE EXTRACT(QUARTER FROM t.datetime) = :quarter
+           AND EXTRACT(YEAR   FROM t.datetime) IN (:currentYear, :previousYear)
+         GROUP BY EXTRACT(YEAR FROM t.datetime)
+         ORDER BY year ASC`,
         {
           replacements: { quarter, currentYear, previousYear },
           type: QueryTypes.SELECT,
         },
       );
+
       const profit2025 = Number(rawData.find((item: any) => item.year === previousYear)?.profit || 0);
       const profit2026 = Number(rawData.find((item: any) => item.year === currentYear)?.profit || 0);
-      let percentage = "0%";
+      let percentage = '0%';
       if (profit2025 > 0) {
         const calc = (profit2026 / profit2025) * 100;
         percentage = `${Math.round(calc)}%`;
       }
+
+      const total_credit_price = Math.round(
+        rawData.reduce((sum, item) => sum + Number(item.credit_price || 0), 0) * 100,
+      ) / 100;
+
       return {
         status: 200,
         data: rawData,
         achievement_percentage: percentage,
-        message: this.i18n.t('turkish_airlines.quarterlyReport', { lang })
+        total_credit_price,
+        message: this.i18n.t('turkish_airlines.quarterlyReport', { lang }),
       };
 
     } catch (error: any) {
