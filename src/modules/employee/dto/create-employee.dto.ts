@@ -16,6 +16,7 @@ export class CreateEmployeeDto {
   declare phone_number: string;
 
   @ApiPropertyOptional()
+  @Transform(({ value }) => (typeof value === 'string' && value.trim() !== '' ? value.trim().toLowerCase() : undefined))
   @IsEmail()
   @IsOptional()
   declare gmail?: string;

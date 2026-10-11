@@ -10,5 +10,6 @@
     "fetchFailed": "Işgärleriň sanawyny alyp bolmady. Ýalňyşlyk ýüze çykdy.",
     "notFoundAfterCreate": "Işgär döredilenden soň tapylmady",
     "positionFetched": "Işgär wezipeleri üstünlikli alyndy",
-    "positionFetchFailed": "Işgär wezipelerini alyp bolmady. Ýalňyşlyk ýüze çykdy."
+    "positionFetchFailed": "Işgär wezipelerini alyp bolmady. Ýalňyşlyk ýüze çykdy.",
+    "gmailAlreadyExists": "Bu email öňem bar."
 }

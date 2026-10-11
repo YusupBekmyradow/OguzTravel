@@ -40,6 +40,21 @@ export class EmployeeService implements OnModuleInit {
 
   async addEmployee(createEmployeeDto: CreateEmployeeDto, lang: string) {
     try {
+      if (createEmployeeDto.gmail) {
+        const normalizedGmail = createEmployeeDto.gmail.trim().toLowerCase();
+        createEmployeeDto.gmail = normalizedGmail;
+
+        const existingEmployee = await this.employeeRepository.findOne({
+          where: { gmail: normalizedGmail },
+        });
+        if (existingEmployee) {
+          return errorResponse(
+            HttpStatuses.CONFLICT,
+            this.i18n.t('employee.gmailAlreadyExists', { lang }),
+          );
+        }
+      }
+
       const employee = await this.employeeRepository.create({
         ...createEmployeeDto
       } as any);
@@ -72,6 +87,26 @@ export class EmployeeService implements OnModuleInit {
         message: this.i18n.t('employee.created', { lang }),
       };
     } catch (error) {
+      if (
+        error?.name === 'SequelizeUniqueConstraintError' ||
+        error?.name === 'UniqueConstraintError'
+      ) {
+        const isGmail =
+          error?.fields?.gmail ||
+          error?.errors?.some((e: any) => e.path === 'gmail');
+        if (isGmail) {
+          return errorResponse(
+            HttpStatuses.CONFLICT,
+            this.i18n.t('employee.gmailAlreadyExists', { lang }),
+            error,
+          );
+        }
+        return errorResponse(
+          HttpStatuses.CONFLICT,
+          this.i18n.t('common.uniqueError', { lang }) || 'Bu maglumat ulgamda eýýäm bar.',
+          error,
+        );
+      }
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.createFailed', { lang }), error);
     }
   }
@@ -280,6 +315,25 @@ export class EmployeeService implements OnModuleInit {
       if (!employee) {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('employee.notFound', { lang }));
       }
+
+      if (updateEmployeeDto.gmail) {
+        const normalizedGmail = updateEmployeeDto.gmail.trim().toLowerCase();
+        updateEmployeeDto.gmail = normalizedGmail;
+
+        const existingEmployee = await this.employeeRepository.findOne({
+          where: {
+            gmail: normalizedGmail,
+            guid: { [Op.ne]: updateEmployeeDto.guid },
+          },
+        });
+        if (existingEmployee) {
+          return errorResponse(
+            HttpStatuses.CONFLICT,
+            this.i18n.t('employee.gmailAlreadyExists', { lang }),
+          );
+        }
+      }
+
       const wasInactive = employee.is_active === false;
       await employee.update({
         ...updateEmployeeDto,
@@ -319,6 +373,26 @@ export class EmployeeService implements OnModuleInit {
         message: this.i18n.t('employee.updated', { lang }),
       };
     } catch (error) {
+      if (
+        error?.name === 'SequelizeUniqueConstraintError' ||
+        error?.name === 'UniqueConstraintError'
+      ) {
+        const isGmail =
+          error?.fields?.gmail ||
+          error?.errors?.some((e: any) => e.path === 'gmail');
+        if (isGmail) {
+          return errorResponse(
+            HttpStatuses.CONFLICT,
+            this.i18n.t('employee.gmailAlreadyExists', { lang }),
+            error,
+          );
+        }
+        return errorResponse(
+          HttpStatuses.CONFLICT,
+          this.i18n.t('common.uniqueError', { lang }) || 'Bu maglumat ulgamda eýýäm bar.',
+          error,
+        );
+      }
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('employee.updateFailed', { lang }), error);
     }
   }

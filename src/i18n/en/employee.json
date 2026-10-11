@@ -10,5 +10,6 @@
     "fetchFailed": "Failed to fetch employee list. An error occurred.",
     "notFoundAfterCreate": "Employee not found after creation",
     "positionFetched": "Employee positions fetched successfully",
-    "positionFetchFailed": "Failed to fetch employee positions. An error occurred."
+    "positionFetchFailed": "Failed to fetch employee positions. An error occurred.",
+    "gmailAlreadyExists": "This email already exists."
 }
