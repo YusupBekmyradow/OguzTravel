@@ -71,11 +71,3 @@ async function zero() {
   console.log(`Swagger Documentation: ${url}/docs`);
 }
 zero();
-
-
-
-// indexing goymali
-// migration yazmaly
-// cors request haysy apilere izin bermeli
-// message responseleri dogry edip duzeltmeli catylmadyklary hem bar
-// inbound visa payment 
