@@ -233,6 +233,10 @@ export class ReceivingService {
           OR c."fullName" ILIKE :search
           OR c.phone_number ILIKE :search
           OR c.passport_number ILIKE :search
+          OR EXISTS (
+            SELECT 1 FROM jsonb_each_text(r.custom_field_values) v
+            WHERE v.value ILIKE :search
+          )
         )`);
         replacements.search = `%${query.search.trim()}%`;
       }
@@ -277,7 +281,7 @@ export class ReceivingService {
         LEFT JOIN tbl_offices o ON r.office_guid = o.guid
         LEFT JOIN tbl_country co ON r.country_guid = co.guid
         ${whereSql}
-        ORDER BY r."createdAt" DESC
+        ORDER BY r."createdAt" DESC, r.guid DESC
         LIMIT :limit OFFSET :offset
       `;
 
