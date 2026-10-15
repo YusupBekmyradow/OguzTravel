@@ -51,6 +51,7 @@ export class MessagesController {
     );
   }
 
+  @RequirePermissions('/tasks')
   @Get('/get-all-tasks')
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -110,6 +111,7 @@ export class MessagesController {
     );
   }
 
+  @RequirePermissions('/tasks')
   @Get('/get-tasks-by-status')
   @ApiQuery({ name: 'status', required: true, example: 1 })
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -146,6 +148,7 @@ export class MessagesController {
     return this.messagesService.updateMessage(updateDto, lang);
   }
 
+  @RequirePermissions('/tasks')
   @Post('/add-task')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FilesInterceptor('images', 10))
@@ -163,6 +166,7 @@ export class MessagesController {
     return this.messagesService.addTask(senderGuid, createDto, lang);
   }
 
+  @RequirePermissions('/tasks')
   @Patch('/update-task')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FilesInterceptor('images', 10))
