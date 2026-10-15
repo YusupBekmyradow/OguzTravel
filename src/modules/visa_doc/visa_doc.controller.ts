@@ -11,7 +11,6 @@ import { CreateVisaDocDto } from './dto/create-visa_doc.dto';
 @ApiTags('VisaDocs')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/visa/package')
 @Controller('visa-docs')
 export class VisaDocsController {
   constructor(private readonly visaDocsService: VisaDocsService) { }
@@ -33,12 +32,14 @@ export class VisaDocsController {
   }
 
   @Post('/add-visa-doc')
+  @RequirePermissions('/visa/package')
   async create(@Body() createVisaDocDto: CreateVisaDocDto, @I18nLang() lang: string) {
     return this.visaDocsService.addVisaDoc(createVisaDocDto, lang);
   }
 
 
   @Patch('/update-visa-doc')
+  @RequirePermissions('/visa/package')
   update(
     @Body() updateVisaDocDto: UpdateVisaDocDto,
     @I18nLang() lang: string,
@@ -48,6 +49,7 @@ export class VisaDocsController {
 
 
   @Delete('/delete-visa-doc')
+  @RequirePermissions('/visa/package')
   @ApiBody({ schema: { type: 'object', properties: { guid: { type: 'string' } } } })
   remove(@Body('guid') guid: string, @I18nLang() lang: string) {
     return this.visaDocsService.deleteVisaDoc(guid, lang);
