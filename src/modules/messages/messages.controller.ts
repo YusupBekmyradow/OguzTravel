@@ -17,7 +17,6 @@ import { ImagesService } from '../../common/image-upload/image-upload.module';
 @ApiTags('Notification & Tasks')
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/notifications', '/tasks')
 @Controller('messages')
 export class MessagesController {
   constructor(

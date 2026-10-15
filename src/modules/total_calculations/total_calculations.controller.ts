@@ -10,11 +10,9 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Total Calculations')
-// Login required (financial data). A page permission (e.g. '/finance/cash-flow')
-// can be added once users are assigned it — the dashboard reads this too.
 @ApiBearerAuth('bearerAuth')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-// @RequirePermissions('/finance/cash-flow')
+@RequirePermissions('/finance/cash-flow', '/finance/office-cash')
 @Controller('total-calculations')
 export class TotalCalculationsController {
   constructor(private readonly totalCalculationsService: TotalCalculationsService) { }
