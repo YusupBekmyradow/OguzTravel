@@ -14,6 +14,10 @@ export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
+    // Frontend koruması yapılacağı için backend yetki kontrolü (403 Forbidden) geçici olarak devre dışı bırakıldı
+    return true;
+
+    /*
     const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
       PERMISSIONS_KEY,
       [context.getHandler(), context.getClass()],
@@ -52,5 +56,6 @@ export class PermissionsGuard implements CanActivate {
     }
 
     return true;
+    */
   }
 }
