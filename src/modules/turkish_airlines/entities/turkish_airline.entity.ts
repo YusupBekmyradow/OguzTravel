@@ -222,9 +222,16 @@ export class TurkishAirline extends Model<TurkishAirline> {
     @BeforeUpdate
     static calculateAndRoundPrices(instance: TurkishAirline) {
         const total = Math.round(Number(instance.total_price) || 0);
-        instance.quoted_price = total;
-        const accepted = instance.is_paid ? Number(instance.accepted_price) || 0 : 0;
-        instance.accepted_price = accepted;
-        instance.returned_price = instance.is_paid ? (instance.quoted_price - instance.accepted_price) : 0;
+        if (instance.quoted_price === undefined || instance.quoted_price === null) {
+            instance.quoted_price = total;
+        } else {
+            instance.quoted_price = Number(instance.quoted_price) || 0;
+        }
+        if (instance.accepted_price !== undefined && instance.accepted_price !== null) {
+            instance.accepted_price = Number(instance.accepted_price) || 0;
+        }
+        if (instance.returned_price !== undefined && instance.returned_price !== null) {
+            instance.returned_price = Number(instance.returned_price) || 0;
+        }
     }
 }
