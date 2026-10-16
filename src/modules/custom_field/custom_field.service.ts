@@ -93,7 +93,7 @@ export class CustomFieldService {
         where,
         limit,
         offset,
-        order: [['sort_order', 'ASC']],
+        order: [['sort_order', 'DESC']],
       });
 
       return {

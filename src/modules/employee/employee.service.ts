@@ -179,7 +179,7 @@ export class EmployeeService implements OnModuleInit {
       LEFT JOIN tbl_offices o ON o.guid = e.office_guid
       LEFT JOIN tbl_departments d ON d.guid = e.department_guid
       WHERE ${conditions.join(' AND ')}
-      ORDER BY e.index_number ASC
+      ORDER BY e.index_number DESC
       LIMIT :limit OFFSET :offset;
     `;
       const rows: any[] = await this.sequelize.query(query, {
