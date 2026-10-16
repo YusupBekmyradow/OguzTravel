@@ -283,7 +283,7 @@ export class EmployeeService implements OnModuleInit {
       FROM tbl_employees e
       LEFT JOIN tbl_offices o ON o.guid = e.office_guid
       WHERE e.position_guids && ARRAY[:targetPositions]::uuid[]
-      ORDER BY e.index_number ASC
+      ORDER BY e.index_number DESC
       LIMIT :limit OFFSET :offset;
     `;
       const rows: any[] = await this.sequelize.query(query, {

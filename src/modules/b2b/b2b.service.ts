@@ -138,11 +138,8 @@ export class B2bService {
   }
 
 
-  /**
-   * start_date / end_date as local (Ashgabat) calendar days, both included. Tickets are stored
-   * as instants, so comparing them with UTC day bounds put the first five hours of a local day
-   * on the day before. A bare year ("2026") still means the whole year.
-   */
+
+
   private localDayRange(column: string, start?: string | Date, end?: string | Date) {
     const toDay = (value: string | Date | undefined, yearEdge: string) => {
       if (typeof value !== 'string') return null;

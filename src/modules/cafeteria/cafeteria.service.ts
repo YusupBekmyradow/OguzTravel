@@ -11,7 +11,6 @@ import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Op, Sequelize } from 'sequelize';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-/** Transaction dates are compared as local (Ashgabat) calendar days, end day included. */
 const LOCAL_DAY = `("Cafeteria"."date" AT TIME ZONE 'Asia/Ashgabat')::date`;
 const CURRENCIES = ['TMT', 'USD'];
 import { I18nService } from 'nestjs-i18n';
@@ -141,10 +140,7 @@ export class CafeteriaService {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, await this.i18n.translate('cafeteria.fetchFailed', { lang }), error);
     }
   }
-  /**
-   * Income, expense and balance per currency: TMT and USD are never added
-   * together. The top-level totals are the TMT ones (what older clients show).
-   */
+
   async getSummary(
     filters?: { search?: string; start_date?: string; end_date?: string; type?: boolean | string; office_guid?: string },
     lang: string = 'tk',

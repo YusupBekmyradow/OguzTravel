@@ -209,7 +209,6 @@ export class ReportService {
     dates: { start_date?: string; end_date?: string } = {},
   ) {
     try {
-      // A batch is filtered by the local (Ashgabat) day it was created on, both ends included.
       const day = (value?: string) => {
         const v = value?.trim().slice(0, 10);
         return v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) ? v : null;

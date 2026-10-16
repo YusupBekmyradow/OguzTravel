@@ -43,7 +43,6 @@ export class InboundReportService implements OnModuleInit {
     private readonly i18n: I18nService,
   ) { }
 
-  // Tables that exist already do not get new columns from sync.
   async onModuleInit() {
     try {
       await this.invitationRepo.sequelize?.query(

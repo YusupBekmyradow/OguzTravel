@@ -26,7 +26,7 @@ export class TranslatorService {
 
   async getAllTranslators(lang: string = 'tk') {
     try {
-      const translators = await this.translatorRepository.findAll({ order: [['createdAt', 'ASC']] });
+      const translators = await this.translatorRepository.findAll({ order: [['createdAt', 'DESC']] });
       return successResponse(HttpStatuses.OK, translators, this.i18n.t('translator.listFetched', { lang }));
     } catch (error) {
       return errorResponse(HttpStatuses.INTERNAL_SERVER_ERROR, this.i18n.t('translator.fetchFailed', { lang }), error);

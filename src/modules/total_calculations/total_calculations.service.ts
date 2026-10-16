@@ -458,8 +458,6 @@ export class TotalCalculationsService implements OnModuleInit {
       } else if (filters?.type === 'EXPENSE') {
         conditions.push(`(tc.type = 'EXPENSE' OR (tc.type IS NULL AND (tc.net_price > 0 OR COALESCE(tc.net_price_usd, 0) > 0)))`);
       }
-      // Compared as local (Ashgabat) calendar days, both included: with UTC day bounds a row
-      // entered between 00:00 and 05:00 local time landed on the day before.
       if (filters?.date_from && /^\d{4}-\d{2}-\d{2}/.test(filters.date_from)) {
         conditions.push(`(tc.datetime AT TIME ZONE 'Asia/Ashgabat')::date >= CAST(:rangeFrom AS date)`);
         replacements.rangeFrom = filters.date_from.substring(0, 10);

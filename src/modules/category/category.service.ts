@@ -61,7 +61,7 @@ export class CategoryService {
 
         const { rows, count } = await this.categoryRepository.findAndCountAll({
           where,
-          order: [['index_number', 'ASC']],
+          order: [['index_number', 'DESC']],
           limit: currentLimit,
           offset,
         });
@@ -136,9 +136,6 @@ export class CategoryService {
 
   async deleteCategory(guid: string, lang: string = 'tk') {
     try {
-      // The total_calculations DB triggers write every synced sale (B2B,
-      // airway, visa, translation, …) with these guids; deleting one would
-      // break or orphan those inserts.
       if ((Object.values(SYSTEM_CATEGORIES) as string[]).includes(guid)) {
         return errorResponse(
           HttpStatuses.FORBIDDEN,

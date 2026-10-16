@@ -139,20 +139,18 @@ export class MessagesService {
         },
         message: this.i18n.t('messages.listFetched', { lang }),
       };
-    } catch (error: any) { console.log(error)
+    } catch (error: any) {
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.fetchFailed', { lang }), error);
     }
   }
 
 
-  // `sort` arrives as `<column>_<asc|desc>` (e.g. `due_date_desc`); only whitelisted columns reach SQL.
   private parseInstant(value?: string): Date | null {
     if (!value) return null;
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  // `t.guid` is the final tie-breaker so LIMIT/OFFSET pages never repeat or skip rows.
   private getTaskOrderClause(sort?: string): string {
     const fallback = 't."createdAt" DESC, t.guid';
     const match = /^(.+)_(asc|desc)$/i.exec(String(sort || ''));
@@ -191,7 +189,6 @@ export class MessagesService {
   ) {
     try {
       const pageNum = Math.max(1, Math.floor(Number(page)) || 1);
-      // Hard cap so a single request (`?limit=100000`) can't pull the whole table.
       const limitNum = Math.min(MAX_TASK_PAGE_SIZE, Math.max(1, Math.floor(Number(limit)) || 10));
       const offset = (pageNum - 1) * limitNum;
       const isGrouped = type === true || type === 'true';
@@ -207,9 +204,6 @@ export class MessagesService {
         conditions.push('t.status = :status');
         replacements.status = Number(status);
       }
-      // Preferred: the client's local day as an exact [due_from, due_to) instant range, since
-      // due dates are stored as UTC instants of the user's local midnight. `due_date`
-      // (a UTC calendar day) stays for older clients.
       const dueFrom = this.parseInstant(due_from);
       const dueTo = this.parseInstant(due_to);
       if (dueFrom && dueTo) {
@@ -220,9 +214,6 @@ export class MessagesService {
         conditions.push(`t.due_date >= CAST(:dueDay AS date) AND t.due_date < CAST(:dueDay AS date) + INTERVAL '1 day'`);
         replacements.dueDay = due_date;
       }
-      // Date-range filter: tasks whose start_date → end_date window overlaps [date_from, date_to).
-      // A task with only one of the two dates is treated as that single instant; a task with
-      // neither never matches. Either bound may be sent alone.
       const dateFrom = this.parseInstant(date_from);
       const dateTo = this.parseInstant(date_to);
       if (dateFrom) {
@@ -233,8 +224,6 @@ export class MessagesService {
         conditions.push('COALESCE(t.start_date, t.end_date) < :dateTo');
         replacements.dateTo = dateTo;
       }
-      // Assignee/search filters use EXISTS so they select tasks without trimming the
-      // aggregated `assignees` list down to only the matching assignee.
       if (assignee_guid) {
         conditions.push(`EXISTS (
           SELECT 1 FROM tbl_task_assignees fa
@@ -257,17 +246,9 @@ export class MessagesService {
       }
       const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
-      // Keyset (cursor) mode for infinite scroll: sending `cursor` (empty for the first page)
-      // switches to `ORDER BY index_number DESC` + `index_number < cursor`. Unlike OFFSET the
-      // next page is an index seek (page 1000 costs the same as page 1), and cards moving in
-      // or out of a column never shift later pages. `index_number` is the unique serial.
       const isKeyset = cursor !== undefined && cursor !== null && !isGrouped;
       const cursorValue = Number(cursor);
       const hasCursor = isKeyset && Number.isInteger(cursorValue) && cursorValue > 0;
-
-      // Filter + sort + LIMIT/OFFSET run on bare task rows in the inner query; the assignee /
-      // creator subqueries run only on the page it returns. Without this split Postgres also
-      // evaluates them for every OFFSET-skipped row (measured: page 2000 took >5 min on 200k tasks).
       const buildTaskSelect = (where: string, order: string, paging = '') => `
       SELECT
         t.*,
@@ -312,8 +293,6 @@ export class MessagesService {
 
       if (isKeyset) {
         const keysetWhere = hasCursor ? `${whereClause} AND t.index_number < :cursor` : whereClause;
-        // One extra row tells whether another page exists without a COUNT per page;
-        // the total (column badge) is only computed for the first page.
         const [rows, countResult]: [any[], any[] | null] = await Promise.all([
           this.sequelize.query(buildTaskSelect(keysetWhere, 't.index_number DESC', 'LIMIT :limitPlusOne'), {
             replacements: { ...replacements, cursor: cursorValue, limitPlusOne: limitNum + 1 },
@@ -613,25 +592,13 @@ export class MessagesService {
     }
   }
 
-  /**
-   * Resolves the task's final image list. Client-sent paths are only trusted when they already
-   * belong to the task (`keep_images` ∩ current), so a request can never point at foreign files.
-   * - `keep_images` sent: kept paths + uploads.
-   * - only uploads (legacy clients): uploads replace everything.
-   * - neither: images untouched (`null`).
-   */
+
   private resolveTaskImages(current: string[], keepImages: string[] | undefined, uploaded: string[]): string[] | null {
     if (keepImages === undefined && uploaded.length === 0) return null;
     const kept = keepImages ? keepImages.filter((path) => current.includes(path)) : [];
     return [...kept, ...uploaded];
   }
 
-  /**
-   * Normalizes a task's window in place and reports whether it is valid.
-   * - `end_date` sent: `due_date` follows it, so older clients reading `due_date` stay correct.
-   * - only `due_date` sent (older clients): it becomes `end_date`.
-   * - the window is checked against the stored value of whichever side the request omits.
-   */
   private resolveTaskDates(data: any, current?: { start_date?: Date | null; end_date?: Date | null }): boolean {
     if (data.end_date !== undefined) {
       data.due_date = data.end_date;
@@ -643,8 +610,6 @@ export class MessagesService {
     return !start || !end || new Date(start).getTime() <= new Date(end).getTime();
   }
 
-  // Returns the guids that don't belong to any user; inserting them would violate
-  // tbl_task_assignees_assignee_guid_fkey and fail the whole request with a 500.
   private async findUnknownUserGuids(guids: string[], transaction?: any): Promise<string[]> {
     if (guids.length === 0) return [];
     const users = await this.userRepository.findAll({
@@ -660,10 +625,7 @@ export class MessagesService {
   async updateTask(updateDto: UpdateTaskDto, lang: string = 'tk', uploadedImages: string[] = []) {
     const transaction = await this.sequelize.transaction();
     try {
-      // `images` from the body is ignored: new files only arrive as uploads (`uploadedImages`).
       let { guid, assignee_guids, images: _ignoredImages, keep_images, ...updateData } = updateDto as any;
-      // Only a request that sends `assignee_guids` replaces the assignees; a partial update
-      // (e.g. a status change from the board) must leave them untouched.
       const shouldReplaceAssignees = assignee_guids !== undefined;
       if (!assignee_guids) {
         assignee_guids = [];
@@ -717,8 +679,6 @@ export class MessagesService {
         await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
       }
       await transaction.commit();
-
-      // Files are removed only after the commit, and only those no longer referenced.
       if (nextImages) {
         this.imagesService.deleteFiles(currentImages.filter((path) => !nextImages.includes(path)));
       }
@@ -734,7 +694,6 @@ export class MessagesService {
       };
     } catch (error: any) {
       await transaction.rollback();
-      // The uploads were saved before the transaction; don't leave them orphaned on disk.
       this.imagesService.deleteFiles(uploadedImages);
       return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, this.i18n.t('messages.updateFailed', { lang }), error);
     }

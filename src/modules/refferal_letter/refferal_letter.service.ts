@@ -16,17 +16,11 @@ import { CreateOtherLetterDto } from './dto/sub_report.dto';
 import { UpdateOtherLetterDto } from './dto/sub_report_update.dto';
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
-/**
- * Letter dates are stored as the instant of local (Ashgabat) midnight, so a day picked in the
- * filter is compared with the local calendar day, not the UTC one.
- */
 const localDay = (column: string) => `("RefferalLetter"."${column}" AT TIME ZONE 'Asia/Ashgabat')::date`;
-/** A filter day that is a real YYYY-MM-DD date, or null: anything else is ignored. */
 const validDay = (value?: string) => {
   const day = value?.trim().slice(0, 10);
   return day && DAY_RE.test(day) && !Number.isNaN(Date.parse(day)) ? day : null;
 };
-/** Typed text is matched literally: % and _ are not wildcards. */
 const escapeLike = (value: string) => value.replace(/[\\%_]/g, '\\$&');
 
 @Injectable()
@@ -49,20 +43,14 @@ export class RefferalLetterService implements OnModuleInit {
           ) THEN
             ALTER TABLE "tbl_refferal_letter" RENAME COLUMN "tranzit" TO "bgn_departure";
           END IF;
-          -- Eger bgn_departure yoksa ekle
           IF NOT EXISTS (
             SELECT 1 FROM information_schema.columns
             WHERE table_name = 'tbl_refferal_letter' AND column_name = 'bgn_departure'
           ) THEN
             ALTER TABLE "tbl_refferal_letter" ADD COLUMN "bgn_departure" VARCHAR;
           END IF;
-          -- BGN arrival, next to BGN departure
           ALTER TABLE "tbl_refferal_letter" ADD COLUMN IF NOT EXISTS "bgn_arrival" VARCHAR;
-          -- Refferal country guid
           ALTER TABLE "tbl_refferal_letter" ADD COLUMN IF NOT EXISTS "refferal_country_guid" UUID;
-          -- The country is picked from tbl_refferal_countries now. The old free-text column is
-          -- dropped once no referral letter depends on it: letters that only have the text are
-          -- first matched to a country by name, and the column stays if any is left unmatched.
           IF EXISTS (
             SELECT 1 FROM information_schema.columns
             WHERE table_name = 'tbl_refferal_letter' AND column_name = 'destination_country'
@@ -93,7 +81,6 @@ export class RefferalLetterService implements OnModuleInit {
         END $$;
       `);
     } catch (e) {
-      // Without these columns every list query fails, so make it visible.
       console.error('tbl_refferal_letter column migration failed:', e);
     }
   }
@@ -283,7 +270,6 @@ export class RefferalLetterService implements OnModuleInit {
           whereConditions.refferal_country_guid = filters.refferal_country_guid;
         }
 
-        // Both ends of a range are included; an end without a start (or the reverse) works alone.
         const dayConditions: any[] = [];
         const addDayRange = (column: string, start?: string, end?: string) => {
           const from = validDay(start);

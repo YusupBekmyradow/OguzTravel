@@ -73,7 +73,7 @@ export class RefferalCountryService {
 
         const { rows, count } = await this.refferalCountryRepo.findAndCountAll({
           where,
-          order: [['index_number', 'ASC']],
+          order: [['index_number', 'DESC']],
           limit: currentLimit,
           offset,
         });
