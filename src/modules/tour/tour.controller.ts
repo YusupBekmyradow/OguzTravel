@@ -10,8 +10,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Tour')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/outbound')
+@UseGuards(JwtAuthGuard)
 @Controller('tour')
 export class TourController {
   constructor(private readonly tourService: TourService) { }

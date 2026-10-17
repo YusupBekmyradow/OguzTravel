@@ -10,8 +10,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('TTP_Payment')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/outbound')
+@UseGuards(JwtAuthGuard)
 @Controller('ttp-payment')
 export class TtpPaymentController {
   constructor(private readonly ttpPaymentService: TtpPaymentService) { }

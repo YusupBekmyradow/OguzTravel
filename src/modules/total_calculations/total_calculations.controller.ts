@@ -11,8 +11,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Total Calculations')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/finance/cash-flow', '/finance/office-cash')
+@UseGuards(JwtAuthGuard)
 @Controller('total-calculations')
 export class TotalCalculationsController {
   constructor(private readonly totalCalculationsService: TotalCalculationsService) { }

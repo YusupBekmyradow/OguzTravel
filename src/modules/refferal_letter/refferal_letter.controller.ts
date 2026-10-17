@@ -12,8 +12,7 @@ import { UpdateOtherLetterDto } from './dto/sub_report_update.dto';
 
 @ApiTags('Refferal_Letter')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/referal-letters')
+@UseGuards(JwtAuthGuard)
 @Controller('refferal-letter')
 export class RefferalLetterController {
   constructor(private readonly refferalLetterService: RefferalLetterService) { }

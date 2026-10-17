@@ -19,8 +19,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 
 @ApiTags('Receivings')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/intake')
+@UseGuards(JwtAuthGuard)
 @Controller('receivings')
 export class ReceivingController {
   constructor(private readonly receivingService: ReceivingService) { }

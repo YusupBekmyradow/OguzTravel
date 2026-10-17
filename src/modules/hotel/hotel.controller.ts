@@ -10,8 +10,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Hotel')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/outbound')
+@UseGuards(JwtAuthGuard)
 @Controller('hotel')
 export class HotelController {
   constructor(private readonly hotelService: HotelService) { }

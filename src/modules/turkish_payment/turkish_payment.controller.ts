@@ -10,8 +10,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Turkish_Payment')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/outbound')
+@UseGuards(JwtAuthGuard)
 @Controller('turkish-payment')
 export class TurkishPaymentController {
   constructor(private readonly turkishPaymentService: TurkishPaymentService) { }

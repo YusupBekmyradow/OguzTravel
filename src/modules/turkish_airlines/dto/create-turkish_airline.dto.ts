@@ -80,6 +80,12 @@ export class CreateTurkishAirlineDto {
   @IsOptional()
   declare accepted_price?: number;
 
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  declare returned_price?: number;
+
   @ApiPropertyOptional({ default: 'USD' })
   @IsString()
   @IsOptional()

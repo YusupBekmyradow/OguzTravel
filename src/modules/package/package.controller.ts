@@ -10,8 +10,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Package')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/outbound')
+@UseGuards(JwtAuthGuard)
 @Controller('package')
 export class PackageController {
   constructor(private readonly packageService: PackageService) { }

@@ -463,6 +463,12 @@ export class TurkishAirlinesService {
         return errorResponse(HttpStatuses.NOT_FOUND, this.i18n.t('turkish_airlines.notFound', { lang }));
       }
       let updateData: any = { ...updateDto };
+      const isPaidFalse = updateDto.is_paid === false || (updateDto.is_paid as any) === 'false';
+      if (isPaidFalse) {
+        updateData.accepted_price = 0;
+        updateData.returned_price = 0;
+      }
+      
       if (updateDto.client_guid && updateDto.client_guid !== turkishAirline.client_guid) {
         const client = await this.clientRepository.findByPk(updateDto.client_guid, { transaction: t });
         if (client) {

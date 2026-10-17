@@ -18,10 +18,8 @@ import { PermissionsGuard } from '../../guards/permissions.guard';
 import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Categories')
-// Login required. No page permission yet: categories are read by several
-// pages (cash flow forms, the category page, filters).
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('category')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) { }

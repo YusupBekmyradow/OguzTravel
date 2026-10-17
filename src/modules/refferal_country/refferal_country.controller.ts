@@ -18,7 +18,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('RefferalCountry')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('refferal-country')
 export class RefferalCountryController {
   constructor(private readonly refferalCountryService: RefferalCountryService) { }

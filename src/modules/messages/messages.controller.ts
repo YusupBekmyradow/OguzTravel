@@ -16,7 +16,7 @@ import { ImagesService } from '../../common/image-upload/image-upload.module';
 
 @ApiTags('Notification & Tasks')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('messages')
 export class MessagesController {
   constructor(
@@ -51,7 +51,6 @@ export class MessagesController {
     );
   }
 
-  @RequirePermissions('/tasks')
   @Get('/get-all-tasks')
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
@@ -60,7 +59,6 @@ export class MessagesController {
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'priority', required: false, example: 'urgent' })
   @ApiQuery({ name: 'due_date', required: false })
-  @ApiQuery({ name: 'assignee_guid', required: false })
   @ApiQuery({ name: 'sort', required: false, example: 'due_date_desc' })
   @ApiQuery({ name: 'due_from', required: false, description: 'ISO instant, inclusive' })
   @ApiQuery({ name: 'due_to', required: false, description: 'ISO instant, exclusive' })
@@ -76,6 +74,7 @@ export class MessagesController {
     description: 'Keyset pagination: send empty for the first page, then meta.nextCursor',
   })
   async getAllTasks(
+    @Req() req,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('status') status?: number,
@@ -83,7 +82,6 @@ export class MessagesController {
     @Query('priority') priority?: string,
     @Query('due_date') due_date?: string,
     @Query('search') search?: string,
-    @Query('assignee_guid') assignee_guid?: string,
     @Query('sort') sort?: string,
     @Query('due_from') due_from?: string,
     @Query('due_to') due_to?: string,
@@ -92,6 +90,8 @@ export class MessagesController {
     @Query('date_to') date_to?: string,
     @I18nLang() lang: string = 'tk',
   ) {
+    const assignee_guid = req.user.guid;
+
     return this.messagesService.getAllTasks(
       page ? Number(page) : 1,
       limit ? Number(limit) : 10,
@@ -111,7 +111,7 @@ export class MessagesController {
     );
   }
 
-  @RequirePermissions('/tasks')
+
   @Get('/get-tasks-by-status')
   @ApiQuery({ name: 'status', required: true, example: 1 })
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -148,7 +148,7 @@ export class MessagesController {
     return this.messagesService.updateMessage(updateDto, lang);
   }
 
-  @RequirePermissions('/tasks')
+
   @Post('/add-task')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FilesInterceptor('images', 10))
@@ -166,7 +166,7 @@ export class MessagesController {
     return this.messagesService.addTask(senderGuid, createDto, lang);
   }
 
-  @RequirePermissions('/tasks')
+
   @Patch('/update-task')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FilesInterceptor('images', 10))

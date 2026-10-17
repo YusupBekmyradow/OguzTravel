@@ -11,8 +11,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('General Translation')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/translation')
+@UseGuards(JwtAuthGuard)
 @Controller('general-translation')
 export class GeneralTranslationController {
   constructor(private readonly translationService: GeneralTranslationService) { }

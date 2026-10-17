@@ -10,8 +10,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Visa_Payment')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/visa/applications', '/intake')
+@UseGuards(JwtAuthGuard)
 @Controller('visa-payment')
 export class VisaPaymentController {
   constructor(private readonly visaPaymentService: VisaPaymentService) { }

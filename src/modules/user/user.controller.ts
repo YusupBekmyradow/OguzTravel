@@ -12,8 +12,7 @@ import { PermissionsGuard } from '../../guards/permissions.guard';
 
 @ApiTags('Users')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/employee/users')
+@UseGuards(JwtAuthGuard)
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) { }

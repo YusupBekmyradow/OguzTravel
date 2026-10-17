@@ -10,7 +10,7 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Departments')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('department')
 export class DepartmentController {
   constructor(private readonly departmentService: DepartmentService) { }

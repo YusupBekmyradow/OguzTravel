@@ -10,8 +10,7 @@ import { PermissionsGuard } from '../../guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 @ApiTags('Salary')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/finance/salary')
+@UseGuards(JwtAuthGuard)
 @Controller('salary')
 export class SalaryController {
   constructor(private readonly salaryService: SalaryService) { }

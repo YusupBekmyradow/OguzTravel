@@ -11,8 +11,7 @@ import { FilterVisaDto } from './dto/get-visas.dto';
 
 @ApiTags('Visa')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('/visa/applications')
+@UseGuards(JwtAuthGuard)
 @Controller('visa')
 export class VisaController {
   constructor(private readonly visaService: VisaService) { }
