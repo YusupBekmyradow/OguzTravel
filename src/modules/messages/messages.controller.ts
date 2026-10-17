@@ -13,6 +13,7 @@ import { I18nLang } from 'nestjs-i18n';
 import { PermissionsGuard } from '../../guards/permissions.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ImagesService } from '../../common/image-upload/image-upload.module';
+import { UserType } from '../../enums/enums';
 
 @ApiTags('Notification & Tasks')
 @ApiBearerAuth('bearerAuth')
@@ -32,6 +33,7 @@ export class MessagesController {
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'createdAt', required: false })
   async getAll(
+    @Req() req: any,
     @Query('page') page: number,
     @Query('limit') limit: number,
     @Query('assignee_guid') assignee_guid?: string,
@@ -40,14 +42,19 @@ export class MessagesController {
     @Query('createdAt') createdAt?: string,
     @I18nLang() lang: string = 'tk',
   ) {
+    const currentUserGuid = req?.user?.guid;
+    // Bildirimler sadece hedef alıcısına dönmeli, gönderen (kendi eylemini yapan) kişi hariç tutulmalıdır
+    const effectiveAssigneeGuid = assignee_guid || currentUserGuid;
+
     return this.messagesService.getAllNotification(
       page,
       limit,
-      assignee_guid,
+      effectiveAssigneeGuid,
       isRead,
       search,
       createdAt,
       lang,
+      currentUserGuid,
     );
   }
 
@@ -73,8 +80,9 @@ export class MessagesController {
     required: false,
     description: 'Keyset pagination: send empty for the first page, then meta.nextCursor',
   })
+  @ApiQuery({ name: 'assignee_guid', required: false, description: 'Filter tasks by specific assignee' })
   async getAllTasks(
-    @Req() req,
+    @Req() req: any,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('status') status?: number,
@@ -88,9 +96,18 @@ export class MessagesController {
     @Query('cursor') cursor?: string,
     @Query('date_from') date_from?: string,
     @Query('date_to') date_to?: string,
+    @Query('assignee_guid') queryAssigneeGuid?: string,
     @I18nLang() lang: string = 'tk',
   ) {
-    const assignee_guid = req.user.guid;
+    const user = req?.user;
+    const userPermissions: string[] = Array.isArray(user?.permissions) ? user.permissions : [];
+    const isAdmin =
+      user?.role === UserType.ADMIN ||
+      user?.role === 'Admin' ||
+      user?.role === 'admin' ||
+      userPermissions.includes('/employee/users') ||
+      userPermissions.includes('/employee') ||
+      userPermissions.includes('*');
 
     return this.messagesService.getAllTasks(
       page ? Number(page) : 1,
@@ -100,7 +117,7 @@ export class MessagesController {
       priority,
       due_date,
       search,
-      assignee_guid,
+      queryAssigneeGuid,
       lang,
       sort,
       due_from,
@@ -108,6 +125,8 @@ export class MessagesController {
       cursor,
       date_from,
       date_to,
+      user?.guid,
+      isAdmin,
     );
   }
 

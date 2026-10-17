@@ -66,30 +66,47 @@ export class MessagesService {
     search?: string,
     createdAt?: string,
     lang: string = 'tk',
+    currentUserGuid?: string,
   ) {
     try {
       const pageNum = Number(page) || 1;
       const limitNum = Number(limit) || 10;
       const offset = (pageNum - 1) * limitNum;
-      const whereClause: any = {};
       const taskAssigneeWhere: any = {};
       if (assignee_guid) {
         taskAssigneeWhere.assignee_guid = assignee_guid;
       }
-      if (isRead !== undefined) {
-        taskAssigneeWhere.isRead = isRead === 'true';
+      const whereConditions: any[] = [];
+
+      if (currentUserGuid) {
+        // Kullanıcı kendi oluşturduğu veya kendi eylemi olan bildirimleri almaz
+        whereConditions.push({
+          [Op.or]: [
+            { adm_user_guid: { [Op.ne]: currentUserGuid } },
+            { adm_user_guid: null },
+          ],
+        });
       }
+
       if (createdAt) {
-        whereClause.createdAt = {
-          [Op.between]: [`${createdAt} 00:00:00`, `${createdAt} 23:59:59`],
-        };
+        whereConditions.push({
+          createdAt: {
+            [Op.between]: [`${createdAt} 00:00:00`, `${createdAt} 23:59:59`],
+          },
+        });
       }
+
       if (search) {
-        whereClause[Op.or] = [
-          { title: { [Op.iLike]: `%${search}%` } },
-          { description: { [Op.iLike]: `%${search}%` } },
-        ];
+        whereConditions.push({
+          [Op.or]: [
+            { title: { [Op.iLike]: `%${search}%` } },
+            { description: { [Op.iLike]: `%${search}%` } },
+          ],
+        });
       }
+
+      const whereClause: any = whereConditions.length > 0 ? { [Op.and]: whereConditions } : {};
+
       const { rows, count } = await this.messageRepository.findAndCountAll({
         where: whereClause,
         include: [
@@ -103,7 +120,7 @@ export class MessagesService {
             model: TaskAssignee,
             as: 'empltaskAssignee',
             where: Object.keys(taskAssigneeWhere).length > 0 ? taskAssigneeWhere : undefined,
-            required: !!assignee_guid || isRead !== undefined || !!search,
+            required: !!assignee_guid || isRead !== undefined,
             include: [
               {
                 model: User,
@@ -186,6 +203,8 @@ export class MessagesService {
     cursor?: string,
     date_from?: string,
     date_to?: string,
+    currentUserGuid?: string,
+    isAdmin?: boolean,
   ) {
     try {
       const pageNum = Math.max(1, Math.floor(Number(page)) || 1);
@@ -225,12 +244,24 @@ export class MessagesService {
         replacements.dateTo = dateTo;
       }
       if (assignee_guid) {
+        // Belirli bir kullanıcı filtrelendiğinde (Örn: Filter Drawer üzerinden operatör seçildiğinde)
         conditions.push(`EXISTS (
           SELECT 1 FROM tbl_task_assignees fa
           WHERE fa.task_guid = t.guid AND fa.assignee_guid = :assignee_guid
         )`);
         replacements.assignee_guid = assignee_guid;
+      } else if (!isAdmin && currentUserGuid) {
+        // Normal personel: Kendisine atanan görevleri VEYA kendisinin oluşturduğu görevleri görür
+        conditions.push(`(
+          t.adm_user_guid = :currentUserGuid OR
+          EXISTS (
+            SELECT 1 FROM tbl_task_assignees fa
+            WHERE fa.task_guid = t.guid AND fa.assignee_guid = :currentUserGuid
+          )
+        )`);
+        replacements.currentUserGuid = currentUserGuid;
       }
+      // NOT: Admin kullanıcısı filtre seçmediğinde tüm görevleri (kendi açtıkları dahil) eksiksiz görür.
       if (search) {
         conditions.push(`(
         t.title ILIKE :search OR
@@ -685,17 +716,18 @@ export class MessagesService {
       }
 
       // ---------------------------------------------------------------------------
-      // [TERSİNE BİLDİRİM - REVERSE NOTIFICATION]
-      // Personel (assignee) görevi kabul edip durumunu (To Do -> In Progress -> Done)
-      // değiştirdiğinde, görevi oluşturan adminin ekranını haberdar etmek için bildirim üretilir.
+      // [DURUM DEĞİŞİKLİĞİ BİLDİRİMİ - STATUS CHANGE NOTIFICATION]
+      // Bir görevin durumu değiştiğinde (To Do -> In Progress -> Done vb.):
+      // 1) Eğer personel durumu değiştirdiyse -> Görevi açan Admin'e bildirim gider.
+      // 2) Eğer admin durumu değiştirdiyse -> Göreve atanan personele bildirim gider.
+      // 3) HİÇBİR DURUMDA işlemi yapan kişinin kendisine bildirim gitmez!
       // ---------------------------------------------------------------------------
       const nextStatus = updateData.status !== undefined ? Number(updateData.status) : undefined;
       const statusChanged = nextStatus !== undefined && nextStatus !== Number(task.status);
 
-      // Sadece durum gerçekten değiştiyse VE güncelleyen kişi adminin kendisi değilse çalışır:
-      if (statusChanged && task.adm_user_guid && currentUserGuid && task.adm_user_guid !== currentUserGuid) {
+      if (statusChanged && currentUserGuid) {
         try {
-          // Durumu değiştiren personelin adını al (Toast mesajında göstermek için)
+          // Durumu değiştiren personelin veya yöneticinin adını al
           const updater = await this.userRepository.findOne({
             where: { guid: currentUserGuid },
             include: [{ model: Employee, attributes: ['guid', 'fullName'] }],
@@ -717,28 +749,45 @@ export class MessagesService {
             ? `${updaterName} changed task status to "${statusText}".`
             : `${updaterName} ýumşy "${statusText}" ýagdaýyna geçirdi.`;
 
-          // Bildirim kaydı oluşturulur:
-          // NOT: `isMessage: true` verilir ki Kanban panosunda ikinci bir görev kartı olarak gözükmesin!
-          // `status: nextStatus` verilir ki frontend (useNotificationWatcher) bunun bir görev olayı olduğunu
-          // anlayıp adminin Kanban panosundaki cache'i (resetTaskBoard) otomatik tazeleyebilsin.
-          const statusNotif = await this.messageRepository.create({
-            title: notifTitle,
-            description: notifDesc,
-            isMessage: true, // Genel mesaj/bildirim tipi (Panoda mükerrer kart açılmaz)
-            status: nextStatus, // Görev durum göstergesi (Frontend watcher için kritik)
-            priority: task.priority || 'medium',
-            adm_user_guid: currentUserGuid, // Gönderen: Personel
-          } as any, { transaction });
+          // Bildirimin gideceği hedef alıcıları belirle (İşlemi yapan KESİNLİKLE hariç tutulur):
+          let recipientGuids: string[] = [];
+          if (task.adm_user_guid && task.adm_user_guid !== currentUserGuid) {
+            // Durumu personel değiştirdiyse -> Görevi açan Admin'e bildirim gider
+            recipientGuids.push(task.adm_user_guid);
+          } else {
+            // Durumu Admin değiştirdiyse -> Göreve atanmış personellere bildirim gider
+            const currentAssignees = await this.taskAssigneeRepository.findAll({
+              where: { task_guid: guid },
+              attributes: ['assignee_guid'],
+              raw: true,
+              transaction,
+            });
+            recipientGuids = currentAssignees
+              .map((a: any) => a.assignee_guid)
+              .filter((g: string) => g && g !== currentUserGuid);
+          }
 
-          // Bildirimi görevi oluşturan admine ata (Alıcı: task.adm_user_guid)
-          await this.taskAssigneeRepository.create({
-            task_guid: statusNotif.guid,
-            assignee_guid: task.adm_user_guid, // Alıcı: Görevi açan Admin
-            isRead: false,
-          } as any, { transaction });
+          // Yalnızca karşı taraf/hedef alıcı varsa bildirim kaydı oluşturulur
+          if (recipientGuids.length > 0) {
+            const statusNotif = await this.messageRepository.create({
+              title: notifTitle,
+              description: notifDesc,
+              isMessage: true, // Genel mesaj/bildirim tipi (Panoda mükerrer kart açılmaz)
+              status: nextStatus, // Görev durum göstergesi (Frontend watcher için kritik)
+              priority: task.priority || 'medium',
+              adm_user_guid: currentUserGuid, // Gönderen: İşlemi yapan kişi
+            } as any, { transaction });
+
+            const assigneeRecords = recipientGuids.map((targetGuid: string) => ({
+              task_guid: statusNotif.guid,
+              assignee_guid: targetGuid, // Alıcı: Karşı taraf
+              isRead: false,
+            }));
+            await this.taskAssigneeRepository.bulkCreate(assigneeRecords as any, { transaction });
+          }
         } catch (notifErr) {
           // Bildirim oluşturulamasa bile ana görev güncellemesinin kesilmemesi için non-blocking tutulur
-          console.warn('Failed to create status change notification for admin:', notifErr);
+          console.warn('Failed to create status change notification:', notifErr);
         }
       }
 
