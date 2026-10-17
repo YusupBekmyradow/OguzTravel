@@ -171,12 +171,16 @@ export class MessagesController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FilesInterceptor('images', 10))
   async updateTask(
+    // Görevi güncelleyen personelin kimliğini tespit etmek için req nesnesi alındı
+    @Req() req: any,
     @Body() updateDto: UpdateTaskDto,
     @UploadedFiles() files: Express.Multer.File[],
     @I18nLang() lang: string = 'tk',
   ) {
     const uploadedImages = files && files.length > 0 ? await this.imagesService.saveImages(files) : [];
-    return this.messagesService.updateTask(updateDto, lang, uploadedImages);
+    // Aktif oturum açan kullanıcının GUID'si servise iletilir (Tersine bildirim kontrolü için)
+    const currentUserGuid = req?.user?.guid;
+    return this.messagesService.updateTask(updateDto, lang, uploadedImages, currentUserGuid);
   }
 
   @Delete('/delete-notificOrmessage')

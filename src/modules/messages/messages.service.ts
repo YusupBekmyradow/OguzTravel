@@ -622,7 +622,12 @@ export class MessagesService {
     return guids.filter((guid) => !existing.has(guid));
   }
 
-  async updateTask(updateDto: UpdateTaskDto, lang: string = 'tk', uploadedImages: string[] = []) {
+  async updateTask(
+    updateDto: UpdateTaskDto,
+    lang: string = 'tk',
+    uploadedImages: string[] = [],
+    currentUserGuid?: string,
+  ) {
     const transaction = await this.sequelize.transaction();
     try {
       let { guid, assignee_guids, images: _ignoredImages, keep_images, ...updateData } = updateDto as any;
@@ -678,6 +683,52 @@ export class MessagesService {
         }));
         await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
       }
+
+      // If task status was changed by an assignee (not the creator admin), notify the creator
+      const nextStatus = updateData.status !== undefined ? Number(updateData.status) : undefined;
+      const statusChanged = nextStatus !== undefined && nextStatus !== Number(task.status);
+
+      if (statusChanged && task.adm_user_guid && currentUserGuid && task.adm_user_guid !== currentUserGuid) {
+        try {
+          const updater = await this.userRepository.findOne({
+            where: { guid: currentUserGuid },
+            include: [{ model: Employee, attributes: ['guid', 'fullName'] }],
+            transaction,
+          });
+          const updaterName = (updater as any)?.employee?.fullName || (updater as any)?.phone_number || 'Işgär';
+
+          const statusLabels: Record<number, Record<string, string>> = {
+            1: { tk: 'Garaşylýar', ru: 'Ожидает', en: 'To Do' },
+            2: { tk: 'Dowam edýär', ru: 'В процессе', en: 'In Progress' },
+            3: { tk: 'Tamamlandy', ru: 'Завершено', en: 'Completed' },
+          };
+          const statusText = statusLabels[nextStatus]?.[lang] || 'Dowam edýär';
+          const notifTitle = task.title ? `${task.title}` : (lang === 'ru' ? 'Задача' : lang === 'en' ? 'Task' : 'Ýumuş');
+          const notifDesc = lang === 'ru'
+            ? `${updaterName} изменил статус задачи на «${statusText}».`
+            : lang === 'en'
+            ? `${updaterName} changed task status to "${statusText}".`
+            : `${updaterName} ýumşy "${statusText}" ýagdaýyna geçirdi.`;
+
+          const statusNotif = await this.messageRepository.create({
+            title: notifTitle,
+            description: notifDesc,
+            isMessage: true,
+            status: nextStatus,
+            priority: task.priority || 'medium',
+            adm_user_guid: currentUserGuid,
+          } as any, { transaction });
+
+          await this.taskAssigneeRepository.create({
+            task_guid: statusNotif.guid,
+            assignee_guid: task.adm_user_guid,
+            isRead: false,
+          } as any, { transaction });
+        } catch (notifErr) {
+          console.warn('Failed to create status change notification for admin:', notifErr);
+        }
+      }
+
       await transaction.commit();
       if (nextImages) {
         this.imagesService.deleteFiles(currentImages.filter((path) => !nextImages.includes(path)));
