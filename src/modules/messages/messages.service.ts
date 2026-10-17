@@ -684,12 +684,18 @@ export class MessagesService {
         await this.taskAssigneeRepository.bulkCreate(assigneeRecords, { transaction });
       }
 
-      // If task status was changed by an assignee (not the creator admin), notify the creator
+      // ---------------------------------------------------------------------------
+      // [TERSİNE BİLDİRİM - REVERSE NOTIFICATION]
+      // Personel (assignee) görevi kabul edip durumunu (To Do -> In Progress -> Done)
+      // değiştirdiğinde, görevi oluşturan adminin ekranını haberdar etmek için bildirim üretilir.
+      // ---------------------------------------------------------------------------
       const nextStatus = updateData.status !== undefined ? Number(updateData.status) : undefined;
       const statusChanged = nextStatus !== undefined && nextStatus !== Number(task.status);
 
+      // Sadece durum gerçekten değiştiyse VE güncelleyen kişi adminin kendisi değilse çalışır:
       if (statusChanged && task.adm_user_guid && currentUserGuid && task.adm_user_guid !== currentUserGuid) {
         try {
+          // Durumu değiştiren personelin adını al (Toast mesajında göstermek için)
           const updater = await this.userRepository.findOne({
             where: { guid: currentUserGuid },
             include: [{ model: Employee, attributes: ['guid', 'fullName'] }],
@@ -697,6 +703,7 @@ export class MessagesService {
           });
           const updaterName = (updater as any)?.employee?.fullName || (updater as any)?.phone_number || 'Işgär';
 
+          // Çok dilli durum etiketleri (Tk, Ru, En)
           const statusLabels: Record<number, Record<string, string>> = {
             1: { tk: 'Garaşylýar', ru: 'Ожидает', en: 'To Do' },
             2: { tk: 'Dowam edýär', ru: 'В процессе', en: 'In Progress' },
@@ -710,21 +717,27 @@ export class MessagesService {
             ? `${updaterName} changed task status to "${statusText}".`
             : `${updaterName} ýumşy "${statusText}" ýagdaýyna geçirdi.`;
 
+          // Bildirim kaydı oluşturulur:
+          // NOT: `isMessage: true` verilir ki Kanban panosunda ikinci bir görev kartı olarak gözükmesin!
+          // `status: nextStatus` verilir ki frontend (useNotificationWatcher) bunun bir görev olayı olduğunu
+          // anlayıp adminin Kanban panosundaki cache'i (resetTaskBoard) otomatik tazeleyebilsin.
           const statusNotif = await this.messageRepository.create({
             title: notifTitle,
             description: notifDesc,
-            isMessage: true,
-            status: nextStatus,
+            isMessage: true, // Genel mesaj/bildirim tipi (Panoda mükerrer kart açılmaz)
+            status: nextStatus, // Görev durum göstergesi (Frontend watcher için kritik)
             priority: task.priority || 'medium',
-            adm_user_guid: currentUserGuid,
+            adm_user_guid: currentUserGuid, // Gönderen: Personel
           } as any, { transaction });
 
+          // Bildirimi görevi oluşturan admine ata (Alıcı: task.adm_user_guid)
           await this.taskAssigneeRepository.create({
             task_guid: statusNotif.guid,
-            assignee_guid: task.adm_user_guid,
+            assignee_guid: task.adm_user_guid, // Alıcı: Görevi açan Admin
             isRead: false,
           } as any, { transaction });
         } catch (notifErr) {
+          // Bildirim oluşturulamasa bile ana görev güncellemesinin kesilmemesi için non-blocking tutulur
           console.warn('Failed to create status change notification for admin:', notifErr);
         }
       }
