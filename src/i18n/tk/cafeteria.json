@@ -1,13 +1,13 @@
 {
-  "createSuccess": "Naharhana amaly üstünlikli döredildi.",
-  "createFailed": "Naharhana amalyny döretmekde ýalňyşlyk ýüze çykdy.",
-  "fetchSuccess": "Naharhana sanawy üstünlikli getirildi.",
-  "fetchFailed": "Naharhana sanawyny getirmekde ýalňyşlyk ýüze çykdy.",
-  "summarySuccess": "Naharhana jemleýji maglumaty üstünlikli getirildi.",
-  "summaryFailed": "Naharhana jemleýji maglumatyny getirmekde ýalňyşlyk ýüze çykdy.",
-  "updateSuccess": "Naharhana amaly üstünlikli täzelendi.",
-  "updateFailed": "Naharhana amalyny täzelemekde ýalňyşlyk ýüze çykdy.",
-  "deleteSuccess": "Naharhana amaly üstünlikli aýryldy.",
-  "deleteFailed": "Naharhana amalyny aýyrmakda ýalňyşlyk ýüze çykdy.",
-  "notFound": "Naharhana amaly tapylmady."
+  "createSuccess": "Kafeteriýa amaly üstünlikli döredildi.",
+  "createFailed": "Kafeteriýa amalyny döretmekde ýalňyşlyk ýüze çykdy.",
+  "fetchSuccess": "Kafeteriýa sanawy üstünlikli getirildi.",
+  "fetchFailed": "Kafeteriýa sanawyny getirmekde ýalňyşlyk ýüze çykdy.",
+  "summarySuccess": "Kafeteriýa jemleýji maglumaty üstünlikli getirildi.",
+  "summaryFailed": "Kafeteriýa jemleýji maglumatyny getirmekde ýalňyşlyk ýüze çykdy.",
+  "updateSuccess": "Kafeteriýa amaly üstünlikli täzelendi.",
+  "updateFailed": "Kafeteriýa amalyny täzelemekde ýalňyşlyk ýüze çykdy.",
+  "deleteSuccess": "Kafeteriýa amaly üstünlikli aýryldy.",
+  "deleteFailed": "Kafeteriýa amalyny aýyrmakda ýalňyşlyk ýüze çykdy.",
+  "notFound": "Kafeteriýa amaly tapylmady."
 }
