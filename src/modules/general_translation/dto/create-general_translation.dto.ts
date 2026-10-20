@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID } from "class-validator";
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID, Min } from "class-validator";
 
 export class CreateGeneralTranslationDto {
 
@@ -42,7 +42,7 @@ export class CreateGeneralTranslationDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
-  @IsPositive()
+  @Min(0)
   declare completed_page_count?: number;
 
   @ApiPropertyOptional({ example: '2026-07-18' })
@@ -55,10 +55,10 @@ export class CreateGeneralTranslationDto {
   @IsNotEmpty()
   declare translator_guid: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ example: 'pending' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  declare correction_status: string;
+  declare correction_status?: string;
 
   @ApiPropertyOptional()
   @IsNumber()

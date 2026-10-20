@@ -85,9 +85,9 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare correction_status: string;
+  declare correction_status?: string;
 
   @Column({
     type: DataType.DECIMAL(12, 2),
