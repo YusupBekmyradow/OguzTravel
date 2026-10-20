@@ -1576,7 +1576,7 @@ export class TotalCalculationsService implements OnModuleInit {
             NEW.guid,
             '${SYSTEM_CATEGORIES.TRANSLATION}'::uuid,
             CASE 
-              WHEN NEW.received_day IS NOT NULL THEN (NEW.received_day::text || ' ' || COALESCE(NEW.received_time::text, '00:00:00'))::timestamp
+              WHEN NEW.received_day IS NOT NULL THEN (NEW.received_day::text || ' ' || COALESCE(NEW.received_time::text, '00:00:00') || '+05:00')::timestamptz
               ELSE COALESCE(NEW."createdAt", NOW())
             END,
             NEW.opr_guid,
@@ -1697,7 +1697,7 @@ export class TotalCalculationsService implements OnModuleInit {
           gt.guid,
           '${SYSTEM_CATEGORIES.TRANSLATION}'::uuid,
           CASE 
-            WHEN gt.received_day IS NOT NULL THEN (gt.received_day::text || ' ' || COALESCE(gt.received_time::text, '00:00:00'))::timestamp
+            WHEN gt.received_day IS NOT NULL THEN (gt.received_day::text || ' ' || COALESCE(gt.received_time::text, '00:00:00') || '+05:00')::timestamptz
             ELSE COALESCE(gt."createdAt", NOW())
           END,
           gt.opr_guid,
