@@ -50,19 +50,19 @@ export class Tour extends Model<Tour> {
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
     declare destination_country: string;
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
     declare tour_name: string;
 
     @Column({
         type: DataType.INTEGER,
-        allowNull: false
+        allowNull: true
     })
     declare guests_count: number;
 

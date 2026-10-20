@@ -50,31 +50,31 @@ export class Transfer extends Model<Transfer> {
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
     declare destination_country: string;
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
     declare transfer_type: string;
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
     declare route: string;
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
     declare machine_type: string;
 
     @Column({
         type: DataType.INTEGER,
-        allowNull: false
+        allowNull: true
     })
     declare guests_count: number;
 

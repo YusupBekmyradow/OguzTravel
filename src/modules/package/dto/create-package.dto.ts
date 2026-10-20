@@ -22,10 +22,10 @@ export class CreatePackageDto {
   @IsNotEmpty()
   declare prepared_opr_guid: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare destination_country: string;
+  @IsOptional()
+  declare destination_country?: string;
 
   @ApiProperty()
   @IsNumber()

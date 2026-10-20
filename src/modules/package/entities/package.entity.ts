@@ -50,7 +50,7 @@ export class Package extends Model<Package> {
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
     declare destination_country: string;
 

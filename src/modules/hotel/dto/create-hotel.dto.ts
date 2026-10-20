@@ -23,31 +23,31 @@ export class CreateHotelDto {
     @IsNotEmpty()
     declare prepared_opr_guid: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare destination_country: string;
+    @IsOptional()
+    declare destination_country?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare hotel_name: string;
+    @IsOptional()
+    declare hotel_name?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare room_type: string;
+    @IsOptional()
+    declare room_type?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare meal_plan: string;
+    @IsOptional()
+    declare meal_plan?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsNumber()
-    @IsNotEmpty()
+    @IsOptional()
     @IsPositive()
-    declare guests_count: number;
+    declare guests_count?: number;
 
     @ApiProperty()
     @IsNumber()

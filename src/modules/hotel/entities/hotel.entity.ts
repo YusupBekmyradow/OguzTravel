@@ -51,31 +51,31 @@ export class Hotel extends Model<Hotel> {
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
   declare destination_country: string;
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
   declare hotel_name: string;
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
   declare room_type: string;
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
   declare meal_plan: string;
 
   @Column({
     type: DataType.INTEGER,
-    allowNull: false
+    allowNull: true
   })
   declare guests_count: number;
 

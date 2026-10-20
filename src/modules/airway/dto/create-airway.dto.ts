@@ -23,30 +23,30 @@ export class CreateAirwayDto {
     @IsNotEmpty()
     declare prepared_opr_guid: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare ticket_number: string;
+    @IsOptional()
+    declare ticket_number?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare ticket_type: string;
+    @IsOptional()
+    declare ticket_type?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare destination_country: string;
+    @IsOptional()
+    declare destination_country?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare route: string;
+    @IsOptional()
+    declare route?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsNumber()
-    @IsNotEmpty()
-    declare passenger_count: number;
+    @IsOptional()
+    declare passenger_count?: number;
 
     @ApiProperty()
     @IsNumber()

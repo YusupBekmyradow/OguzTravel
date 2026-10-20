@@ -22,30 +22,30 @@ export class CreateTransferDto {
   @IsNotEmpty()
   declare prepared_opr_guid: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare destination_country: string;
+  @IsOptional()
+  declare destination_country?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare transfer_type: string;
+  @IsOptional()
+  declare transfer_type?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare route: string;
+  @IsOptional()
+  declare route?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare machine_type: string;
+  @IsOptional()
+  declare machine_type?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsNumber()
-  @IsNotEmpty()
-  declare guests_count: number;
+  @IsOptional()
+  declare guests_count?: number;
 
   @ApiProperty()
   @IsNumber()
