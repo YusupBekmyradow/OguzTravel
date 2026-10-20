@@ -1,7 +1,6 @@
 import { BelongsTo, Column, DataType, HasMany, Model, Table } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
 import { Translator } from "../../translator/entities/translator.entity";
-import { Client } from "../../client/entities/client.entity";
 import { TransPayment } from "../../trans_payment/entities/trans_payment.entity";
 
 @Table({
@@ -42,10 +41,10 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   declare page_count: number;
 
   @Column({
-    type: DataType.UUID,
+    type: DataType.STRING,
     allowNull: true
   })
-  declare client_guid: string;
+  declare client_name: string;
 
   @Column({
     type: DataType.STRING,
@@ -129,7 +128,6 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
   })
   declare is_paid: boolean;
 
-
   @BelongsTo(() => Employee, {
     foreignKey: 'opr_guid',
     targetKey: 'guid',
@@ -137,14 +135,6 @@ export class GeneralTranslation extends Model<GeneralTranslation> {
     onUpdate: 'SET NULL'
   })
   declare operator: Employee;
-
-  @BelongsTo(() => Client, {
-    foreignKey: 'client_guid',
-    targetKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare client: Client;
 
   @BelongsTo(() => Translator, {
     foreignKey: 'translator_guid',

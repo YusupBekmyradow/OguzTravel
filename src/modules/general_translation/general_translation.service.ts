@@ -5,7 +5,6 @@ import { UpdateGeneralTranslationDto } from './dto/update-general_translation.dt
 import { InjectModel } from '@nestjs/sequelize';
 import { GeneralTranslation } from './entities/general_translation.entity';
 import { Employee } from '../employee/entities/employee.entity';
-import { Client } from '../client/entities/client.entity';
 import { Translator } from '../translator/entities/translator.entity';
 import { Office } from '../office/entities/office.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
@@ -27,7 +26,23 @@ export class GeneralTranslationService implements OnModuleInit {
     try {
       await this.sequelize.query(`
         ALTER TABLE "tbl_general_translations" 
-        ADD COLUMN IF NOT EXISTS "expense_price" NUMERIC(12, 2) DEFAULT 0;
+        ADD COLUMN IF NOT EXISTS "expense_price" NUMERIC(12, 2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS "client_name" VARCHAR(255);
+
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'tbl_general_translations' AND column_name = 'client_guid'
+          ) THEN
+            UPDATE "tbl_general_translations" AS gt
+            SET "client_name" = c."fullName"
+            FROM "tbl_clients" AS c
+            WHERE gt."client_guid" = c."guid"
+              AND gt."client_guid" IS NOT NULL
+              AND (gt."client_name" IS NULL OR gt."client_name" = '');
+          END IF;
+        END $$;
       `);
     } catch (e) {
     }
@@ -49,7 +64,6 @@ export class GeneralTranslationService implements OnModuleInit {
         model: Employee, attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
       },
-      { model: Client, attributes: ['guid', 'fullName'] },
       { model: Translator, attributes: ['guid', 'fullName'] },
     ];
   }
@@ -111,7 +125,7 @@ export class GeneralTranslationService implements OnModuleInit {
       const newTranslation = await this.translationRepository.findOne({
         where: { guid: translation.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid'],
+          exclude: ['opr_guid', 'translator_guid', 'status_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()
@@ -134,7 +148,7 @@ export class GeneralTranslationService implements OnModuleInit {
 
       const { rows, count } = await this.translationRepository.findAndCountAll({
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid'],
+          exclude: ['opr_guid', 'translator_guid', 'status_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes(),
@@ -232,10 +246,7 @@ export class GeneralTranslationService implements OnModuleInit {
             Sequelize.cast(Sequelize.col('GeneralTranslation.index_number'), 'TEXT'),
             { [Op.iLike]: searchTerm }
           ),
-          Sequelize.where(
-            Sequelize.col('client.fullName'),
-            { [Op.iLike]: searchTerm }
-          ),
+          { client_name: { [Op.iLike]: searchTerm } },
           Sequelize.where(
             Sequelize.col('operator.fullName'),
             { [Op.iLike]: searchTerm }
@@ -252,7 +263,7 @@ export class GeneralTranslationService implements OnModuleInit {
       const [{ rows, count }, totalPriceResult] = await Promise.all([this.translationRepository.findAndCountAll({
         where: whereConditions,
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid'],
+          exclude: ['opr_guid', 'translator_guid', 'status_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes(),
@@ -265,7 +276,6 @@ export class GeneralTranslationService implements OnModuleInit {
         where: whereConditions,
         include: hasSearch
           ? [
-            { association: 'client', attributes: [] },
             { association: 'operator', attributes: [] },
             { association: 'translator', attributes: [] },
           ]
@@ -404,7 +414,7 @@ export class GeneralTranslationService implements OnModuleInit {
       const updatedTranslation = await this.translationRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'translator_guid', 'status_guid'],
+          exclude: ['opr_guid', 'translator_guid', 'status_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()

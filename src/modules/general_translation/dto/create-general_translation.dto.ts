@@ -24,10 +24,10 @@ export class CreateGeneralTranslationDto {
   @IsPositive()
   declare page_count: number;
 
-  @ApiProperty()
-  @IsUUID()
+  @ApiProperty({ example: 'John Doe' })
+  @IsString()
   @IsNotEmpty()
-  declare client_guid: string;
+  declare client_name: string;
 
   @ApiProperty()
   @IsString()
