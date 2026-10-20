@@ -68,27 +68,27 @@ export class B2b extends Model<B2b> {
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare airline: string;
+  declare airline?: string;
 
   @Column({
     type: DataType.STRING,
     allowNull: true,
   })
-  declare pnr: string;
+  declare pnr?: string;
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare route: string;
+  declare route?: string;
 
   @Column({
     type: DataType.STRING,
-    allowNull: false
+    allowNull: true
   })
-  declare class: string;
+  declare class?: string;
 
   @Column({
     type: DataType.INTEGER,

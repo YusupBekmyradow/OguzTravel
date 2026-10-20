@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { CreateB2bDto } from './dto/create-b2b.dto';
 import { UpdateB2bDto } from './dto/update-b2b.dto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -15,7 +15,7 @@ import { TicketPayment } from '../ticket_payment/entities/ticket_payment.entity'
 import { Op } from 'sequelize';
 
 @Injectable()
-export class B2bService {
+export class B2bService implements OnModuleInit {
   constructor(
     @InjectModel(B2b) private b2bRepository: typeof B2b,
     @InjectModel(TicketPayment) private ticketPaymentRepo: typeof TicketPayment,
@@ -23,6 +23,17 @@ export class B2bService {
     private sequelize: Sequelize,
     private readonly i18n: I18nService,
   ) { }
+
+  async onModuleInit() {
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_b2b"
+        ALTER COLUMN "airline" DROP NOT NULL,
+        ALTER COLUMN "route" DROP NOT NULL,
+        ALTER COLUMN "class" DROP NOT NULL;
+      `);
+    } catch (e) { }
+  }
 
   private getB2bIncludes() {
     return [

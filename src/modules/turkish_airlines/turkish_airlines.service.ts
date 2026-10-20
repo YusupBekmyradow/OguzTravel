@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateTurkishAirlineDto } from './dto/create-turkish_airline.dto';
 import { UpdateTurkishAirlineDto } from './dto/update-turkish_airline.dto';
@@ -25,7 +25,7 @@ interface FooterRow {
 
 
 @Injectable()
-export class TurkishAirlinesService {
+export class TurkishAirlinesService implements OnModuleInit {
   constructor(
     @InjectModel(TurkishAirline) private turkishAirlineRepo: typeof TurkishAirline,
     @InjectModel(TurkishPayment) private turkishPaymentRepo: typeof TurkishPayment,
@@ -33,6 +33,19 @@ export class TurkishAirlinesService {
     private sequelize: Sequelize,
     private readonly i18n: I18nService,
   ) { }
+
+  async onModuleInit() {
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_turkish_airlines"
+        ALTER COLUMN "pnr" DROP NOT NULL,
+        ALTER COLUMN "route" DROP NOT NULL,
+        ALTER COLUMN "class" DROP NOT NULL,
+        ALTER COLUMN "accepted_price" DROP NOT NULL,
+        ALTER COLUMN "returned_price" DROP NOT NULL;
+      `);
+    } catch (e) { }
+  }
 
   async getTurkishReport(yearMonth: string, lang: string = 'tk') {
     try {

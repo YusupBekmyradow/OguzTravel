@@ -67,9 +67,9 @@ export class TurkishAirline extends Model<TurkishAirline> {
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
-    declare pnr: string;
+    declare pnr?: string;
 
     @Column({
         type: DataType.STRING,
@@ -86,15 +86,15 @@ export class TurkishAirline extends Model<TurkishAirline> {
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
-    declare route: string;
+    declare route?: string;
 
     @Column({
         type: DataType.STRING,
-        allowNull: false
+        allowNull: true
     })
-    declare class: string;
+    declare class?: string;
 
     @Column({
         type: DataType.DATEONLY,
@@ -125,14 +125,14 @@ export class TurkishAirline extends Model<TurkishAirline> {
 
     @Column({
         type: DataType.DECIMAL(12, 2),
-        allowNull: false,
+        allowNull: true,
         defaultValue: 0
     })
     declare accepted_price: number;
 
     @Column({
         type: DataType.DECIMAL(12, 2),
-        allowNull: false,
+        allowNull: true,
         defaultValue: 0
     })
     declare returned_price: number;

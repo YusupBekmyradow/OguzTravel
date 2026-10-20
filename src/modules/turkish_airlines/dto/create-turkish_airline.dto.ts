@@ -40,25 +40,25 @@ export class CreateTurkishAirlineDto {
   @IsNotEmpty()
   declare status_guid: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare pnr: string;
+  @IsOptional()
+  declare pnr?: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   declare ticket_number: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare route: string;
+  @IsOptional()
+  declare route?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare class: string;
+  @IsOptional()
+  declare class?: string;
 
   @ApiProperty()
   @IsDateString()

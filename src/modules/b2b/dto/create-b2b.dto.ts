@@ -40,20 +40,20 @@ export class CreateB2bDto {
   @IsOptional()
   declare pnr: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare airline: string;
+  @IsOptional()
+  declare airline?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare route: string;
+  @IsOptional()
+  declare route?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
   @IsString()
-  @IsNotEmpty()
-  declare class: string;
+  @IsOptional()
+  declare class?: string;
 
   @ApiProperty()
   @IsNumber()
