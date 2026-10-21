@@ -1,15 +1,44 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { AuditLog } from './entities/audit_log.entity';
 import { User } from '../user/entities/user.entity';
 import { Employee } from '../employee/entities/employee.entity';
 import { Op } from 'sequelize';
 
+const LOG_RETENTION_DAYS = 30;
+const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
 @Injectable()
-export class AuditLogService {
+export class AuditLogService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(AuditLogService.name);
+
   constructor(
     @InjectModel(AuditLog) private auditLogRepository: typeof AuditLog,
   ) { }
+
+  onApplicationBootstrap() {
+    this.deleteOldLogs();
+    setInterval(() => this.deleteOldLogs(), CLEANUP_INTERVAL_MS);
+  }
+
+  private async deleteOldLogs(): Promise<void> {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - LOG_RETENTION_DAYS);
+
+      const deleted = await this.auditLogRepository.destroy({
+        where: {
+          created_at: { [Op.lt]: cutoffDate },
+        },
+      });
+
+      if (deleted > 0) {
+        this.logger.log(`[AuditLog] ${deleted} eski log silindi (${LOG_RETENTION_DAYS} günden eski)`);
+      }
+    } catch (err) {
+      this.logger.error('[AuditLog] Eski log silinirken hata:', err?.message);
+    }
+  }
 
   async createLog(data: {
     user_guid: string | null;
