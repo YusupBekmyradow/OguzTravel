@@ -10,7 +10,8 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 
 @ApiTags('Cafeteria')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/cafeteria')
 @Controller('cafeteria')
 export class CafeteriaController {
   constructor(private readonly cafeteriaService: CafeteriaService) { }

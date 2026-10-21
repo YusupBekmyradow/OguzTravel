@@ -10,7 +10,8 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Employees')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/employee')
 @Controller('employee')
 export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) { }
@@ -24,7 +25,7 @@ export class EmployeeController {
   }
 
   @Get('/get-all-employees')
-  @ApiQuery({ name: 'position_guids', required: false, type: [String]})
+  @ApiQuery({ name: 'position_guids', required: false, type: [String] })
   async getAllEmployee(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,

@@ -14,6 +14,7 @@ import { Position } from '../position/entities/position.entity';
 import { Op } from 'sequelize';
 import { Office } from '../office/entities/office.entity';
 import { UserDetail } from '../user_datails/entities/user_datail.entity';
+import { UserType } from '../../enums/enums';
 
 @Injectable()
 export class AuthService {
@@ -59,11 +60,21 @@ export class AuthService {
       const comparePassword = await bcrypt.compare(signInAuthDto.password, existUser.password ?? '');
       if (!comparePassword) return errorResponse(HttpStatuses.FORBIDDEN, this.i18n.t('auth.loginFailed', { lang }));
 
+      let userPermissions: string[] = Array.isArray(existUser.permissions)
+        ? [...existUser.permissions]
+        : [];
+
+      // Admin rolündeki kullanıcılara tam yetki (*) tanımla
+      const isAdmin = existUser.role === 'Admin' || existUser.role === 'admin' || existUser.role === UserType.ADMIN;
+      if (isAdmin && !userPermissions.includes('*')) {
+        userPermissions = ['*', ...userPermissions];
+      }
+
       const payload = {
         phone_number: existUser.phone_number,
         guid: existUser.guid,
         role: existUser.role,
-        permissions: existUser.permissions || []
+        permissions: userPermissions,
       };
 
       const access_token = await this.jwtService.signAsync(payload, { expiresIn: '7d' });
@@ -76,7 +87,7 @@ export class AuthService {
         guid: existUser.guid,
         phone_number: existUser.phone_number,
         role: existUser.role,
-        permissions: existUser.permissions || [],
+        permissions: userPermissions,
         employee_name: existUser.employee ? existUser.employee.fullName : null,
         office: existUser.employee?.office ?? null,
         positions,
@@ -122,11 +133,20 @@ export class AuthService {
         return errorResponse(HttpStatuses.FORBIDDEN, this.i18n.t('auth.tokenRefreshFailed', { lang }));
       }
 
+      let userPermissions: string[] = Array.isArray(existUser.permissions)
+        ? [...existUser.permissions]
+        : [];
+
+      const isAdmin = existUser.role === 'Admin' || existUser.role === 'admin' || existUser.role === UserType.ADMIN;
+      if (isAdmin && !userPermissions.includes('*')) {
+        userPermissions = ['*', ...userPermissions];
+      }
+
       const newPayload = {
         phone_number: existUser.phone_number,
         guid: existUser.guid,
         role: existUser.role,
-        permissions: existUser.permissions || []
+        permissions: userPermissions,
       };
 
       const access_token = await this.jwtService.signAsync(newPayload, { expiresIn: '7d' });
@@ -137,7 +157,7 @@ export class AuthService {
       return successResponse(HttpStatuses.OK, {
         access_token,
         refresh_token: new_refresh_token,
-        permissions: existUser.permissions || [],
+        permissions: userPermissions,
       }, this.i18n.t('auth.tokenRefreshed', { lang }));
     } catch (error: any) {
       return errorResponse(HttpStatuses.UNAUTHORIZED, this.i18n.t('auth.tokenRefreshFailed', { lang }));
