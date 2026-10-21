@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, Query, UseGuards } from '@nestjs/common';
 import { VisaService } from './visa.service';
 import { CreateVisaDto } from './dto/create-visa.dto';
 import { UpdateVisaDto } from './dto/update-visa.dto';
@@ -11,7 +11,8 @@ import { FilterVisaDto } from './dto/get-visas.dto';
 
 @ApiTags('Visa')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/visa/applications')
 @Controller('visa')
 export class VisaController {
   constructor(private readonly visaService: VisaService) { }

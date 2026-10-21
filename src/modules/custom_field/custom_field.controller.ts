@@ -21,7 +21,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Custom Fields')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/visa/package')
 @Controller('custom_fields')
 export class CustomFieldController {
   constructor(private readonly customFieldService: CustomFieldService) { }

@@ -13,7 +13,8 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Clients')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/clients')
 @Controller('client')
 export class ClientController {
   constructor(
