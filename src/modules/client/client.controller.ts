@@ -6,7 +6,7 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { UpdatePassportDto } from './dto/updata-passport.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
-import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { RequirePermissions, SkipPermissions } from '../../common/decorators/permissions.decorator';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ImagesService } from '../../common/image-upload/image-upload.module';
 import { I18nLang } from 'nestjs-i18n';
@@ -27,6 +27,23 @@ export class ClientController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FilesInterceptor('images', 10))
   async create(
+    @Body() createClientDto: CreateClientDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @I18nLang() lang: string,
+  ) {
+    if (files && files.length > 0) {
+      const savedImages = await this.imagesService.saveImages(files);
+      createClientDto.images = savedImages;
+    }
+    return this.clientService.addClient(createClientDto, lang);
+  }
+
+
+  @Post(['/quick-add-client', '/create-client'])
+  @SkipPermissions()
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('images', 10))
+  async quickAdd(
     @Body() createClientDto: CreateClientDto,
     @UploadedFiles() files: Express.Multer.File[],
     @I18nLang() lang: string,

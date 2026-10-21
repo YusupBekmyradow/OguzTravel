@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSIONS_KEY } from '../common/decorators/permissions.decorator';
+import { PERMISSIONS_KEY, SKIP_PERMISSIONS_KEY } from '../common/decorators/permissions.decorator';
 import { UserType } from '../enums/enums';
 
 function getActionSuffix(method: string): string {
@@ -33,6 +33,15 @@ export class PermissionsGuard implements CanActivate {
 
     // GET, HEAD, OPTIONS istekleri için permission kontrolüne gerek yok (kullanıcı isteği: get için lazım değil)
     if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+      return true;
+    }
+
+    const isSkipped = this.reflector.getAllAndOverride<boolean>(
+      SKIP_PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (isSkipped) {
       return true;
     }
 
