@@ -107,7 +107,7 @@ dotenv.config();
     PackageModule,
     HarPaymentModule,
     TtpPaymentModule,
-        InboundReportModule,
+    InboundReportModule,
     MessagesModule,
     ReportModule,
     ImageUploadModule,

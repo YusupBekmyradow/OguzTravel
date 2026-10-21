@@ -12,7 +12,6 @@ module.exports = {
       user_guid: {
         type: DataTypes.UUID,
         allowNull: true,
-        // Kullanıcı silinse bile log silinmesin (SET NULL)
         references: {
           model: 'tbl_users',
           key: 'guid',
@@ -23,7 +22,6 @@ module.exports = {
       action: {
         type: DataTypes.STRING(20),
         allowNull: false,
-        // CREATE | UPDATE | DELETE
       },
       endpoint: {
         type: DataTypes.STRING,
@@ -57,7 +55,6 @@ module.exports = {
       },
     });
 
-    // Sık kullanılacak sütunlara index ekle (sorgular hızlansın)
     await queryInterface.addIndex('tbl_audit_logs', ['user_guid']);
     await queryInterface.addIndex('tbl_audit_logs', ['action']);
     await queryInterface.addIndex('tbl_audit_logs', ['module']);

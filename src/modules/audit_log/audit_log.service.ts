@@ -9,11 +9,8 @@ import { Op } from 'sequelize';
 export class AuditLogService {
   constructor(
     @InjectModel(AuditLog) private auditLogRepository: typeof AuditLog,
-  ) {}
+  ) { }
 
-  /**
-   * Interceptor'dan çağrılır — log kaydeder
-   */
   async createLog(data: {
     user_guid: string | null;
     action: 'CREATE' | 'UPDATE' | 'DELETE';
@@ -27,14 +24,10 @@ export class AuditLogService {
     try {
       await this.auditLogRepository.create(data as any);
     } catch (err) {
-      // Log kaydı başarısız olursa ana işlemi etkilemesin, sadece konsola yaz
       console.error('[AuditLog] Log kaydedilemedi:', err?.message);
     }
   }
 
-  /**
-   * Frontend için: logları listele (sayfalı, filtreli)
-   */
   async getLogs(
     page: number = 1,
     limit: number = 20,
@@ -56,7 +49,6 @@ export class AuditLogService {
     if (filters?.action) where.action = filters.action;
     if (filters?.module) where.module = { [Op.iLike]: `%${filters.module}%` };
 
-    // Tarih aralığı filtresi
     if (filters?.from_date || filters?.to_date) {
       where.created_at = {};
       if (filters?.from_date) where.created_at[Op.gte] = new Date(filters.from_date);

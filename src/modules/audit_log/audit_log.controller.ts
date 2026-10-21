@@ -8,14 +8,9 @@ import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 @UseGuards(JwtAuthGuard)
 @Controller('audit-log')
 export class AuditLogController {
-  constructor(private readonly auditLogService: AuditLogService) {}
+  constructor(private readonly auditLogService: AuditLogService) { }
 
-  /**
-   * GET /api/v1/audit-log/list
-   * Frontend'den logları çekmek için
-   * Query params ile filtreleme yapılabilir:
-   *   ?page=1&limit=20&action=DELETE&module=tour&user_guid=xxx&from_date=2026-10-01&to_date=2026-10-31
-   */
+
   @Get('/list')
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })

@@ -10,8 +10,6 @@ import { Employee } from '../employee/entities/employee.entity';
   imports: [SequelizeModule.forFeature([AuditLog, User, Employee])],
   controllers: [AuditLogController],
   providers: [AuditLogService],
-  // AuditLogService'i dışarıya export ediyoruz
-  // Çünkü AuditInterceptor onu inject edecek
   exports: [AuditLogService],
 })
-export class AuditLogModule {}
+export class AuditLogModule { }
