@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { TranslatorService } from './translator.service';
 import { CreateTranslatorDto } from './dto/create-translator.dto';
 import { UpdateTranslatorDto } from './dto/update-translator.dto';
@@ -10,7 +10,8 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Translator')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/professional-translation/translator')
 @Controller('translator')
 export class TranslatorController {
   constructor(private readonly translatorService: TranslatorService) { }

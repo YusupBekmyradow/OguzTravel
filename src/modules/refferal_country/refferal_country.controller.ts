@@ -14,11 +14,13 @@ import { UpdateRefferalCountryDto } from './dto/update-refferal_country.dto';
 import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('RefferalCountry')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/professional-translation/referral-country')
 @Controller('refferal-country')
 export class RefferalCountryController {
   constructor(private readonly refferalCountryService: RefferalCountryService) { }

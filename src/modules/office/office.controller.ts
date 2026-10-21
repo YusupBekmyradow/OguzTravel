@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { OfficeService } from './office.service';
 import { CreateOfficeDto } from './dto/create-office.dto';
 import { UpdateOfficeDto } from './dto/update-office.dto';
@@ -10,7 +10,8 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Offices')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/professional-translation/office')
 @Controller('office')
 export class OfficeController {
   constructor(private readonly officeService: OfficeService) { }

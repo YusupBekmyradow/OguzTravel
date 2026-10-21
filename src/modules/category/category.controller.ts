@@ -15,11 +15,13 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Categories')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/professional-translation/category')
 @Controller('category')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) { }

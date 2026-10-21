@@ -10,7 +10,8 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('TurkishAirliens')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/ticket/turkish-airlines')
 @Controller('turkish-airlines')
 export class TurkishAirlinesController {
   constructor(private readonly turkishAirlinesService: TurkishAirlinesService) { }

@@ -10,7 +10,8 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('B2B')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/ticket/b2b')
 @Controller('b2b')
 export class B2bController {
   constructor(private readonly b2bService: B2bService) { }

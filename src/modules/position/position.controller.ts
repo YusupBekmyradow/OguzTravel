@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { PositionService } from './position.service';
 import { CreatePositionDto } from './dto/create-position.dto';
 import { UpdatePositionDto } from './dto/update-position.dto';
@@ -11,7 +11,8 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Positions')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/professional-translation/position')
 @Controller('position')
 export class PositionController {
   constructor(private readonly positionService: PositionService) { }

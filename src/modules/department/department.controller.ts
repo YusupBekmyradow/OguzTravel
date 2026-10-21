@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Patch, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Delete, UseGuards } from '@nestjs/common';
 import { DepartmentService } from './department.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
@@ -10,7 +10,8 @@ import { I18nLang } from 'nestjs-i18n';
 
 @ApiTags('Departments')
 @ApiBearerAuth('bearerAuth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('/professional-translation/department')
 @Controller('department')
 export class DepartmentController {
   constructor(private readonly departmentService: DepartmentService) { }
