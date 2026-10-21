@@ -1,6 +1,8 @@
 import { CafeteriaModule } from './modules/cafeteria/cafeteria.module';
 import { SalaryModule } from './modules/salary/salary.module';
 import { Module } from '@nestjs/common';
+import { AuditLogModule } from './modules/audit_log/audit_log.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { ConfigModule } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 import * as dotenv from 'dotenv';
@@ -37,7 +39,7 @@ import { HarPaymentModule } from './modules/har_payment/har_payment.module';
 import { TtpPaymentModule } from './modules/ttp_payment/ttp_payment.module';
 import { InboundReportModule } from './modules/inbound_report/inbound_report.module';
 import { AllExceptionsFilter } from './filters/all-exceptions.filter';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { MessagesModule } from './modules/messages/messages.module';
 import { ReportModule } from './modules/report/report.module';
 import { ImageUploadModule } from './common/image-upload/image-upload.module';
@@ -120,6 +122,7 @@ dotenv.config();
     SalaryModule,
     DashboardModule,
     RefferalCountryModule,
+    AuditLogModule,
   ],
   controllers: [AppController],
   providers: [
@@ -127,7 +130,11 @@ dotenv.config();
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
-    }
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
   ],
 })
 export class AppModule { }
