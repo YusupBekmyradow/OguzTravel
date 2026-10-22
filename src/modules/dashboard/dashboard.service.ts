@@ -17,6 +17,9 @@ const toCurrency = (value: any): Currency => (value === 'USD' ? 'USD' : 'TMT');
 const SALES_ONLY_SQL =
   `COALESCE(${T}.source, 'PROJECT') = 'PROJECT' ` +
   `AND ${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'`;
+  const SALES_ONLY_SQL1 =
+  `COALESCE(${T}.source, 'PROJECT') IN ('PROJECT', 'MANUAL') ` +
+  `AND ${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'`;
 const inCurrencySql = (c: Currency) =>
   c === 'USD'
     ? `(${T}.currency = 'USD' OR COALESCE(${T}.sale_price_usd, 0) > 0 OR COALESCE(${T}.net_price_usd, 0) > 0 OR COALESCE(${T}.profit_usd, 0) > 0 OR COALESCE(${T}.credit_usd, 0) > 0)`
@@ -64,6 +67,11 @@ const bucketKeySql = (interval: Interval) =>
 const salesWhere = (base: any, currency?: Currency) => ({
   ...base,
   [Op.and]: [literal(SALES_ONLY_SQL), ...(currency ? [literal(inCurrencySql(currency))] : [])],
+});
+
+const salesWhere1 = (base: any, currency?: Currency) => ({
+  ...base,
+  [Op.and]: [literal(SALES_ONLY_SQL1), ...(currency ? [literal(inCurrencySql(currency))] : [])],
 });
 
 const anyCurrencySalesWhere = (base: any) => ({
@@ -1076,11 +1084,12 @@ export class DashboardService {
       if (office_guid) where.office_guid = office_guid;
       if (category_guid) where.category_guid = category_guid;
 
-      return salesWhere(where, currencyParam);
+      return salesWhere1(where, currencyParam);
     };
     const saleExpr = `COALESCE(SUM(${AMOUNT_SQL.sale(currencyParam)}), 0)`;
     const creditExpr = `COALESCE(SUM(${AMOUNT_SQL.credit(currencyParam)}), 0)`;
     const profitExpr = `COALESCE(SUM(${AMOUNT_SQL.profit(currencyParam)}), 0)`;
+    const netExpr = `COALESCE(SUM(${AMOUNT_SQL.net(currencyParam)}), 0)`;
     const refundCountExpr = `COUNT(CASE WHEN status = 'REFUND' THEN 1 END)`;
     const timeLabelLiteral = literal(bucketKeySql(groupByInterval));
     const [currentPeriodData, prevPeriodData, overallTotals, prevOverallTotals] = await Promise.all([
@@ -1090,6 +1099,7 @@ export class DashboardService {
           [timeLabelLiteral, 'time_label'],
           [literal(saleExpr), 'total_sale'],
           [literal(profitExpr), 'total_profit'],
+          [literal(netExpr), 'total_net'],
         ],
         group: [timeLabelLiteral as any],
         order: [[timeLabelLiteral as any, 'ASC']],
@@ -1109,6 +1119,7 @@ export class DashboardService {
         where: buildWhere(currentStart, currentEnd),
         attributes: [
           [literal(saleExpr), 'total_sale'],
+          [literal(netExpr), 'total_net'],
           [literal(profitExpr), 'total_profit'],
           [literal(creditExpr), 'total_credit'],
           [literal('COUNT(*)'), 'total_count'],
@@ -1120,12 +1131,14 @@ export class DashboardService {
         where: buildWhere(prevStart, prevEnd),
         attributes: [
           [literal(saleExpr), 'total_sale'],
+          [literal(netExpr), 'total_net'],
           [literal(profitExpr), 'total_profit'],
         ],
         raw: true,
       }),
     ]);
     const currentTotalSale = Number(overallTotals?.['total_sale'] || 0);
+    const currentTotalNet = Number(overallTotals?.['total_net'] || 0);
     const currentTotalProfit = Number(overallTotals?.['total_profit'] || 0);
     const currentTotalCredit = Number(overallTotals?.['total_credit'] || 0);
     const currentTotalCount = Number(overallTotals?.['total_count'] || 0);
@@ -1166,10 +1179,11 @@ export class DashboardService {
       if (!d) return `${m}.${y}`;
       return spansYears ? `${d}.${m}.${y.slice(2)}` : `${d}.${m}`;
     };
-    const currentDataMap = new Map<string, { sale: number; profit: number }>();
+    const currentDataMap = new Map<string, { sale: number; net:number; profit: number}>();
     currentPeriodData.forEach((row: any) => {
       currentDataMap.set(row.time_label, {
         sale: Number(row.total_sale || 0),
+        net: Number(row.total_net || 0),
         profit: Number(row.total_profit || 0),
       });
     });
@@ -1197,7 +1211,7 @@ export class DashboardService {
     return {
       currency: currencyParam,
       total_sale: currentTotalSale,
-      total_profit: currentTotalProfit,
+      total_profit: currentTotalSale-currentTotalNet,
       total_credit: currentTotalCredit,
       total_count: currentTotalCount,
       total_refund_count: currentTotalRefundCount,
