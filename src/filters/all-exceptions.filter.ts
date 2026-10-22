@@ -119,7 +119,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const lang = this.resolveLang(request);
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
 
-    // 1. Validation exceptions from class-validator
     if (exception instanceof I18nValidationException) {
       const errors = (exception as any).errors || [];
       const messages = this.extractValidationErrors(errors, lang);
@@ -132,7 +131,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       });
     }
 
-    // 2. Sequelize Database Errors
     const excName = (exception as any)?.name;
     if (excName === 'SequelizeUniqueConstraintError' || excName === 'UniqueConstraintError') {
       const msg = String(this.i18n.t('common.uniqueError', { lang }) || 'Bu maglumat ulgamda eýýäm bar.');
@@ -162,7 +160,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       });
     }
 
-    // 3. NestJS HttpExceptions
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res: any = exception.getResponse();
@@ -170,7 +167,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       let translatedMessage = '';
 
-      // Check if message is a translation key (e.g., 'common.notFound' or 'auth.invalidCredentials')
       if (typeof resMessage === 'string' && resMessage.includes('.')) {
         const t = String(this.i18n.t(resMessage, { lang }) || '');
         if (t && t !== resMessage) {
@@ -238,7 +234,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       });
     }
 
-    // 4. Other exceptions / Server errors
     let errorMessage: any;
     if (exception instanceof Error) {
       errorMessage = exception.stack || exception.message;

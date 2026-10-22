@@ -31,7 +31,6 @@ export class PermissionsGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const method = request.method?.toUpperCase();
 
-    // GET, HEAD, OPTIONS istekleri için permission kontrolüne gerek yok (kullanıcı isteği: get için lazım değil)
     if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
       return true;
     }
@@ -50,7 +49,6 @@ export class PermissionsGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    // Endpoint veya Controller'da permission kısıtlaması yoksa izin ver
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
     }
@@ -71,15 +69,12 @@ export class PermissionsGuard implements CanActivate {
       }
     }
 
-    // Sadece wildcard (*) yetkisi varsa tüm kısıtlamaları aşar
-    // Admin veya User fark etmez; herkes sadece izin listesinde olanları yapabilir!
     if (userPermissions.includes('*')) {
       return true;
     }
 
     const suffix = getActionSuffix(method);
 
-    // Örneğin '/employee' tanımlandıysa: POST -> '/employee:create', PATCH -> '/employee:update'
     const expectedPermissions = requiredPermissions.map((perm) =>
       perm.includes(':') ? perm.trim() : `${perm.trim()}${suffix}`,
     );
@@ -89,7 +84,6 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!hasPermission) {
-      // AllExceptionsFilter bu anahtarı platform diline (tk, ru, en) göre otomatik çevirir
       throw new ForbiddenException('common.forbidden');
     }
 

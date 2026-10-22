@@ -7,7 +7,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const ALLOWED_MIME_TYPES = new Set([
-  // Images
   'image/jpeg',
   'image/jpg',
   'image/png',
@@ -23,29 +22,22 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/avif',
   'image/x-icon',
   'image/vnd.microsoft.icon',
-  // PDF
   'application/pdf',
-  // Word
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  // Excel
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/csv',
-  // PowerPoint
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  // Text & Code
   'text/plain',
   'application/json',
   'application/xml',
-  // Archives
   'application/zip',
   'application/x-zip-compressed',
   'application/x-rar-compressed',
   'application/rar',
   'application/x-7z-compressed',
-  // Generic binary fallback
   'application/octet-stream',
 ]);
 
@@ -129,11 +121,9 @@ export class ImagesService {
           savedFiles.push(`${this.folder}/${filename}`);
           continue;
         } catch (error) {
-          // If sharp processing fails, fallback to direct file save
         }
       }
 
-      // Save non-image files (PDF, Word, Excel, ZIP, etc.) or SVG/fallback directly
       const safeExt = ext || '.bin';
       const filename = `${uuid()}${safeExt}`;
       const filePath = path.join(fullPath, filename);
