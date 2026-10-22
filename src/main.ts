@@ -62,50 +62,6 @@ async function zero() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-
-
-
-  // try {
-  //   const sequelize = app.get(Sequelize);
-  //   if (sequelize) {
-  //     await sequelize.query(`
-  //       DO $$
-  //       DECLARE
-  //           r RECORD;
-  //       BEGIN
-  //           FOR r IN 
-  //               SELECT 
-  //                   n.nspname AS schema_name,
-  //                   c.relname AS table_name,
-  //                   a.attname AS column_name,
-  //                   s.relname AS sequence_name
-  //               FROM pg_class c
-  //               JOIN pg_namespace n ON n.oid = c.relnamespace
-  //               JOIN pg_attribute a ON a.attrelid = c.oid
-  //               JOIN pg_depend d ON d.refobjid = c.oid AND d.refobjsubid = a.attnum
-  //               JOIN pg_class s ON s.oid = d.objid
-  //               WHERE n.nspname = 'public' 
-  //                 AND s.relkind = 'S' 
-  //                 AND a.attnum > 0 
-  //                 AND NOT a.attisdropped
-  //           LOOP
-  //               EXECUTE format(
-  //                   'SELECT setval(%L, COALESCE((SELECT MAX(%I) FROM %I.%I), 1))',
-  //                   r.schema_name || '.' || r.sequence_name,
-  //                   r.column_name,
-  //                   r.schema_name,
-  //                   r.table_name
-  //               );
-  //           END LOOP;
-  //       END $$;
-  //     `);
-  //   }
-  // } catch (error) {
-  //   console.error('Sequence error:', error);
-  // }
-
-
-
   const port = process.env.NODE_PORT || 3000;
   await app.listen(port, '0.0.0.0');
 
