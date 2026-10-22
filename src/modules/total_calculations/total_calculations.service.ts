@@ -109,8 +109,14 @@ export class TotalCalculationsService implements OnModuleInit {
       }
       const type = createDto.type || 'EXPENSE';
       const amount = Number(createDto.amount ?? createDto.net_price) || 0;
+      const amountUsd = Number(createDto.amount_usd) || 0;
       const profit = type === 'INCOME' && createDto.profit != null ? Number(createDto.profit) : null;
-      if (this.isInvalidProfit(amount, profit)) {
+      const profitUsd = type === 'INCOME' && createDto.profit_usd != null ? Number(createDto.profit_usd) : null;
+
+      if (
+        this.isInvalidProfit(amount, profit) ||
+        (createDto.profit_usd != null && this.isInvalidProfit(amountUsd, profitUsd))
+      ) {
         return errorResponse(
           HttpStatuses.BAD_REQUEST,
           this.i18n.t('total_calculation.invalidProfit', { lang })
@@ -122,8 +128,8 @@ export class TotalCalculationsService implements OnModuleInit {
         datetime: createDto.datetime ? new Date(createDto.datetime) : new Date(),
         receiver_opr_guid: createDto.receiver_opr_guid || null,
         office_guid: officeGuid,
-        ...this.splitAmount(type, amount, profit),
-        currency: createDto.currency || 'USD',
+        ...this.splitAmount(type, amount, profit, amountUsd, profitUsd),
+        currency: createDto.currency || 'TMT',
         credit_price: 0,
         status: null,
         is_manual: true,
@@ -180,26 +186,48 @@ export class TotalCalculationsService implements OnModuleInit {
         updateData.datetime = new Date(updateDto.datetime);
       }
       const nextAmount = updateDto.amount ?? updateDto.net_price;
-      if (updateDto.type !== undefined || nextAmount !== undefined || updateDto.profit !== undefined) {
+      const nextAmountUsd = updateDto.amount_usd;
+      if (
+        updateDto.type !== undefined ||
+        nextAmount !== undefined ||
+        nextAmountUsd !== undefined ||
+        updateDto.profit !== undefined ||
+        updateDto.profit_usd !== undefined
+      ) {
         const prevType = existing.type || 'EXPENSE';
         const type = updateDto.type || prevType;
         const amount = nextAmount !== undefined
           ? Number(nextAmount)
           : Number(prevType === 'INCOME' ? existing.sale_price : existing.net_price);
+        const amountUsd = nextAmountUsd !== undefined
+          ? Number(nextAmountUsd)
+          : Number(prevType === 'INCOME' ? (existing.sale_price_usd || 0) : (existing.net_price_usd || 0));
+
         const hadProfit = prevType === 'INCOME' && (Number(existing.profit) > 0 || Number(existing.net_price) > 0);
         const profit = type !== 'INCOME'
           ? null
           : updateDto.profit != null
             ? Number(updateDto.profit)
             : hadProfit ? Number(existing.profit) : null;
-        if (this.isInvalidProfit(amount, profit)) {
+
+        const hadProfitUsd = prevType === 'INCOME' && (Number(existing.profit_usd) > 0 || Number(existing.net_price_usd) > 0);
+        const profitUsd = type !== 'INCOME'
+          ? null
+          : updateDto.profit_usd != null
+            ? Number(updateDto.profit_usd)
+            : hadProfitUsd ? Number(existing.profit_usd) : null;
+
+        if (
+          this.isInvalidProfit(amount, profit) ||
+          (profitUsd != null && this.isInvalidProfit(amountUsd, profitUsd))
+        ) {
           return errorResponse(
             HttpStatuses.BAD_REQUEST,
             this.i18n.t('total_calculation.invalidProfit', { lang })
           );
         }
         updateData.type = type;
-        Object.assign(updateData, this.splitAmount(type, amount, profit));
+        Object.assign(updateData, this.splitAmount(type, amount, profit, amountUsd, profitUsd));
       }
       for (const key of ['description', 'giver', 'receiver', 'company'] as const) {
         if (updateDto[key] !== undefined) {
@@ -279,10 +307,31 @@ export class TotalCalculationsService implements OnModuleInit {
 
 
 
-  private splitAmount(type: string, amount: number, profit: number | null = null) {
-    if (type !== 'INCOME') return { sale_price: 0, net_price: amount, profit: 0 };
-    if (profit == null) return { sale_price: amount, net_price: 0, profit: 0 };
-    return { sale_price: amount, net_price: amount - profit, profit };
+  private splitAmount(
+    type: string,
+    amount: number,
+    profit: number | null = null,
+    amountUsd: number = 0,
+    profitUsd: number | null = null,
+  ) {
+    if (type !== 'INCOME') {
+      return {
+        sale_price: 0,
+        net_price: amount,
+        profit: 0,
+        sale_price_usd: 0,
+        net_price_usd: amountUsd,
+        profit_usd: 0,
+      };
+    }
+    return {
+      sale_price: amount,
+      sale_price_usd: amountUsd,
+      net_price: profit == null ? 0 : amount - profit,
+      profit: profit ?? 0,
+      net_price_usd: profitUsd == null ? 0 : amountUsd - profitUsd,
+      profit_usd: profitUsd ?? 0,
+    };
   }
 
   private isInvalidProfit(amount: number, profit: number | null) {

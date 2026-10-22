@@ -34,17 +34,27 @@ export class CreateTotalCalculationDto {
   @IsOptional()
   declare amount?: number;
 
+  @ApiPropertyOptional({ example: 50.0, description: 'Amount of the income / expense in USD' })
+  @IsNumber()
+  @IsOptional()
+  declare amount_usd?: number;
+
   @ApiPropertyOptional({ example: 150, description: 'Income only: profit of the amount; the expense (net_price) becomes amount − profit' })
   @IsNumber()
   @IsOptional()
   declare profit?: number;
+
+  @ApiPropertyOptional({ example: 25.0, description: 'Income only: profit in USD' })
+  @IsNumber()
+  @IsOptional()
+  declare profit_usd?: number;
 
   @ApiPropertyOptional({ example: 100.5, description: 'Legacy expense amount — prefer amount + type' })
   @IsNumber()
   @IsOptional()
   declare net_price?: number;
 
-  @ApiPropertyOptional({ default: 'USD', example: 'USD' })
+  @ApiPropertyOptional({ default: 'TMT', example: 'TMT' })
   @IsString()
   @IsOptional()
   declare currency?: string;
