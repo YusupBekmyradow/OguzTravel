@@ -33,10 +33,10 @@ export class AuditLogService implements OnApplicationBootstrap {
       });
 
       if (deleted > 0) {
-        this.logger.log(`[AuditLog] ${deleted} eski log silindi (${LOG_RETENTION_DAYS} günden eski)`);
+        this.logger.log(`[AuditLog] ${deleted} sany köne log pozuldy (${LOG_RETENTION_DAYS} günden köne)`);
       }
     } catch (err) {
-      this.logger.error('[AuditLog] Eski log silinirken hata:', err?.message);
+      this.logger.error('[AuditLog] Köne loglar pozulýarka säwlik ýüze çykdy:', (err as any)?.message);
     }
   }
 
@@ -53,7 +53,7 @@ export class AuditLogService implements OnApplicationBootstrap {
     try {
       await this.auditLogRepository.create(data as any);
     } catch (err) {
-      console.error('[AuditLog] Log kaydedilemedi:', err?.message);
+      this.logger.error('[AuditLog] Log ýazgysy ýazylanda säwlik ýüze çykdy:', (err as any)?.message);
     }
   }
 
