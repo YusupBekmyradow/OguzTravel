@@ -2,7 +2,6 @@ import { QueryInterface } from 'sequelize';
 
 module.exports = {
   up: async (queryInterface: QueryInterface): Promise<void> => {
-    // 1. tbl_b2b
     await queryInterface.sequelize.query(`
       ALTER TABLE "tbl_b2b"
       ALTER COLUMN "airline" DROP NOT NULL,
@@ -10,7 +9,7 @@ module.exports = {
       ALTER COLUMN "class" DROP NOT NULL;
     `);
 
-    // 2. tbl_turkish_airlines
+
     await queryInterface.sequelize.query(`
       ALTER TABLE "tbl_turkish_airlines"
       ALTER COLUMN "pnr" DROP NOT NULL,
