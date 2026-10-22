@@ -87,13 +87,14 @@ export class EmployeeService implements OnModuleInit {
         message: this.i18n.t('employee.created', { lang }),
       };
     } catch (error) {
+      const err=error as any;
       if (
-        error?.name === 'SequelizeUniqueConstraintError' ||
-        error?.name === 'UniqueConstraintError'
+        err?.name === 'SequelizeUniqueConstraintError' ||
+        err?.name === 'UniqueConstraintError'
       ) {
         const isGmail =
-          error?.fields?.gmail ||
-          error?.errors?.some((e: any) => e.path === 'gmail');
+          err?.fields?.gmail ||
+          err?.errors?.some((e: any) => e.path === 'gmail');
         if (isGmail) {
           return errorResponse(
             HttpStatuses.CONFLICT,
@@ -373,13 +374,14 @@ export class EmployeeService implements OnModuleInit {
         message: this.i18n.t('employee.updated', { lang }),
       };
     } catch (error) {
+      const err = error as any;
       if (
-        error?.name === 'SequelizeUniqueConstraintError' ||
-        error?.name === 'UniqueConstraintError'
+        err?.name === 'SequelizeUniqueConstraintError' ||
+        err?.name === 'UniqueConstraintError'
       ) {
         const isGmail =
-          error?.fields?.gmail ||
-          error?.errors?.some((e: any) => e.path === 'gmail');
+          err?.fields?.gmail ||
+          err?.errors?.some((e: any) => e.path === 'gmail');
         if (isGmail) {
           return errorResponse(
             HttpStatuses.CONFLICT,
