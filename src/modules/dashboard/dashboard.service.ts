@@ -14,12 +14,19 @@ type Currency = 'USD' | 'TMT';
 
 const T = '"TotalCalculation"';
 const toCurrency = (value: any): Currency => (value === 'USD' ? 'USD' : 'TMT');
-const SALES_ONLY_SQL =
-  `COALESCE(${T}.source, 'PROJECT') = 'PROJECT' ` +
-  `AND ${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'`;
-  const SALES_ONLY_SQL1 =
-  `COALESCE(${T}.source, 'PROJECT') IN ('PROJECT', 'MANUAL') ` +
-  `AND ${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'`;
+// Diňe category_guid-i NULL bolmadyk we SALARY bolmadyk ähli ýazgylary alýar (Manual ýa-da Project tapawudy yok)
+const SALES_ONLY_SQL = `
+  COALESCE(${T}.source, 'PROJECT') = 'PROJECT'
+  AND ${T}.category_guid IS NOT NULL
+  AND ${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'
+`;
+
+// Eger Manual bolanlary hem goşjak bolsaň (ýöne ýene-de category_guid-i NULL bolmaly däl):
+const SALES_ONLY_SQL1 = `
+  COALESCE(${T}.source, 'PROJECT') IN ('PROJECT', 'MANUAL')
+  AND ${T}.category_guid IS NOT NULL
+  AND ${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'
+`;
 const inCurrencySql = (c: Currency) =>
   c === 'USD'
     ? `(${T}.currency = 'USD' OR COALESCE(${T}.sale_price_usd, 0) > 0 OR COALESCE(${T}.net_price_usd, 0) > 0 OR COALESCE(${T}.profit_usd, 0) > 0 OR COALESCE(${T}.credit_usd, 0) > 0)`
@@ -282,6 +289,8 @@ export class DashboardService {
       ));
     }
 
+    const catNotNull = `${T}.category_guid IS NOT NULL AND ${T}.category_guid IS DISTINCT FROM '${SYSTEM_CATEGORIES.SALARY}'`;
+
     const result = await this.totalCalculationModel.findOne({
       where: {
         ...whereCondition,
@@ -289,10 +298,10 @@ export class DashboardService {
       },
       attributes: [
         [literal('COUNT(*)'), 'count'],
-        [sumOf(AMOUNT_SQL.sale(currency)), 'totalSale'],
-        [sumOf(AMOUNT_SQL.credit(currency)), 'totalCredit'],
-        [sumOf(AMOUNT_SQL.net(currency)), 'totalNetPrice'],
-        [sumOf(AMOUNT_SQL.profit(currency)), 'totalProfit'],
+        [sumOf(`CASE WHEN ${catNotNull} THEN ${AMOUNT_SQL.sale(currency)} ELSE 0 END`), 'totalSale'],
+        [sumOf(`CASE WHEN ${catNotNull} THEN ${AMOUNT_SQL.credit(currency)} ELSE 0 END`), 'totalCredit'],
+        [sumOf(`CASE WHEN ${catNotNull} THEN ${AMOUNT_SQL.net(currency)} ELSE 0 END`), 'totalNetPrice'],
+        [sumOf(`CASE WHEN ${catNotNull} THEN ${AMOUNT_SQL.profit(currency)} ELSE 0 END`), 'totalProfit'],
       ],
       raw: true,
     });
@@ -418,9 +427,15 @@ export class DashboardService {
       currentEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
       groupType = 'month';
     }
-    const priorWhere: any = { datetime: { [Op.lt]: currentStart } };
+    const priorWhere: any = {
+      datetime: { [Op.lt]: currentStart },
+      category_guid: { [Op.ne]: null },
+    };
     if (office_guid) priorWhere.office_guid = office_guid;
-    const baseWhere: any = { datetime: { [Op.between]: [currentStart, currentEnd] } };
+    const baseWhere: any = {
+      datetime: { [Op.between]: [currentStart, currentEnd] },
+      category_guid: { [Op.ne]: null },
+    };
     if (office_guid) baseWhere.office_guid = office_guid;
     const priorSumResult = await this.totalCalculationModel.findOne({
       where: salesWhere(priorWhere, currencyParam),
@@ -919,6 +934,7 @@ export class DashboardService {
       office_guid: filters.office_guid
         ? filters.office_guid
         : { [Op.ne]: null },
+      category_guid: { [Op.ne]: null },
     });
 
     const currentResults = await this.totalCalculationModel.findAll({
@@ -946,7 +962,12 @@ export class DashboardService {
     });
     const net = `COALESCE(${T}.net_price, 0)`;
     const otherOutResults = await this.totalCalculationModel.findAll({
-      where: officeWhereBase(currentStart, currentEnd) as any,
+      where: {
+        datetime: { [Op.between]: [currentStart, currentEnd] },
+        office_guid: filters.office_guid
+          ? filters.office_guid
+          : { [Op.ne]: null },
+      } as any,
       attributes: [
         'office_guid',
         [sumOf(`CASE WHEN ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'salary'],
