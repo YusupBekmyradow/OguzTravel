@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { CreateHotelDto } from './dto/create-hotel.dto';
 import { UpdateHotelDto } from './dto/update-hotel.dto';
 import { InjectModel } from '@nestjs/sequelize';
 import { Hotel } from './entities/hotel.entity';
 import { Employee } from '../employee/entities/employee.entity';
-import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Office } from '../office/entities/office.entity';
@@ -14,7 +13,7 @@ import { I18nService } from 'nestjs-i18n';
 import { Op, QueryTypes } from 'sequelize';
 
 @Injectable()
-export class HotelService {
+export class HotelService implements OnModuleInit {
   constructor(
     @InjectModel(Hotel) private hotelRepository: typeof Hotel,
     @InjectModel(HarPayment) private harPaymentRepo: typeof HarPayment,
@@ -22,11 +21,35 @@ export class HotelService {
     private readonly i18n: I18nService,
   ) { }
 
+  async onModuleInit() {
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_hotel" 
+        ADD COLUMN IF NOT EXISTS "client_name" VARCHAR(255);
+
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'tbl_hotel' AND column_name = 'client_guid'
+          ) THEN
+            UPDATE "tbl_hotel" AS h
+            SET "client_name" = c."fullName"
+            FROM "tbl_clients" AS c
+            WHERE h."client_guid" = c."guid"
+              AND h."client_guid" IS NOT NULL
+              AND (h."client_name" IS NULL OR h."client_name" = '');
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+    }
+  }
+
   private getIncludes() {
     return [
       { model: Employee, as: 'operator', attributes: ['guid', 'fullName'], include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }] },
-      { model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'], include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }] },
-      { model: Client, attributes: ['guid', 'fullName'] }
+      { model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'], include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }] }
     ];
   }
 
@@ -54,7 +77,7 @@ export class HotelService {
       await t.commit();
       const newHotel = await this.hotelRepository.findOne({
         where: { guid: hotel.guid },
-        attributes: { exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'], include: this.getAttributes().include as any },
+        attributes: { exclude: ['opr_guid', 'prepared_opr_guid'], include: this.getAttributes().include as any },
         include: this.getIncludes()
       });
       return { status: 201, data: newHotel, message: this.i18n.t('hotel.created', { lang }) };
@@ -136,6 +159,7 @@ export class HotelService {
     h.guid, h.index_number, h.application_date, h.destination_country, 
     h.hotel_name, h.room_type, h.meal_plan, h.guests_count, h.net_fare, 
     h.currency, h.price, h.profit, h.system, h.note, h.is_paid, h."createdAt", h."updatedAt",
+    h.client_name,
 
     ROUND(COALESCE(SUM(hp.amount), 0)::numeric, 2) AS "totalPaid",
     CASE 
@@ -144,7 +168,6 @@ export class HotelService {
       ELSE '100%' 
     END AS "paidPercentage",
 
-    JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
     JSON_BUILD_OBJECT(
       'guid', op.guid, 'fullName', op."fullName",
       'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
@@ -157,7 +180,6 @@ export class HotelService {
     COUNT(*) OVER() AS "totalCount"
 
   FROM tbl_hotel h
-  LEFT JOIN tbl_clients c ON c.guid = h.client_guid
   LEFT JOIN tbl_employees op ON op.guid = h.opr_guid
   LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
   LEFT JOIN tbl_employees pop ON pop.guid = h.prepared_opr_guid
@@ -166,7 +188,7 @@ export class HotelService {
 
   WHERE 
     (:search::text IS NULL OR (
-      c."fullName" ILIKE :search OR
+      h.client_name ILIKE :search OR
       h.destination_country ILIKE :search OR
       h.hotel_name ILIKE :search OR
       h.room_type ILIKE :search OR
@@ -181,7 +203,7 @@ export class HotelService {
     AND (:system::text IS NULL OR h.system = :system::text)
     AND (:meal_plan::text IS NULL OR h.meal_plan = :meal_plan::text)
 
-  GROUP BY h.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+  GROUP BY h.guid, op.guid, off1.guid, pop.guid, off2.guid
   ORDER BY h.index_number DESC
   LIMIT :limit OFFSET :offset;
 `;
@@ -306,7 +328,7 @@ export class HotelService {
       const updatedHotel = await this.hotelRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()

@@ -1,6 +1,5 @@
 import { Table, Model, DataType, Column, BeforeSave, BeforeUpdate, BelongsTo, HasMany } from "sequelize-typescript";
 import { Employee } from "../../employee/entities/employee.entity";
-import { Client } from "../../client/entities/client.entity";
 import { HarPayment } from "../../har_payment/entities/har_payment.entity";
 
 @Table({
@@ -38,10 +37,10 @@ export class Hotel extends Model<Hotel> {
   declare opr_guid: string;
 
   @Column({
-    type: DataType.UUID,
+    type: DataType.STRING,
     allowNull: true
   })
-  declare client_guid: string;
+  declare client_name?: string;
 
   @Column({
     type: DataType.UUID,
@@ -134,13 +133,6 @@ export class Hotel extends Model<Hotel> {
   })
   declare operator: Employee;
 
-  @BelongsTo(() => Client, {
-    foreignKey: 'client_guid',
-    targetKey: 'guid',
-    onDelete: 'SET NULL',
-    onUpdate: 'SET NULL'
-  })
-  declare client: Client;
 
   @BelongsTo(() => Employee, {
     foreignKey: 'prepared_opr_guid',

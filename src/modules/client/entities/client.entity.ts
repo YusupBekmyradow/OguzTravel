@@ -4,7 +4,6 @@ import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.
 import { Visa } from "../../visa/entities/visa.entity";
 import { RefferalLetter } from "../../refferal_letter/entities/refferal_letter.entity";
 
-import { Hotel } from "../../hotel/entities/hotel.entity";
 import { Airway } from "../../airway/entities/airway.entity";
 import { Railway } from "../../railway/entities/railway.entity";
 import { Tour } from "../../tour/entities/tour.entity";
@@ -143,12 +142,6 @@ export class Client extends Model<Client> {
 
 
 
-
-  @HasMany(() => Hotel, {
-    foreignKey: 'client_guid',
-    sourceKey: 'guid'
-  })
-  declare hotel: Hotel[];
 
   @HasMany(() => Airway, {
     foreignKey: 'client_guid',
