@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateTourDto } from './dto/create-tour.dto';
 import { UpdateTourDto } from './dto/update-tour.dto';
@@ -6,7 +6,6 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Tour } from './entities/tour.entity';
 import { Employee } from '../employee/entities/employee.entity';
 import { Office } from '../office/entities/office.entity';
-import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Sequelize } from 'sequelize-typescript';
@@ -14,7 +13,7 @@ import { TtpPayment } from '../ttp_payment/entities/ttp_payment.entity';
 import { QueryTypes } from 'sequelize';
 
 @Injectable()
-export class TourService {
+export class TourService implements OnModuleInit {
   constructor(
     @InjectModel(Tour) private tourRepository: typeof Tour,
     @InjectModel(TtpPayment) private ttpPaymentRepo: typeof TtpPayment,
@@ -22,13 +21,37 @@ export class TourService {
     private readonly i18n: I18nService,
   ) { }
 
+  async onModuleInit() {
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_tour" 
+        ADD COLUMN IF NOT EXISTS "client_name" VARCHAR(255);
+
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'tbl_tour' AND column_name = 'client_guid'
+          ) THEN
+            UPDATE "tbl_tour" AS t
+            SET "client_name" = c."fullName"
+            FROM "tbl_clients" AS c
+            WHERE t."client_guid" = c."guid"
+              AND t."client_guid" IS NOT NULL
+              AND (t."client_name" IS NULL OR t."client_name" = '');
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+    }
+  }
+
   private getIncludes() {
     return [
       {
         model: Employee, as: 'operator', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
       },
-      { model: Client, attributes: ['guid', 'fullName'] },
       {
         model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
@@ -83,7 +106,7 @@ export class TourService {
       const newTour = await this.tourRepository.findOne({
         where: { guid: tour.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()
@@ -162,6 +185,7 @@ export class TourService {
           t.guid, t.index_number, t.application_date, t.destination_country, 
           t.tour_name, t.guests_count, t.net_fare, t.currency, t.price, 
           t.profit, t.system, t.note, t.is_paid, t."createdAt", t."updatedAt",
+          t.client_name,
 
           ROUND(COALESCE(SUM(tp.amount), 0)::numeric, 2) AS "totalPaid",
           CASE 
@@ -170,7 +194,6 @@ export class TourService {
             ELSE '100%' 
           END AS "paidPercentage",
 
-          JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
           JSON_BUILD_OBJECT(
             'guid', op.guid, 'fullName', op."fullName",
             'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
@@ -183,7 +206,6 @@ export class TourService {
           COUNT(*) OVER() AS "totalCount"
 
         FROM tbl_tour t
-        LEFT JOIN tbl_clients c ON c.guid = t.client_guid
         LEFT JOIN tbl_employees op ON op.guid = t.opr_guid
         LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
         LEFT JOIN tbl_employees pop ON pop.guid = t.prepared_opr_guid
@@ -192,7 +214,7 @@ export class TourService {
 
         WHERE 
           (:search::text IS NULL OR (
-            c."fullName" ILIKE :search OR
+            t.client_name ILIKE :search OR
             t.destination_country ILIKE :search OR
             t.tour_name ILIKE :search OR
             t.guests_count::text ILIKE :search
@@ -205,7 +227,7 @@ export class TourService {
           AND (:is_paid::integer IS NULL OR t.is_paid = :is_paid::integer)
           AND (:system::text IS NULL OR t.system = :system::text)
 
-        GROUP BY t.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+        GROUP BY t.guid, op.guid, off1.guid, pop.guid, off2.guid
         ORDER BY t.index_number DESC
         LIMIT :limit OFFSET :offset;
       `;
@@ -331,7 +353,7 @@ export class TourService {
       const updatedTour = await this.tourRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()

@@ -4,11 +4,6 @@ import { TurkishAirline } from "../../turkish_airlines/entities/turkish_airline.
 import { Visa } from "../../visa/entities/visa.entity";
 import { RefferalLetter } from "../../refferal_letter/entities/refferal_letter.entity";
 
-import { Railway } from "../../railway/entities/railway.entity";
-import { Tour } from "../../tour/entities/tour.entity";
-import { Transfer } from "../../transfer/entities/transfer.entity";
-import { Package } from "../../package/entities/package.entity";
-
 import { Receiving } from "../../receiving/entities/receiving.entity";
 
 
@@ -143,29 +138,7 @@ export class Client extends Model<Client> {
 
 
 
-  @HasMany(() => Railway, {
-    foreignKey: 'client_guid',
-    sourceKey: 'guid'
-  })
-  declare railway: Railway[];
 
-  @HasMany(() => Tour, {
-    foreignKey: 'client_guid',
-    sourceKey: 'guid'
-  })
-  declare tour: Tour[];
-
-  @HasMany(() => Transfer, {
-    foreignKey: 'client_guid',
-    sourceKey: 'guid'
-  })
-  declare transfer: Transfer[];
-
-  @HasMany(() => Package, {
-    foreignKey: 'client_guid',
-    sourceKey: 'guid'
-  })
-  declare package: Package[];
 
 
   @HasMany(() => Receiving, {

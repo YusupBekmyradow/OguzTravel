@@ -1,11 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 import { UpdateTransferDto } from './dto/update-transfer.dto';
 import { InjectModel } from '@nestjs/sequelize';
 import { Transfer } from './entities/transfer.entity';
 import { Employee } from '../employee/entities/employee.entity';
 import { Office } from '../office/entities/office.entity';
-import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { TtpPayment } from '../ttp_payment/entities/ttp_payment.entity';
@@ -14,7 +13,7 @@ import { I18nService } from 'nestjs-i18n';
 import { QueryTypes } from 'sequelize';
 
 @Injectable()
-export class TransferService {
+export class TransferService implements OnModuleInit {
   constructor(
     @InjectModel(Transfer) private transferRepository: typeof Transfer,
     @InjectModel(TtpPayment) private ttpPaymentRepo: typeof TtpPayment,
@@ -22,13 +21,37 @@ export class TransferService {
     private readonly i18n: I18nService,
   ) { }
 
+  async onModuleInit() {
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_transfer" 
+        ADD COLUMN IF NOT EXISTS "client_name" VARCHAR(255);
+
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'tbl_transfer' AND column_name = 'client_guid'
+          ) THEN
+            UPDATE "tbl_transfer" AS tr
+            SET "client_name" = c."fullName"
+            FROM "tbl_clients" AS c
+            WHERE tr."client_guid" = c."guid"
+              AND tr."client_guid" IS NOT NULL
+              AND (tr."client_name" IS NULL OR tr."client_name" = '');
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+    }
+  }
+
   private getIncludes() {
     return [
       {
         model: Employee, as: 'operator', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
       },
-      { model: Client, attributes: ['guid', 'fullName'] },
       {
         model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
@@ -82,7 +105,7 @@ export class TransferService {
       const newTransfer = await this.transferRepository.findOne({
         where: { guid: transfer.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()
@@ -168,6 +191,7 @@ export class TransferService {
           tr.transfer_type, tr.route, tr.machine_type, tr.guests_count, 
           tr.net_fare, tr.currency, tr.price, tr.profit, tr.system, tr.note, 
           tr.is_paid, tr."createdAt", tr."updatedAt",
+          tr.client_name,
 
           ROUND(COALESCE(SUM(tp.amount), 0)::numeric, 2) AS "totalPaid",
           CASE 
@@ -176,7 +200,6 @@ export class TransferService {
             ELSE '100%' 
           END AS "paidPercentage",
 
-          JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
           JSON_BUILD_OBJECT(
             'guid', op.guid, 'fullName', op."fullName",
             'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
@@ -189,7 +212,6 @@ export class TransferService {
           COUNT(*) OVER() AS "totalCount"
 
         FROM tbl_transfer tr
-        LEFT JOIN tbl_clients c ON c.guid = tr.client_guid
         LEFT JOIN tbl_employees op ON op.guid = tr.opr_guid
         LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
         LEFT JOIN tbl_employees pop ON pop.guid = tr.prepared_opr_guid
@@ -198,7 +220,7 @@ export class TransferService {
 
         WHERE 
           (:search::text IS NULL OR (
-            c."fullName" ILIKE :search OR
+            tr.client_name ILIKE :search OR
             tr.destination_country ILIKE :search OR
             tr.route ILIKE :search OR
             tr.guests_count::text ILIKE :search
@@ -212,7 +234,7 @@ export class TransferService {
           AND (:is_paid::integer IS NULL OR tr.is_paid = :is_paid::integer)
           AND (:system::text IS NULL OR tr.system = :system::text)
 
-        GROUP BY tr.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+        GROUP BY tr.guid, op.guid, off1.guid, pop.guid, off2.guid
         ORDER BY tr.index_number DESC
         LIMIT :limit OFFSET :offset;
       `;
@@ -338,7 +360,7 @@ export class TransferService {
       const updatedTransfer = await this.transferRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()

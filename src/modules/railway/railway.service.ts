@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreateRailwayDto } from './dto/create-railway.dto';
 import { UpdateRailwayDto } from './dto/update-railway.dto';
@@ -6,7 +6,6 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Railway } from './entities/railway.entity';
 import { Employee } from '../employee/entities/employee.entity';
 import { Office } from '../office/entities/office.entity';
-import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Sequelize } from 'sequelize-typescript';
@@ -14,7 +13,7 @@ import { HarPayment } from '../har_payment/entities/har_payment.entity';
 import { QueryTypes } from 'sequelize';
 
 @Injectable()
-export class RailwayService {
+export class RailwayService implements OnModuleInit {
   constructor(
     @InjectModel(Railway) private railwayRepository: typeof Railway,
     @InjectModel(HarPayment) private harPaymentRepo: typeof HarPayment,
@@ -22,13 +21,37 @@ export class RailwayService {
     private readonly i18n: I18nService,
   ) { }
 
+  async onModuleInit() {
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_railway" 
+        ADD COLUMN IF NOT EXISTS "client_name" VARCHAR(255);
+
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'tbl_railway' AND column_name = 'client_guid'
+          ) THEN
+            UPDATE "tbl_railway" AS r
+            SET "client_name" = c."fullName"
+            FROM "tbl_clients" AS c
+            WHERE r."client_guid" = c."guid"
+              AND r."client_guid" IS NOT NULL
+              AND (r."client_name" IS NULL OR r."client_name" = '');
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+    }
+  }
+
   private getIncludes() {
     return [
       {
         model: Employee, as: 'operator', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
       },
-      { model: Client, attributes: ['guid', 'fullName'] },
       {
         model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
@@ -82,7 +105,7 @@ export class RailwayService {
       const newRailway = await this.railwayRepository.findOne({
         where: { guid: railway.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()
@@ -170,6 +193,7 @@ export class RailwayService {
         r.train_type, r.ticket_type, r.destination_country, r.route, 
         r.passenger_count, r.net_fare, r.currency, r.price, r.profit, 
         r.system, r.note, r.is_paid, r."createdAt", r."updatedAt",
+        r.client_name,
 
         ROUND(COALESCE(SUM(hp.amount), 0)::numeric, 2) AS "totalPaid",
         CASE 
@@ -178,7 +202,6 @@ export class RailwayService {
           ELSE '100%' 
         END AS "paidPercentage",
 
-        JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
         JSON_BUILD_OBJECT(
           'guid', op.guid, 'fullName', op."fullName",
           'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
@@ -191,7 +214,6 @@ export class RailwayService {
         COUNT(*) OVER() AS "totalCount"
 
       FROM tbl_railway r
-      LEFT JOIN tbl_clients c ON c.guid = r.client_guid
       LEFT JOIN tbl_employees op ON op.guid = r.opr_guid
       LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
       LEFT JOIN tbl_employees pop ON pop.guid = r.prepared_opr_guid
@@ -201,7 +223,7 @@ export class RailwayService {
       WHERE 
 
         (:search::text IS NULL OR (
-          c."fullName" ILIKE :search OR
+          r.client_name ILIKE :search OR
           r.ticket_number ILIKE :search OR
           r.destination_country ILIKE :search OR
           r.route ILIKE :search OR
@@ -217,7 +239,7 @@ export class RailwayService {
         AND (:train_type::text IS NULL OR r.train_type = :train_type::text)
         AND (:ticket_type::text IS NULL OR r.ticket_type = :ticket_type::text)
 
-      GROUP BY r.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+      GROUP BY r.guid, op.guid, off1.guid, pop.guid, off2.guid
       ORDER BY r.index_number DESC
       LIMIT :limit OFFSET :offset;
     `;
@@ -343,7 +365,7 @@ export class RailwayService {
       const updatedRailway = await this.railwayRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()

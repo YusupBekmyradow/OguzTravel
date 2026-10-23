@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { I18nService } from 'nestjs-i18n';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
@@ -6,7 +6,6 @@ import { InjectModel } from '@nestjs/sequelize';
 import { Package } from './entities/package.entity';
 import { Employee } from '../employee/entities/employee.entity';
 import { Office } from '../office/entities/office.entity';
-import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { TtpPayment } from '../ttp_payment/entities/ttp_payment.entity';
@@ -14,7 +13,7 @@ import { Sequelize } from 'sequelize-typescript';
 import { QueryTypes } from 'sequelize';
 
 @Injectable()
-export class PackageService {
+export class PackageService implements OnModuleInit {
   constructor(
     @InjectModel(Package) private packageRepository: typeof Package,
     @InjectModel(TtpPayment) private ttpPaymentRepo: typeof TtpPayment,
@@ -23,13 +22,37 @@ export class PackageService {
     private readonly i18n: I18nService,
   ) { }
 
+  async onModuleInit() {
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_package" 
+        ADD COLUMN IF NOT EXISTS "client_name" VARCHAR(255);
+
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'tbl_package' AND column_name = 'client_guid'
+          ) THEN
+            UPDATE "tbl_package" AS p
+            SET "client_name" = c."fullName"
+            FROM "tbl_clients" AS c
+            WHERE p."client_guid" = c."guid"
+              AND p."client_guid" IS NOT NULL
+              AND (p."client_name" IS NULL OR p."client_name" = '');
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+    }
+  }
+
   private getIncludes() {
     return [
       {
         model: Employee, as: 'operator', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
       },
-      { model: Client, attributes: ['guid', 'fullName'] },
       {
         model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'],
         include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }]
@@ -82,7 +105,7 @@ export class PackageService {
       const newPackage = await this.packageRepository.findOne({
         where: { guid: packageItem.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()
@@ -161,6 +184,7 @@ export class PackageService {
           p.guid, p.index_number, p.application_date, p.destination_country, 
           p.partner, p.net_fare, p.currency, p.price, p.profit, p.note, 
           p.is_paid, p."createdAt", p."updatedAt",
+          p.client_name,
 
           ROUND(COALESCE(SUM(tp.amount), 0)::numeric, 2) AS "totalPaid",
           CASE 
@@ -169,7 +193,6 @@ export class PackageService {
             ELSE '100%' 
           END AS "paidPercentage",
 
-          JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
           JSON_BUILD_OBJECT(
             'guid', op.guid, 'fullName', op."fullName",
             'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
@@ -182,7 +205,6 @@ export class PackageService {
           COUNT(*) OVER() AS "totalCount"
 
         FROM tbl_package p
-        LEFT JOIN tbl_clients c ON c.guid = p.client_guid
         LEFT JOIN tbl_employees op ON op.guid = p.opr_guid
         LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
         LEFT JOIN tbl_employees pop ON pop.guid = p.prepared_opr_guid
@@ -191,7 +213,7 @@ export class PackageService {
 
         WHERE 
           (:search::text IS NULL OR (
-            c."fullName" ILIKE :search OR
+            p.client_name ILIKE :search OR
             p.destination_country ILIKE :search OR
             p.partner ILIKE :search
           ))
@@ -202,7 +224,7 @@ export class PackageService {
           AND (:prepared_opr_guid::uuid IS NULL OR p.prepared_opr_guid = :prepared_opr_guid::uuid)
           AND (:is_paid::integer IS NULL OR p.is_paid = :is_paid::integer)
 
-        GROUP BY p.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+        GROUP BY p.guid, op.guid, off1.guid, pop.guid, off2.guid
         ORDER BY p.index_number DESC
         LIMIT :limit OFFSET :offset;
       `;
@@ -329,7 +351,7 @@ export class PackageService {
       const updatedPackage = await this.packageRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()

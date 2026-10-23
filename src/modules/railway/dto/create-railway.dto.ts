@@ -12,10 +12,10 @@ export class CreateRailwayDto {
     @IsNotEmpty()
     declare opr_guid: string;
 
-    @ApiProperty()
-    @IsUUID()
-    @IsNotEmpty()
-    declare client_guid: string;
+    @ApiPropertyOptional()
+    @IsString()
+    @IsOptional()
+    declare client_name?: string;
 
     @ApiProperty()
     @IsUUID()
