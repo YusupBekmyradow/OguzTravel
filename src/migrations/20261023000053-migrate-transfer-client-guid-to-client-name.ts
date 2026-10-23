@@ -2,13 +2,13 @@ import { QueryInterface } from 'sequelize';
 
 module.exports = {
   up: async (queryInterface: QueryInterface): Promise<void> => {
-    // 1. Add client_name column if it does not exist
+
     await queryInterface.sequelize.query(`
       ALTER TABLE "tbl_transfer" 
       ADD COLUMN IF NOT EXISTS "client_name" VARCHAR(255);
     `);
 
-    // 2. Copy existing client full name from tbl_clients to client_name
+
     await queryInterface.sequelize.query(`
       DO $$
       BEGIN
@@ -26,7 +26,7 @@ module.exports = {
       END $$;
     `);
 
-    // 3. Drop Foreign Key constraint on client_guid dynamically
+
     await queryInterface.sequelize.query(`
       DO $$
       DECLARE
@@ -44,12 +44,12 @@ module.exports = {
       END $$;
     `);
 
-    // 4. Drop index on client_guid
+
     await queryInterface.sequelize.query(`
       DROP INDEX IF EXISTS "tbl_transfer_client_guid";
     `);
 
-    // 5. Drop client_guid column
+
     await queryInterface.sequelize.query(`
       ALTER TABLE "tbl_transfer" 
       DROP COLUMN IF EXISTS "client_guid";
@@ -57,13 +57,13 @@ module.exports = {
   },
 
   down: async (queryInterface: QueryInterface): Promise<void> => {
-    // 1. Recreate client_guid column
+
     await queryInterface.sequelize.query(`
       ALTER TABLE "tbl_transfer" 
       ADD COLUMN IF NOT EXISTS "client_guid" UUID;
     `);
 
-    // 2. Attempt to restore client_guid by matching fullName
+
     await queryInterface.sequelize.query(`
       UPDATE "tbl_transfer" AS tr
       SET "client_guid" = c."guid"
@@ -72,7 +72,7 @@ module.exports = {
         AND tr."client_guid" IS NULL;
     `);
 
-    // 3. Recreate foreign key constraint
+
     await queryInterface.sequelize.query(`
       DO $$
       BEGIN
@@ -89,7 +89,7 @@ module.exports = {
       END $$;
     `);
 
-    // 4. Recreate index
+
     await queryInterface.sequelize.query(`
       CREATE INDEX IF NOT EXISTS "tbl_transfer_client_guid" 
       ON "tbl_transfer" ("client_guid");
