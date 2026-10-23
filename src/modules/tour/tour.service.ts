@@ -27,6 +27,11 @@ export class TourService implements OnModuleInit {
         ALTER TABLE "tbl_tour" 
         ADD COLUMN IF NOT EXISTS "client_name" VARCHAR(255);
 
+        ALTER TABLE "tbl_tour" 
+        ALTER COLUMN "destination_country" DROP NOT NULL,
+        ALTER COLUMN "tour_name" DROP NOT NULL,
+        ALTER COLUMN "guests_count" DROP NOT NULL;
+
         DO $$
         BEGIN
           IF EXISTS (

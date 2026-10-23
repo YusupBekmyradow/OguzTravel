@@ -22,20 +22,20 @@ export class CreateTourDto {
     @IsNotEmpty()
     declare prepared_opr_guid: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare destination_country: string;
+    @IsOptional()
+    declare destination_country?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsString()
-    @IsNotEmpty()
-    declare tour_name: string;
+    @IsOptional()
+    declare tour_name?: string;
 
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsNumber()
-    @IsNotEmpty()
-    declare guests_count: number;
+    @IsOptional()
+    declare guests_count?: number;
 
     @ApiProperty()
     @IsNumber()

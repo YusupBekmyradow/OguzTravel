@@ -51,19 +51,19 @@ export class Tour extends Model<Tour> {
         type: DataType.STRING,
         allowNull: true
     })
-    declare destination_country: string;
+    declare destination_country?: string;
 
     @Column({
         type: DataType.STRING,
         allowNull: true
     })
-    declare tour_name: string;
+    declare tour_name?: string;
 
     @Column({
         type: DataType.INTEGER,
         allowNull: true
     })
-    declare guests_count: number;
+    declare guests_count?: number;
 
     @Column({
         type: DataType.DECIMAL(12, 2),
