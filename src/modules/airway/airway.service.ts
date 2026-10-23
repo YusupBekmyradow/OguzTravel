@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { CreateAirwayDto } from './dto/create-airway.dto';
 import { UpdateAirwayDto } from './dto/update-airway.dto';
 import { InjectModel } from '@nestjs/sequelize';
 import { Airway } from './entities/airway.entity';
 import { Employee } from '../employee/entities/employee.entity';
-import { Client } from '../client/entities/client.entity';
 import { errorResponse, successResponse } from '../../helpers/responseFunctions';
 import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { Office } from '../office/entities/office.entity';
@@ -14,7 +13,7 @@ import { I18nService } from 'nestjs-i18n';
 import { QueryTypes } from 'sequelize';
 
 @Injectable()
-export class AirwayService {
+export class AirwayService implements OnModuleInit {
   constructor(
     @InjectModel(Airway) private airwayRepository: typeof Airway,
     @InjectModel(HarPayment) private harPaymentRepo: typeof HarPayment,
@@ -22,10 +21,34 @@ export class AirwayService {
     private readonly i18n: I18nService,
   ) { }
 
+  async onModuleInit() {
+    try {
+      await this.sequelize.query(`
+        ALTER TABLE "tbl_airway" 
+        ADD COLUMN IF NOT EXISTS "client_name" VARCHAR(255);
+
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'tbl_airway' AND column_name = 'client_guid'
+          ) THEN
+            UPDATE "tbl_airway" AS a
+            SET "client_name" = c."fullName"
+            FROM "tbl_clients" AS c
+            WHERE a."client_guid" = c."guid"
+              AND a."client_guid" IS NOT NULL
+              AND (a."client_name" IS NULL OR a."client_name" = '');
+          END IF;
+        END $$;
+      `);
+    } catch (e) {
+    }
+  }
+
   private getIncludes() {
     return [
       { model: Employee, as: 'operator', attributes: ['guid', 'fullName'], include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }] },
-      { model: Client, attributes: ['guid', 'fullName'] },
       { model: Employee, as: 'preparedOpr', attributes: ['guid', 'fullName'], include: [{ model: Office, attributes: ['guid', 'fullName', 'shortName'] }] },
     ];
   }
@@ -54,7 +77,7 @@ export class AirwayService {
       await t.commit();
       const newAirway = await this.airwayRepository.findOne({
         where: { guid: airway.guid },
-        attributes: { exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'], include: this.getAttributes().include as any },
+        attributes: { exclude: ['opr_guid', 'prepared_opr_guid'], include: this.getAttributes().include as any },
         include: this.getIncludes()
       });
       return { status: 201, data: newAirway, message: this.i18n.t('airway.created', { lang }) };
@@ -137,6 +160,7 @@ export class AirwayService {
         a.ticket_type, a.destination_country, a.route, a.passenger_count, 
         a.net_fare, a.currency, a.price, a.profit, a.system, a.note, 
         a.is_paid, a."createdAt", a."updatedAt",
+        a.client_name,
 
         ROUND(COALESCE(SUM(hp.amount), 0)::numeric, 2) AS "totalPaid",
         CASE 
@@ -145,7 +169,6 @@ export class AirwayService {
           ELSE '100%' 
         END AS "paidPercentage",
 
-        JSON_BUILD_OBJECT('guid', c.guid, 'fullName', c."fullName") AS client,
         JSON_BUILD_OBJECT(
           'guid', op.guid, 'fullName', op."fullName",
           'office', JSON_BUILD_OBJECT('guid', off1.guid, 'fullName', off1."fullName", 'shortName', off1."shortName")
@@ -158,7 +181,6 @@ export class AirwayService {
         COUNT(*) OVER() AS "totalCount"
 
       FROM tbl_airway a
-      LEFT JOIN tbl_clients c ON c.guid = a.client_guid
       LEFT JOIN tbl_employees op ON op.guid = a.opr_guid
       LEFT JOIN tbl_offices off1 ON off1.guid = op.office_guid
       LEFT JOIN tbl_employees pop ON pop.guid = a.prepared_opr_guid
@@ -168,7 +190,7 @@ export class AirwayService {
       WHERE 
 
         (:search::text IS NULL OR (
-          c."fullName" ILIKE :search OR
+          a.client_name ILIKE :search OR
           a.ticket_number ILIKE :search OR
           a.destination_country ILIKE :search OR
           a.route ILIKE :search OR
@@ -184,7 +206,7 @@ export class AirwayService {
         AND (:system::text IS NULL OR a.system = :system::text)
         AND (:ticket_type::text IS NULL OR a.ticket_type = :ticket_type::text)
 
-      GROUP BY a.guid, c.guid, op.guid, off1.guid, pop.guid, off2.guid
+      GROUP BY a.guid, op.guid, off1.guid, pop.guid, off2.guid
       ORDER BY a.index_number DESC
       LIMIT :limit OFFSET :offset;
     `;
@@ -311,7 +333,7 @@ export class AirwayService {
       const updatedAirway = await this.airwayRepository.findOne({
         where: { guid: updateDto.guid },
         attributes: {
-          exclude: ['opr_guid', 'client_guid', 'prepared_opr_guid'],
+          exclude: ['opr_guid', 'prepared_opr_guid'],
           include: this.getAttributes().include as any
         },
         include: this.getIncludes()
