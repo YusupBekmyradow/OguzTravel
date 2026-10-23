@@ -228,8 +228,8 @@ export class DashboardService {
   private async kassaExpense(whereCondition: any): Promise<Record<Currency, number>> {
     const expenseIn = (c: Currency) =>
       sumOf(
-        `CASE WHEN ${T}.currency = '${c}' AND ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' ` +
-        `THEN COALESCE(${T}.net_price, 0) ELSE 0 END`,
+        `CASE WHEN ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' ` +
+        `THEN ${AMOUNT_SQL.net(c)} ELSE 0 END`,
       );
     const result: any = await this.totalCalculationModel.findOne({
       where: whereCondition,
@@ -348,12 +348,10 @@ export class DashboardService {
     const prevEnd = new Date(currentStart.getTime() - 1);
     const prevStart = new Date(prevEnd.getTime() - (currentEnd.getTime() - currentStart.getTime()));
 
-    const net = `COALESCE(${T}.net_price, 0)`;
-    const own = `${T}.currency = '${currencyParam}'`;
     const groupSums: [any, string][] = [
       [sumOf(`CASE WHEN ${SALES_ONLY_SQL} THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'cost'],
       [sumOf(`CASE WHEN ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'salary'],
-      [sumOf(`CASE WHEN ${own} AND ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' THEN ${net} ELSE 0 END`), 'expense'],
+      [sumOf(`CASE WHEN ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'expense'],
     ];
     const whereFor = (start: Date, end: Date) => ({
       datetime: { [Op.between]: [start, end] },
@@ -960,7 +958,6 @@ export class DashboardService {
       group: ['office_guid'],
       raw: true,
     });
-    const net = `COALESCE(${T}.net_price, 0)`;
     const otherOutResults = await this.totalCalculationModel.findAll({
       where: {
         datetime: { [Op.between]: [currentStart, currentEnd] },
@@ -971,7 +968,7 @@ export class DashboardService {
       attributes: [
         'office_guid',
         [sumOf(`CASE WHEN ${T}.category_guid = '${SYSTEM_CATEGORIES.SALARY}' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'salary'],
-        [sumOf(`CASE WHEN ${T}.currency = '${currencyParam}' AND ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' THEN ${net} ELSE 0 END`), 'expense'],
+        [sumOf(`CASE WHEN ${T}.source IN ('MANUAL', 'EXCEL') AND ${T}.type = 'EXPENSE' THEN ${AMOUNT_SQL.net(currencyParam)} ELSE 0 END`), 'expense'],
       ],
       group: ['office_guid'],
       raw: true,
@@ -1200,7 +1197,7 @@ export class DashboardService {
       if (!d) return `${m}.${y}`;
       return spansYears ? `${d}.${m}.${y.slice(2)}` : `${d}.${m}`;
     };
-    const currentDataMap = new Map<string, { sale: number; net:number; profit: number}>();
+    const currentDataMap = new Map<string, { sale: number; net: number; profit: number }>();
     currentPeriodData.forEach((row: any) => {
       currentDataMap.set(row.time_label, {
         sale: Number(row.total_sale || 0),
@@ -1232,7 +1229,7 @@ export class DashboardService {
     return {
       currency: currencyParam,
       total_sale: currentTotalSale,
-      total_profit: currentTotalSale-currentTotalNet,
+      total_profit: currentTotalSale - currentTotalNet,
       total_credit: currentTotalCredit,
       total_count: currentTotalCount,
       total_refund_count: currentTotalRefundCount,
