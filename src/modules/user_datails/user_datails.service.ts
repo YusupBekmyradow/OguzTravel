@@ -6,7 +6,7 @@ import { HttpStatuses } from '../../helpers/httpStatuses.enum';
 import { UserDetail } from './entities/user_datail.entity';
 import { UpdateUserProfileDto } from './dto/update-user_datail.dto';
 import { ImagesService } from '../../common/image-upload/image-upload.module';
-import { QueryTypes } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
@@ -22,9 +22,12 @@ export class UserProfileService {
   async getProfileByGuid(guid: string, lang: string = 'tk') {
     try {
       const profile = await this.userDetailRepo.findOne({
-        where: { guid },
+        where: {
+          [Op.or]: [{ user_guid: guid }, { guid }],
+        },
         attributes: [
           'guid',
+          'user_guid',
           'full_name',
           'role',
           'status',
