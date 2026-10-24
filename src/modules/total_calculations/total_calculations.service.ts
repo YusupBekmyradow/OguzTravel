@@ -50,15 +50,15 @@ export class TotalCalculationsService implements OnModuleInit {
     try {
       const defaults = [
         { guid: SYSTEM_CATEGORIES.B2B, name: { tk: 'B2B', ru: 'B2B', en: 'B2B' } },
-        { guid: SYSTEM_CATEGORIES.AIRWAY, name: { tk: 'Howa ýollary', ru: 'Авиалинии', en: 'Airways' } },
-        { guid: SYSTEM_CATEGORIES.RAILWAY, name: { tk: 'Demir ýollary', ru: 'Железная дорога', en: 'Railway' } },
-        { guid: SYSTEM_CATEGORIES.HOTEL, name: { tk: 'Myhmanhana', ru: 'Отель', en: 'Hotel' } },
-        { guid: SYSTEM_CATEGORIES.TOUR, name: { tk: 'Syýahat', ru: 'Тур', en: 'Tour' } },
-        { guid: SYSTEM_CATEGORIES.TRANSFER, name: { tk: 'Ulag', ru: 'Трансфер', en: 'Transfer' } },
-        { guid: SYSTEM_CATEGORIES.PACKAGE, name: { tk: 'Bukja', ru: 'Пакет', en: 'Package' } },
+        { guid: SYSTEM_CATEGORIES.AIRWAY, name: { tk: 'Outbound-Howa ýollary', ru: 'Авиалинии', en: 'Airways' } },
+        { guid: SYSTEM_CATEGORIES.RAILWAY, name: { tk: 'Outbound-Demir ýollary', ru: 'Железная дорога', en: 'Railway' } },
+        { guid: SYSTEM_CATEGORIES.HOTEL, name: { tk: 'Outbound-Otel', ru: 'Отель', en: 'Hotel' } },
+        { guid: SYSTEM_CATEGORIES.TOUR, name: { tk: 'Outbound-Tur', ru: 'Тур', en: 'Tour' } },
+        { guid: SYSTEM_CATEGORIES.TRANSFER, name: { tk: 'Outbound-Transfer', ru: 'Трансфер', en: 'Transfer' } },
+        { guid: SYSTEM_CATEGORIES.PACKAGE, name: { tk: 'Outbound-Bukja', ru: 'Пакет', en: 'Package' } },
         { guid: SYSTEM_CATEGORIES.VISA, name: { tk: 'Wiza', ru: 'Виза', en: 'Visa' } },
         { guid: SYSTEM_CATEGORIES.TRANSLATION, name: { tk: 'Terjime', ru: 'Перевод', en: 'Translation' } },
-        { guid: SYSTEM_CATEGORIES.REFERRAL_LETTER, name: { tk: 'Ugur haty', ru: 'Направление', en: 'Referral Letter' } },
+        { guid: SYSTEM_CATEGORIES.REFERRAL_LETTER, name: { tk: 'Yollanma haty', ru: 'Направление', en: 'Referral Letter' } },
         { guid: SYSTEM_CATEGORIES.CAFETERIA, name: { tk: 'Kafe', ru: 'Кафе', en: 'Cafeteria' } },
         { guid: SYSTEM_CATEGORIES.SALARY, name: { tk: 'Işgärler', ru: 'Сотрудники', en: 'Employees' } },
       ];
