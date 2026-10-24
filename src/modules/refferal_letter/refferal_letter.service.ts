@@ -242,17 +242,13 @@ export class RefferalLetterService implements OnModuleInit {
         if (filters.search && filters.search.trim() !== '') {
           const searchText = escapeLike(filters.search.trim());
           const searchPattern = `%${searchText}%`;
-          const searchLower = searchText.toLowerCase();
           whereConditions[Op.or] = [
             { bgn_departure: { [Op.iLike]: searchPattern } },
             { bgn_arrival: { [Op.iLike]: searchPattern } },
             { travel_document_number: { [Op.iLike]: searchPattern } },
             { status: { [Op.iLike]: searchPattern } },
-            this.sequelize.where(
-              this.sequelize.fn('LOWER', this.sequelize.literal(`"RefferalLetter"."agent"->>'name'`)),
-              { [Op.like]: `%${searchLower}%` }
-            ),
             { '$client.fullName$': { [Op.iLike]: searchPattern } },
+            { '$refferaloperator.fullName$': { [Op.iLike]: searchPattern } },
             ...['tk', 'ru', 'en'].map((l) =>
               this.sequelize.where(
                 this.sequelize.literal(`"refferalCountry"."name"->>'${l}'`),
