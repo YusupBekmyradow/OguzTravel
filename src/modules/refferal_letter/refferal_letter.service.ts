@@ -248,7 +248,6 @@ export class RefferalLetterService implements OnModuleInit {
             { travel_document_number: { [Op.iLike]: searchPattern } },
             { status: { [Op.iLike]: searchPattern } },
             { '$client.fullName$': { [Op.iLike]: searchPattern } },
-            { '$refferaloperator.fullName$': { [Op.iLike]: searchPattern } },
             ...['tk', 'ru', 'en'].map((l) =>
               this.sequelize.where(
                 this.sequelize.literal(`"refferalCountry"."name"->>'${l}'`),
