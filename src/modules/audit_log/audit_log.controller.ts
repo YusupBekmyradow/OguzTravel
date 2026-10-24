@@ -17,8 +17,20 @@ export class AuditLogController {
   @ApiQuery({ name: 'user_guid', required: false, type: String })
   @ApiQuery({ name: 'action', required: false, enum: ['CREATE', 'UPDATE', 'DELETE'] })
   @ApiQuery({ name: 'module', required: false, type: String })
-  @ApiQuery({ name: 'from_date', required: false, type: String, description: 'ISO date: 2026-10-01' })
-  @ApiQuery({ name: 'to_date', required: false, type: String, description: 'ISO date: 2026-10-31' })
+  @ApiQuery({
+    name: 'from_date',
+    required: false,
+    type: String,
+    description: 'Sene ýa-da wagt (mysal: 2026-10-24, 2026-10-24 14:00, 2026-10-24T14:00:00)',
+    example: '2026-10-24',
+  })
+  @ApiQuery({
+    name: 'to_date',
+    required: false,
+    type: String,
+    description: 'Sene ýa-da wagt (mysal: 2026-10-24, 2026-10-24 18:30, 2026-10-24T23:59:59)',
+    example: '2026-10-24',
+  })
   async getLogs(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,

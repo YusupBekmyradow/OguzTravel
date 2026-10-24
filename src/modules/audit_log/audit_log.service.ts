@@ -57,6 +57,48 @@ export class AuditLogService implements OnApplicationBootstrap {
     }
   }
 
+  private parseDate(val?: string, isEnd = false): Date | null {
+    if (!val || typeof val !== 'string') return null;
+    const trimmed = val.trim();
+    if (!trimmed) return null;
+
+    // 1. Sene diňe: YYYY-MM-DD
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+    if (dateOnlyMatch) {
+      const [, y, m, d] = dateOnlyMatch;
+      return isEnd
+        ? new Date(Number(y), Number(m) - 1, Number(d), 23, 59, 59, 999)
+        : new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0);
+    }
+
+    // 2. Sene we minut: YYYY-MM-DD[T ]HH:mm
+    const minuteMatch = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})$/.exec(trimmed);
+    if (minuteMatch) {
+      const [, y, m, d, hh, mm] = minuteMatch;
+      return isEnd
+        ? new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), 59, 999)
+        : new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), 0, 0);
+    }
+
+    // 3. Sene, minut we sekunt: YYYY-MM-DD[T ]HH:mm:ss
+    const secondMatch = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})$/.exec(trimmed);
+    if (secondMatch) {
+      const [, y, m, d, hh, mm, ss] = secondMatch;
+      return isEnd
+        ? new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss), 999)
+        : new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss), 0);
+    }
+
+    // 4. ISO ýa-da beýleki formatlar (mysal: ISO string with timezone)
+    const parsed = new Date(trimmed);
+    if (isNaN(parsed.getTime())) return null;
+
+    if (isEnd && !trimmed.includes('.') && parsed.getMilliseconds() === 0) {
+      parsed.setMilliseconds(999);
+    }
+    return parsed;
+  }
+
   async getLogs(
     page: number = 1,
     limit: number = 20,
@@ -74,14 +116,22 @@ export class AuditLogService implements OnApplicationBootstrap {
 
     const where: any = {};
 
-    if (filters?.user_guid) where.user_guid = filters.user_guid;
-    if (filters?.action) where.action = filters.action;
-    if (filters?.module) where.module = { [Op.iLike]: `%${filters.module}%` };
+    const userGuid = filters?.user_guid?.trim();
+    if (userGuid) where.user_guid = userGuid;
 
-    if (filters?.from_date || filters?.to_date) {
+    const action = filters?.action?.trim();
+    if (action) where.action = action;
+
+    const module = filters?.module?.trim();
+    if (module) where.module = { [Op.iLike]: `%${module}%` };
+
+    const fromDate = this.parseDate(filters?.from_date, false);
+    const toDate = this.parseDate(filters?.to_date, true);
+
+    if (fromDate || toDate) {
       where.created_at = {};
-      if (filters?.from_date) where.created_at[Op.gte] = new Date(filters.from_date);
-      if (filters?.to_date) where.created_at[Op.lte] = new Date(filters.to_date);
+      if (fromDate) where.created_at[Op.gte] = fromDate;
+      if (toDate) where.created_at[Op.lte] = toDate;
     }
 
     const { count, rows } = await this.auditLogRepository.findAndCountAll({
