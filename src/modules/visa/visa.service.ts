@@ -237,8 +237,7 @@ export class VisaService {
     if (search) {
       const term = this.sequelize.escape(`%${search}%`);
       and.push(Sequelize.literal(`(
-        CAST("Visa"."index_number" AS TEXT) ILIKE ${term}
-        OR "Visa"."note" ILIKE ${term}
+        "Visa"."note" ILIKE ${term}
         OR "Visa"."agent"->>'name' ILIKE ${term}
         OR EXISTS (
           SELECT 1 FROM tbl_clients c

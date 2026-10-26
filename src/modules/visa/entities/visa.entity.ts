@@ -1,4 +1,4 @@
-import { Table, Model, Column, DataType, BelongsTo, HasMany, ForeignKey, BeforeSave, BeforeUpdate } from "sequelize-typescript";
+import { Table, Model, Column, DataType, BelongsTo, HasMany, ForeignKey } from "sequelize-typescript";
 import { Client } from "../../client/entities/client.entity";
 import { Employee } from "../../employee/entities/employee.entity";
 import { VisaPayment } from "../../visa_payment/entities/visa_payment.entity";
@@ -17,12 +17,7 @@ export class Visa extends Model<Visa> {
   })
   declare guid: string;
 
-  @Column({
-    type: DataType.STRING,
-    allowNull: true,
-    unique: true
-  })
-  declare index_number?: string;
+
 
   @Column({
     type: DataType.DATE,
@@ -129,12 +124,4 @@ export class Visa extends Model<Visa> {
   })
   declare visaPayments: VisaPayment[];
 
-  @BeforeSave
-  @BeforeUpdate
-  static normalizeIndexNumber(instance: Visa) {
-    if (typeof instance.index_number === 'string') {
-      const trimmed = instance.index_number.trim();
-      instance.index_number = trimmed.length > 0 ? trimmed : (null as any);
-    }
-  }
 }

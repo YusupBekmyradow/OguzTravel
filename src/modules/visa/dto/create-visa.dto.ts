@@ -8,10 +8,7 @@ export class CreateVisaDto {
   @IsNotEmpty()
   declare client_guid: string;
 
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  declare index_number?: string;
+
 
   @ApiProperty()
   @IsDateString()
